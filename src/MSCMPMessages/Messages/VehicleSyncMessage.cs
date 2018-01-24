@@ -12,6 +12,7 @@ namespace MSCMPMessages.Messages {
 		QuaternionMessage rotation;
 
 		float steering;
+		float throttle;
 
 	}
 }
