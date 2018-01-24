@@ -123,6 +123,7 @@ namespace MSCMP.Network {
 
 			if (GameObject != null) {
 				GameObject.Steering = message.steering;
+				GameObject.ThrottleInput = message.throttle;
 			}
 		}
 
@@ -185,6 +186,7 @@ namespace MSCMP.Network {
 			message.position = Utils.GameVec3ToNet(transform.position);
 			message.rotation = Utils.GameQuatToNet(transform.rotation);
 			message.steering = GameObject.Steering;
+			message.throttle = GameObject.ThrottleInput;
 			return true;
 		}
 
