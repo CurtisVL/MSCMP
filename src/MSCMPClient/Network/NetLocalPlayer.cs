@@ -189,6 +189,18 @@ namespace MSCMP.Network {
 		}
 
 		/// <summary>
+		/// Write vehicle engine state into state message.
+		/// </summary>
+		/// <param name="state">The engine state to write.</param>
+		public void WriteVehicleStateMessage(NetVehicle vehicle, GameVehicle.EngineStates state) {
+			Logger.Debug($"Writing state message! State: {(int)state} ({state.ToString()})");
+			Messages.VehicleStateMessage msg = new Messages.VehicleStateMessage();
+			msg.vehicleId = vehicle.NetId;
+			msg.state = (int)state;
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
 		/// Write player state into handshake message.
 		/// </summary>
 		/// <param name="msg">Message to write to.</param>

@@ -37,11 +37,15 @@ namespace MSCMP.Game.Objects {
 
 		public delegate void OnEnter();
 		public delegate void OnLeave();
+		public delegate void OnEngineStateChanged(EngineStates state);
 		public OnEnter onEnter = () => {
 			Logger.Log("On Enter");
 		};
 		public OnLeave onLeave = () => {
 			Logger.Log("On Leave");
+		};
+		public OnEngineStateChanged onEngineStateChanged = (EngineStates state) => {
+			Logger.Debug($"Engine state changed to: {state.ToString()}");
 		};
 
 		public string Name {
@@ -116,6 +120,9 @@ namespace MSCMP.Game.Objects {
 
 
 		GameObject seatGameObject = null;
+		GameObject starterGameObject = null;
+
+		PlayMakerFSM starterFsm = null;
 
 		public Transform SeatTransform {
 			get {
@@ -123,6 +130,21 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
+		public enum EngineStates {
+			WaitForStart,
+			ACC,
+			TurnKey,
+			StartingEngine,
+			StartEngine,
+			MotorRunning,
+		}
+
+		string MP_WAIT_FOR_START_EVENT_NAME = "MPWAITFORSTART";
+		string MP_ACC_EVENT_NAME = "MPACC";
+		string MP_TURN_KEY_EVENT_NAME = "MPTURNKEY";
+		string MP_STARTING_ENGINE_EVENT_NAME = "MPSTARTINGENGINE";
+		string MP_START_ENGINE_EVENT_NAME = "MPSTARTENGINE";
+		string MP_MOTOR_RUNNING_EVENT_NAME = "MPMOTORRUNNING";
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -168,6 +190,133 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Wait for start state.
+		/// </summary>
+		private class onWaitForStartAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onWaitForStartAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition != null) {
+					if (State.Fsm.LastTransition.EventName == vehicle.MP_WAIT_FOR_START_EVENT_NAME) {
+						Logger.Log("Last state was event!");
+						return;
+					}
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.WaitForStart);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters ACC state.
+		/// </summary>
+		private class onACCAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onACCAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_ACC_EVENT_NAME) {
+					Logger.Log("Last state was event!");
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.ACC);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Turn key state.
+		/// </summary>
+		private class onTurnKeyAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onTurnKeyAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_TURN_KEY_EVENT_NAME) {
+					Logger.Log("Last state was event!");
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.TurnKey);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Starting engine state.
+		/// </summary>
+		private class onStartingEngineAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onStartingEngineAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_STARTING_ENGINE_EVENT_NAME) {
+					Logger.Log("Last state was event!");
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.StartingEngine);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Start engine state.
+		/// </summary>
+		private class onStartEngineAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onStartEngineAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_START_ENGINE_EVENT_NAME) {
+					Logger.Log("Last state was event!");
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.StartEngine);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Start engine state.
+		/// </summary>
+		private class onMotorRunningAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onMotorRunningAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_MOTOR_RUNNING_EVENT_NAME) {
+					Logger.Log("Last state was event!");
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.MotorRunning);
+				Finish();
+			}
+		}
 
 		/// <summary>
 		/// Constructor.
@@ -192,6 +341,11 @@ namespace MSCMP.Game.Objects {
 
 					// Temp - use player trigger..
 					seatGameObject = fsm.gameObject;
+				}
+				else if (fsm.FsmName == "Starter") {
+					SetupVehicleEngineHooks(fsm);
+					starterGameObject = fsm.gameObject;
+					starterFsm = fsm;
 				}
 			}
 		}
@@ -218,10 +372,83 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
+		/// <summary>
+		/// Setup vehicle engine related hooks.
+		/// </summary>
+		private void SetupVehicleEngineHooks(PlayMakerFSM fsm) {
+			FsmState waitForStartState = fsm.Fsm.GetState("Wait for start");
+			FsmState accState = fsm.Fsm.GetState("ACC");
+			FsmState turnKeyState = fsm.Fsm.GetState("Turn key");
+			FsmState startingEngineState = fsm.Fsm.GetState("Starting engine");
+			FsmState startEngineState = fsm.Fsm.GetState("Start engine");
+			FsmState motorRunningState = fsm.Fsm.GetState("Motor running");
+
+			if (waitForStartState != null) {
+				PlayMakerUtils.AddNewAction(waitForStartState, new onWaitForStartAction(this));
+				FsmEvent mpWaitForStartEvent = fsm.Fsm.GetEvent(MP_WAIT_FOR_START_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpWaitForStartEvent, "Wait for start");
+			}
+
+			if (accState != null) {
+				PlayMakerUtils.AddNewAction(accState, new onACCAction(this));
+				FsmEvent mpACCEvent = fsm.Fsm.GetEvent(MP_ACC_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpACCEvent, "ACC");
+			}
+
+			if(turnKeyState != null) {
+				PlayMakerUtils.AddNewAction(turnKeyState, new onTurnKeyAction(this));
+				FsmEvent mpTurnKeyEvent = fsm.Fsm.GetEvent(MP_TURN_KEY_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpTurnKeyEvent, "Turn key");
+			}
+
+			if (startingEngineState != null) {
+				PlayMakerUtils.AddNewAction(startingEngineState, new onStartingEngineAction(this));
+				FsmEvent mpStartingEngineState = fsm.Fsm.GetEvent(MP_STARTING_ENGINE_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpStartingEngineState, "Starting engine");
+			}
+
+			if (startEngineState != null) {
+				PlayMakerUtils.AddNewAction(startEngineState, new onStartEngineAction(this));
+				FsmEvent mpStartEngineState = fsm.Fsm.GetEvent(MP_START_ENGINE_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpStartEngineState, "Start engine");
+			}
+
+			if (motorRunningState != null) {
+				PlayMakerUtils.AddNewAction(motorRunningState, new onMotorRunningAction(this));
+				FsmEvent mpMotorRunningState = fsm.Fsm.GetEvent(MP_MOTOR_RUNNING_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpMotorRunningState, "Motor running");
+			}
+		}
+
 		public void SetPosAndRot(Vector3 pos, Quaternion rot) {
 			Transform transform = gameObject.transform;
 			transform.position = pos;
 			transform.rotation = rot;
+		}
+
+		/// <summary>
+		/// Set vehicle state
+		/// </summary>
+		public void SetEngineState(EngineStates state) {
+			Logger.Debug($"Remote engine state {state.ToString()} set on vehicle: {VehicleTransform.gameObject.name}");
+			if(state == EngineStates.WaitForStart) {
+				starterFsm.SendEvent(MP_WAIT_FOR_START_EVENT_NAME);
+			}
+			if (state == EngineStates.ACC) {
+				starterFsm.SendEvent(MP_ACC_EVENT_NAME);
+			}
+			if (state == EngineStates.TurnKey) {
+				starterFsm.SendEvent(MP_TURN_KEY_EVENT_NAME);
+			}
+			if (state == EngineStates.StartingEngine) {
+				starterFsm.SendEvent(MP_STARTING_ENGINE_EVENT_NAME);
+			}
+			if (state == EngineStates.StartEngine) {
+				starterFsm.SendEvent(MP_START_ENGINE_EVENT_NAME);
+			}
+			if (state == EngineStates.MotorRunning) {
+				starterFsm.SendEvent(MP_MOTOR_RUNNING_EVENT_NAME);
+			}
 		}
 
 		public void UpdateIMGUI() {
