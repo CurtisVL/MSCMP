@@ -70,6 +70,11 @@ namespace MSCMP.Network {
 		NetPlayer passengerPlayer = null;
 
 		/// <summary>
+		/// Last engine state.
+		/// </summary>
+		GameVehicle.EngineStates lastEngineState;
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="gameName">Name of the game object representing this vehicle.</param>
@@ -164,6 +169,13 @@ namespace MSCMP.Network {
 				netManager.GetLocalPlayer().LeaveVehicle();
 			};
 
+			GameObject.onEngineStateChanged = (GameVehicle.EngineStates state) => {
+				if (lastEngineState != state) {
+					netManager.GetLocalPlayer().WriteVehicleStateMessage(this, state);
+					lastEngineState = state;
+				}
+			};
+
 
 			// Make sure interpolator has proper location of the vehicle.
 
@@ -188,6 +200,11 @@ namespace MSCMP.Network {
 			message.steering = GameObject.Steering;
 			message.throttle = GameObject.ThrottleInput;
 			return true;
+		}
+
+		public void SetEngineState(int state) {
+			GameVehicle.EngineStates engineState = (GameVehicle.EngineStates)state;
+			GameObject.SetEngineState(engineState);
 		}
 
 		/// <summary>

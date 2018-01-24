@@ -252,6 +252,21 @@ namespace MSCMP.Network {
 				player.HandleVehicleSync(msg);
 			});
 
+			BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleStateMessage msg) => {
+				NetPlayer player = players[1];
+				if (player == null) {
+					return;
+				}
+
+				NetVehicle vehicle = netWorld.GetVehicle(msg.vehicleId);
+				if (vehicle == null) {
+					Logger.Log("Player " + player.SteamId + " tried to set state of vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
+					return;
+				}
+
+				vehicle.SetEngineState(msg.state);
+			});
+
 
 			BindMessageHandler((Steamworks.CSteamID sender, Messages.PickupObjectMessage msg) => {
 				NetPlayer player = players[1];

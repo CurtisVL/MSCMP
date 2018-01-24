@@ -30,6 +30,7 @@
 			generator.GenerateMessage(typeof(Messages.RemoveBottleMessage));
 			generator.GenerateMessage(typeof(Messages.LightSwitchMessage));
 			generator.GenerateMessage(typeof(Messages.LightSwithInitMessage));
+			generator.GenerateMessage(typeof(Messages.VehicleStateMessage));
 			generator.EndGeneration();
 		}
 	}
