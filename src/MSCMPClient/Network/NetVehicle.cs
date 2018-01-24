@@ -128,7 +128,11 @@ namespace MSCMP.Network {
 
 			if (GameObject != null) {
 				GameObject.Steering = message.steering;
-				GameObject.ThrottleInput = message.throttle;
+				GameObject.Throttle = message.throttle;
+				GameObject.Brake = message.brake;
+				GameObject.HandbrakeInput = message.handbrake;
+				GameObject.Gear = message.gear;
+				GameObject.ClutchInput = message.clutch;
 			}
 		}
 
@@ -198,7 +202,11 @@ namespace MSCMP.Network {
 			message.position = Utils.GameVec3ToNet(transform.position);
 			message.rotation = Utils.GameQuatToNet(transform.rotation);
 			message.steering = GameObject.Steering;
-			message.throttle = GameObject.ThrottleInput;
+			message.throttle = GameObject.Throttle;
+			message.brake = GameObject.Brake;
+			message.clutch = GameObject.ClutchInput;
+			message.handbrake = GameObject.HandbrakeInput;
+			message.gear = GameObject.Gear;
 			return true;
 		}
 

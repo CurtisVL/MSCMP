@@ -69,20 +69,20 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
-		public float ThrottleInput {
+		public float Throttle {
 			get {
-				return dynamics.carController.throttleInput;
+				return dynamics.carController.throttle;
 			}
 			set {
-				mpCarController.throttleInput = value;
+				mpCarController.remoteThrottleInput = value;
 			}
 		}
-		public float BrakeInput {
+		public float Brake {
 			get {
-				return dynamics.carController.brakeInput;
+				return dynamics.carController.brake;
 			}
 			set {
-				mpCarController.brakeInput = value;
+				mpCarController.remoteBrakeInput = value;
 			}
 		}
 		public float HandbrakeInput {
@@ -90,7 +90,7 @@ namespace MSCMP.Game.Objects {
 				return dynamics.carController.handbrakeInput;
 			}
 			set {
-				mpCarController.handbrakeInput = value;
+				mpCarController.remoteHandbrakeInput = value;
 			}
 		}
 		public float ClutchInput {
@@ -98,7 +98,7 @@ namespace MSCMP.Game.Objects {
 				return dynamics.carController.clutchInput;
 			}
 			set {
-				mpCarController.clutchInput = value;
+				mpCarController.remoteClutchInput = value;
 			}
 		}
 		public bool StartEngineInput {
@@ -114,7 +114,7 @@ namespace MSCMP.Game.Objects {
 				return driveTrain.gear;
 			}
 			set {
-				mpCarController.remoteTargetGear = value;
+				driveTrain.gear = value;
 			}
 		}
 
@@ -137,6 +137,7 @@ namespace MSCMP.Game.Objects {
 			StartingEngine,
 			StartEngine,
 			MotorRunning,
+			Wait,
 		}
 
 		string MP_WAIT_FOR_START_EVENT_NAME = "MPWAITFORSTART";
@@ -145,6 +146,7 @@ namespace MSCMP.Game.Objects {
 		string MP_STARTING_ENGINE_EVENT_NAME = "MPSTARTINGENGINE";
 		string MP_START_ENGINE_EVENT_NAME = "MPSTARTENGINE";
 		string MP_MOTOR_RUNNING_EVENT_NAME = "MPMOTORRUNNING";
+		string MP_WAIT_EVENT_NAME = "MPWAIT";
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -201,9 +203,9 @@ namespace MSCMP.Game.Objects {
 			}
 
 			public override void OnEnter() {
+				//LastTransition is null on new vehicle spawn
 				if (State.Fsm.LastTransition != null) {
 					if (State.Fsm.LastTransition.EventName == vehicle.MP_WAIT_FOR_START_EVENT_NAME) {
-						Logger.Log("Last state was event!");
 						return;
 					}
 				}
@@ -225,7 +227,6 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				if (State.Fsm.LastTransition.EventName == vehicle.MP_ACC_EVENT_NAME) {
-					Logger.Log("Last state was event!");
 					return;
 				}
 
@@ -246,7 +247,6 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				if (State.Fsm.LastTransition.EventName == vehicle.MP_TURN_KEY_EVENT_NAME) {
-					Logger.Log("Last state was event!");
 					return;
 				}
 
@@ -267,7 +267,6 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				if (State.Fsm.LastTransition.EventName == vehicle.MP_STARTING_ENGINE_EVENT_NAME) {
-					Logger.Log("Last state was event!");
 					return;
 				}
 
@@ -288,7 +287,6 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				if (State.Fsm.LastTransition.EventName == vehicle.MP_START_ENGINE_EVENT_NAME) {
-					Logger.Log("Last state was event!");
 					return;
 				}
 
@@ -309,11 +307,30 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				if (State.Fsm.LastTransition.EventName == vehicle.MP_MOTOR_RUNNING_EVENT_NAME) {
-					Logger.Log("Last state was event!");
 					return;
 				}
 
 				vehicle.onEngineStateChanged(EngineStates.MotorRunning);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when vehicle enters Wait engine state.
+		/// </summary>
+		private class onWaitAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onWaitAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_WAIT_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onEngineStateChanged(EngineStates.Wait);
 				Finish();
 			}
 		}
@@ -448,6 +465,9 @@ namespace MSCMP.Game.Objects {
 			}
 			if (state == EngineStates.MotorRunning) {
 				starterFsm.SendEvent(MP_MOTOR_RUNNING_EVENT_NAME);
+			}
+			if (state == EngineStates.Wait) {
+				starterFsm.SendEvent(MP_WAIT_EVENT_NAME);
 			}
 		}
 
