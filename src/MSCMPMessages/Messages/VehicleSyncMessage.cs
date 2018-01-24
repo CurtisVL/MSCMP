@@ -13,6 +13,9 @@ namespace MSCMPMessages.Messages {
 
 		float steering;
 		float throttle;
-
+		float brake;
+		float clutch;
+		float handbrake;
+		int gear;
 	}
 }
