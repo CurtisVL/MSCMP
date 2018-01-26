@@ -15,7 +15,15 @@ namespace MSCMPMessages.Messages {
 		float throttle;
 		float brake;
 		float clutch;
+		float fuel;
+
+		[Optional]
 		float handbrake;
+
+		[Optional]
 		int gear;
+
+		[Optional]
+		bool range;
 	}
 }

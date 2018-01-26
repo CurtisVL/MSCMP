@@ -75,6 +75,13 @@ namespace MSCMP.Network {
 		GameVehicle.EngineStates lastEngineState;
 
 		/// <summary>
+		/// Latest received value.
+		/// </summary>
+		int lastGear = 0;
+		bool lastRange = false;
+		float lastHandbrake = 0;
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="gameName">Name of the game object representing this vehicle.</param>
@@ -130,9 +137,17 @@ namespace MSCMP.Network {
 				GameObject.Steering = message.steering;
 				GameObject.Throttle = message.throttle;
 				GameObject.Brake = message.brake;
-				GameObject.HandbrakeInput = message.handbrake;
-				GameObject.Gear = message.gear;
 				GameObject.ClutchInput = message.clutch;
+				GameObject.Fuel = message.fuel;
+				if (message.HasHandbrake) {
+					GameObject.HandbrakeInput = message.Handbrake;
+				}
+				if (message.HasGear) {
+					GameObject.Gear = message.Gear;
+				}
+				if (message.HasRange) {
+					GameObject.Range = message.Range;
+				}
 			}
 		}
 
@@ -205,8 +220,21 @@ namespace MSCMP.Network {
 			message.throttle = GameObject.Throttle;
 			message.brake = GameObject.Brake;
 			message.clutch = GameObject.ClutchInput;
-			message.handbrake = GameObject.HandbrakeInput;
-			message.gear = GameObject.Gear;
+			message.fuel = GameObject.Fuel;
+
+			//Only send following messages when something has changed
+			if (GameObject.HandbrakeInput != lastHandbrake) {
+				lastHandbrake = GameObject.HandbrakeInput;
+				message.Handbrake = GameObject.HandbrakeInput;
+			}
+			if (GameObject.Gear != lastGear) {
+				lastGear = GameObject.Gear;
+				message.Gear = GameObject.Gear;
+			}
+			if (GameObject.Range != lastRange) {
+				lastRange = GameObject.Range;
+				message.Range = GameObject.Range;
+			}
 			return true;
 		}
 

@@ -87,8 +87,8 @@ namespace MSCMP.Game.Objects {
 		}
 		public float HandbrakeInput {
 			get {
-				//Van
-				if (gameObject.name.StartsWith("HAYOSIKO")) {
+				//Van, Tractor, Ruscko, Ferndale
+				if (!gameObject.name.StartsWith("GIFU") && !gameObject.name.StartsWith("JONNEZ ES")) {
 					return handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value;
 				}
 				//Truck
@@ -100,25 +100,23 @@ namespace MSCMP.Game.Objects {
 						return 0;
 					}
 				}
-				//Unknown
+				//Mopped, or unknown
 				else {
 					return 0;
 				}
 			}
 			set {
 				//Van
-				if (gameObject.name.StartsWith("HAYOSIKO")) {
+				if (!gameObject.name.StartsWith("GIFU") && !gameObject.name.StartsWith("JONNEZ ES")) {
 					handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value = value;
 				}
 				//Truck
-				if (gameObject.name.StartsWith("GIFU")) {
-					if(value == 1) {
-						handbrakeFsm.Fsm.GetFsmBool("Brake").Value = true;
-						Logger.Log("Handbrake on");
+				else if (gameObject.name.StartsWith("GIFU")) {
+					if (value == 1 && handbrakeFsm.Fsm.GetFsmBool("Brake").Value == false) {
+						handbrakeFsm.SendEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
 					}
-					else {
-						handbrakeFsm.Fsm.GetFsmBool("Brake").Value = false;
-						Logger.Log("Handbrake off");
+					else if(value == 0 && handbrakeFsm.Fsm.GetFsmBool("Brake").Value == true) {
+						handbrakeFsm.SendEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
 					}
 				}
 			}
@@ -145,9 +143,25 @@ namespace MSCMP.Game.Objects {
 				return driveTrain.gear;
 			}
 			set {
-				if (value != driveTrain.gear) {
-					mpCarController.remoteTargetGear = value;
-				}
+				mpCarController.remoteTargetGear = value;
+			}
+		}
+
+		public bool Range {
+			get {
+				return true;
+			}
+			set {
+				rangeFsm.SendEvent(MP_RANGE_SWITCH_EVENT_NAME);
+			}
+		}
+
+		public float Fuel {
+			get {
+				return fuelTankFsm.Fsm.GetFsmFloat("FuelLevel").Value;
+			}
+			set {
+				fuelTankFsm.Fsm.GetFsmFloat("FuelLevel").Value = value;
 			}
 		}
 
@@ -157,6 +171,8 @@ namespace MSCMP.Game.Objects {
 
 		PlayMakerFSM starterFsm = null;
 		PlayMakerFSM handbrakeFsm = null;
+		PlayMakerFSM fuelTankFsm = null;
+		PlayMakerFSM rangeFsm = null;
 
 		public Transform SeatTransform {
 			get {
@@ -171,6 +187,7 @@ namespace MSCMP.Game.Objects {
 			CheckClutch,
 			StartingEngine,
 			StartEngine,
+			StartOrNot,
 			MotorRunning,
 			Wait,
 		}
@@ -181,8 +198,12 @@ namespace MSCMP.Game.Objects {
 		string MP_CHECK_CLUTCH_EVENT_NAME = "MPCHECKCLUTCH";
 		string MP_STARTING_ENGINE_EVENT_NAME = "MPSTARTINGENGINE";
 		string MP_START_ENGINE_EVENT_NAME = "MPSTARTENGINE";
+		string MP_START_OR_NOT_EVENT_NAME = "MPSTARTORNOT";
 		string MP_MOTOR_RUNNING_EVENT_NAME = "MPMOTORRUNNING";
 		string MP_WAIT_EVENT_NAME = "MPWAIT";
+
+		string MP_TRUCK_PBRAKE_FLIP_EVENT_NAME = "MPFLIPBRAKE";
+		string MP_RANGE_SWITCH_EVENT_NAME = "MPRANGE";
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -198,6 +219,9 @@ namespace MSCMP.Game.Objects {
 				Utils.CallSafe("OnEnterHandler", () => {
 					if (Fsm.PreviousActiveState != null && Fsm.PreviousActiveState.Name == "Death") {
 						if (vehicle.onEnter != null) {
+							if (vehicle.gameObject.GetComponent<Drivetrain>() != null) {
+								vehicle.gameObject.GetComponent<Drivetrain>().canStall = true;
+							}
 							vehicle.onEnter();
 						}
 					}
@@ -220,6 +244,9 @@ namespace MSCMP.Game.Objects {
 				Utils.CallSafe("OnLeaveHandler", () => {
 					if (Fsm.PreviousActiveState != null && Fsm.PreviousActiveState.Name == "Create player") {
 						if (vehicle.onLeave != null) {
+							if (vehicle.gameObject.GetComponent<Drivetrain>() != null) {
+								vehicle.gameObject.GetComponent<Drivetrain>().canStall = false;
+							}
 							vehicle.onLeave();
 						}
 					}
@@ -402,7 +429,10 @@ namespace MSCMP.Game.Objects {
 			Client.Assert(dynamics != null, "Missing car dynamics!");
 
 			driveTrain = gameObject.GetComponent<Drivetrain>();
-			
+
+			if(driveTrain != null) {
+				driveTrain.canStall = false;
+			}
 
 			axisCarController = gameObject.GetComponent<AxisCarController>();
 			mpCarController = gameObject.AddComponent<MPCarController>();
@@ -425,9 +455,18 @@ namespace MSCMP.Game.Objects {
 					//Van
 					handbrakeFsm = fsm;
 				}
+
 				if (fsm.gameObject.name == "Parking Brake" && fsm.FsmName == "Use") {
 					//Truck
 					handbrakeFsm = fsm;
+				}
+
+				if (fsm.gameObject.name == "Range" && fsm.FsmName == "Use") {
+					rangeFsm = fsm;
+				}
+
+				if (fsm.gameObject.name == "FuelTank" && fsm.FsmName == "Data") {
+					fuelTankFsm = fsm;
 				}
 			}
 
@@ -477,8 +516,14 @@ namespace MSCMP.Game.Objects {
 			FsmState startingEngineState = starterFsm.Fsm.GetState("Starting engine");
 			FsmState startEngineState = starterFsm.Fsm.GetState("Start engine");
 			FsmState waitState = starterFsm.Fsm.GetState("Wait");
+			FsmState startOrNotState = starterFsm.Fsm.GetState("Start or not");
 			FsmState motorRunningState = starterFsm.Fsm.GetState("Motor running");
 
+			FsmState truckPBrakeFlipState = handbrakeFsm.Fsm.GetState("Flip");
+			FsmState rangeSwitchState = null;
+			if (rangeFsm != null) {
+				rangeSwitchState = rangeFsm.Fsm.GetState("Switch");
+			}
 
 			//Engine states
 			if (waitForStartState != null) {
@@ -523,10 +568,26 @@ namespace MSCMP.Game.Objects {
 				//PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpWaitState, "Wait");
 			}
 
+			if (startOrNotState != null) {
+				//PlayMakerUtils.AddNewAction(motorRunningState, new onMotorRunningAction(this));
+				//FsmEvent mpStartOrNotState = starterFsm.Fsm.GetEvent(MP_START_OR_NOT_EVENT_NAME);
+				//PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpStartOrNotState, "Start or not");
+			}
+
 			if (motorRunningState != null) {
 				PlayMakerUtils.AddNewAction(motorRunningState, new onMotorRunningAction(this));
 				FsmEvent mpMotorRunningState = starterFsm.Fsm.GetEvent(MP_MOTOR_RUNNING_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpMotorRunningState, "Motor running");
+			}
+
+			if (truckPBrakeFlipState != null) {
+				FsmEvent mpTruckPBrakeFlipState = handbrakeFsm.Fsm.GetEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpTruckPBrakeFlipState, "Flip");
+			}
+
+			if (rangeSwitchState != null) {
+				FsmEvent mpRangeSwitchState = rangeFsm.Fsm.GetEvent(MP_RANGE_SWITCH_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(rangeFsm, mpRangeSwitchState, "Switch");
 			}
 		}
 
@@ -564,6 +625,9 @@ namespace MSCMP.Game.Objects {
 			}
 			if (state == EngineStates.CheckClutch) {
 				starterFsm.SendEvent(MP_CHECK_CLUTCH_EVENT_NAME);
+			}
+			if (state == EngineStates.StartOrNot) {
+				starterFsm.SendEvent(MP_START_OR_NOT_EVENT_NAME);
 			}
 		}
 
@@ -605,6 +669,11 @@ namespace MSCMP.Game.Objects {
 				vinfo += "  > Handbrake:\n";
 				vinfo += "     KnobPos: " + handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value + " \n";
 				vinfo += "     Truck brake: " + handbrakeFsm.Fsm.GetFsmBool("Brake").Value + " \n";
+			}
+
+			if (fuelTankFsm != null) {
+				vinfo += "  > Fuel tank:\n";
+				vinfo += "     Fuel level: " + fuelTankFsm.Fsm.GetFsmFloat("FuelLevel").Value + " \n";
 			}
 
 			GUI.Label(new Rect(10, 200, 500, 500), vinfo);
