@@ -188,11 +188,15 @@ namespace MSCMP.Network {
 				netManager.GetLocalPlayer().LeaveVehicle();
 			};
 
-			GameObject.onEngineStateChanged = (GameVehicle.EngineStates state) => {
+			GameObject.onEngineStateChanged = (GameVehicle.EngineStates state, GameVehicle.DashboardStates dashstate, float startTime) => {
 				if (lastEngineState != state) {
-					netManager.GetLocalPlayer().WriteVehicleStateMessage(this, state);
+					netManager.GetLocalPlayer().WriteVehicleStateMessage(this, state, dashstate, startTime);
 					lastEngineState = state;
 				}
+			};
+
+			GameObject.onVehicleSwitchChanges = (GameVehicle.SwitchIDs id, bool newValue, float newValueFloat) => {
+				netManager.GetLocalPlayer().WriteVehicleSwitchMessage(this, id, newValue, newValueFloat);
 			};
 
 
@@ -222,7 +226,7 @@ namespace MSCMP.Network {
 			message.clutch = GameObject.ClutchInput;
 			message.fuel = GameObject.Fuel;
 
-			//Only send following messages when something has changed
+			//Only send following messages when they have changed
 			if (GameObject.HandbrakeInput != lastHandbrake) {
 				lastHandbrake = GameObject.HandbrakeInput;
 				message.Handbrake = GameObject.HandbrakeInput;
@@ -238,9 +242,21 @@ namespace MSCMP.Network {
 			return true;
 		}
 
-		public void SetEngineState(int state) {
+		/// <summary>
+		/// Sets engine and dashboard state of vehicle.
+		/// </summary>
+		/// <param name="state">Engine state to change.</param>
+		/// <param name="dashstate">Dashboard state to change.</param>
+		/// <param name="startTime">Engine start time.</param>
+		public void SetEngineState(int state, int dashstate, float startTime) {
 			GameVehicle.EngineStates engineState = (GameVehicle.EngineStates)state;
-			GameObject.SetEngineState(engineState);
+			GameVehicle.DashboardStates dashState = (GameVehicle.DashboardStates)dashstate;
+			GameObject.SetEngineState(engineState, dashState, startTime);
+		}
+
+		public void SetVehicleSwitch(int id, bool newValue, float newValueFloat) {
+			GameVehicle.SwitchIDs switchID = (GameVehicle.SwitchIDs)id;
+			GameObject.SetVehicleSwitch(switchID, newValue, newValueFloat);
 		}
 
 		/// <summary>

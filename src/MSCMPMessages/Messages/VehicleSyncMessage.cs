@@ -17,6 +17,7 @@ namespace MSCMPMessages.Messages {
 		float clutch;
 		float fuel;
 
+		// Remove at a later time, should be added to VehicleSwitchMessage
 		[Optional]
 		float handbrake;
 

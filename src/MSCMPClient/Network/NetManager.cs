@@ -254,6 +254,8 @@ namespace MSCMP.Network {
 
 			BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleStateMessage msg) => {
 				NetPlayer player = players[1];
+				float startTime = -1;
+
 				if (player == null) {
 					return;
 				}
@@ -264,7 +266,32 @@ namespace MSCMP.Network {
 					return;
 				}
 
-				vehicle.SetEngineState(msg.state);
+				if (msg.HasStartTime) {
+					startTime = msg.StartTime;
+				}
+
+				vehicle.SetEngineState(msg.state, msg.dashstate, startTime);
+			});
+
+			BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleSwitchMessage msg) => {
+				NetPlayer player = players[1];
+				float newValueFloat = -1;
+
+				if (player == null) {
+					return;
+				}
+
+				NetVehicle vehicle = netWorld.GetVehicle(msg.vehicleId);
+				if (vehicle == null) {
+					Logger.Log("Player " + player.SteamId + " tried to change a switch in vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
+					return;
+				}
+
+				if (msg.HasSwitchValueFloat) {
+					newValueFloat = msg.SwitchValueFloat;
+				}
+
+				vehicle.SetVehicleSwitch(msg.switchID, msg.switchValue, newValueFloat);
 			});
 
 

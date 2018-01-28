@@ -3,5 +3,9 @@
 	class VehicleStateMessage {
 		byte vehicleId;
 		int state;
+		int dashstate;
+
+		[Optional]
+		float startTime;
 	}
 }
