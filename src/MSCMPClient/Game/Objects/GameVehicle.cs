@@ -166,12 +166,14 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM dashboardFsm = null;
 		PlayMakerFSM fuelTapFsm = null;
 		PlayMakerFSM lightsFsm = null;
+		PlayMakerFSM wipersFsm = null;
 
 		bool hasRange = false;
 		bool hasLeverParkingBrake = false;
 		bool hasPushParkingBrake = false;
 		bool hasFuelTap = false;
 		bool hasLights = false;
+		bool hasWipers = false;
 
 
 		public Transform SeatTransform {
@@ -235,6 +237,7 @@ namespace MSCMP.Game.Objects {
 		// Interior
 		string MP_TRUCK_PBRAKE_FLIP_EVENT_NAME = "MPFLIPBRAKE";
 		string MP_LIGHTS_EVENT_NAME = "MPLIGHTS";
+		string MP_WIPERS_EVENT_NAME = "MPWIPERS";
 
 		// Dashboard
 		string MP_ACC_ON_EVENT_NAME = "MPACCON";
@@ -572,6 +575,34 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// PlayMaker state action executed when wipers are used.
+		/// </summary>
+		private class onWipersUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onWipersUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_WIPERS_EVENT_NAME) {
+					return;
+				}
+
+				int selection = vehicle.wipersFsm.Fsm.GetFsmInt("Selection").Value;
+				if (selection == 2) {
+					selection = 0;
+				}
+				else {
+					selection++;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.Wipers, false, selection);
+				Finish();
+			}
+		}
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go">Vehicle game object.</param>
@@ -645,19 +676,22 @@ namespace MSCMP.Game.Objects {
 					lightsFsm = fsm;
 					hasLights = true;
 				}
+
+				// Wipers
+				else if (fsm.gameObject.name == "ButtonWipers" && fsm.FsmName == "Use" || fsm.gameObject.name == "Wipers" && fsm.FsmName == "Use") {
+					wipersFsm = fsm;
+					hasWipers = true;
+				}
 			}
 
-			if (starterFsm != null) {
-				SetupVehicleEngineHooks();
+			if (starterFsm == null) {
+				Logger.Log($"Missing vehicle starterFSM, vehicle: {gameObject.name}!");
 			}
-			else {
-				if (starterFsm == null) {
-					Logger.Log($"Missing vehicle starterFSM, vehicle: {gameObject.name}!");
-				}
-				if (handbrakeFsm == null) {
-					Logger.Log($"Missing vehicle handbrakeFsm, vehicle: {gameObject.name}!");
-				}
+			if (handbrakeFsm == null) {
+				Logger.Log($"Missing vehicle handbrakeFsm, vehicle: {gameObject.name}!");
 			}
+
+			SetupVehicleHooks();
 		}
 
 		public void SetRemoteSteering(bool enabled) {
@@ -683,9 +717,9 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
-		/// Setup vehicle engine/dashboard related hooks.
+		/// Setup vehicle event hooks.
 		/// </summary>
-		private void SetupVehicleEngineHooks() {
+		private void SetupVehicleHooks() {
 			FsmState waitForStartState = starterFsm.Fsm.GetState("Wait for start");
 			FsmState accState = starterFsm.Fsm.GetState("ACC");
 			FsmState turnKeyState = starterFsm.Fsm.GetState("Turn key");
@@ -696,6 +730,37 @@ namespace MSCMP.Game.Objects {
 			FsmState startOrNotState = starterFsm.Fsm.GetState("Start or not");
 			FsmState motorRunningState = starterFsm.Fsm.GetState("Motor running");
 			FsmState accGlowplugState = starterFsm.Fsm.GetState("ACC / Glowplug");
+			if (starterFsm != null) {
+				waitForStartState = starterFsm.Fsm.GetState("Wait for start");
+				accState = starterFsm.Fsm.GetState("ACC");
+				turnKeyState = starterFsm.Fsm.GetState("Turn key");
+				checkClutchState = starterFsm.Fsm.GetState("Check clutch");
+				startingEngineState = starterFsm.Fsm.GetState("Starting engine");
+				startEngineState = starterFsm.Fsm.GetState("Start engine");
+				waitState = starterFsm.Fsm.GetState("Wait");
+				startOrNotState = starterFsm.Fsm.GetState("Start or not");
+				motorRunningState = starterFsm.Fsm.GetState("Motor running");
+				accGlowplugState = starterFsm.Fsm.GetState("ACC / Glowplug");
+			}
+
+			FsmState accOnState = null;
+			FsmState testState = null;
+			FsmState accOn2State = null;
+			FsmState motorStartingState = null;
+			FsmState shutOffState = null;
+			FsmState motorOffState = null;
+			FsmState waitButtonState = null;
+			FsmState waitPlayerState = null;
+			if (dashboardFsm != null) {
+				accOnState = dashboardFsm.Fsm.GetState("ACC on");
+				testState = dashboardFsm.Fsm.GetState("Test");
+				accOn2State = dashboardFsm.Fsm.GetState("ACC on 2");
+				motorStartingState = dashboardFsm.Fsm.GetState("Motor starting");
+				shutOffState = dashboardFsm.Fsm.GetState("Shut off");
+				motorOffState = dashboardFsm.Fsm.GetState("Motor OFF");
+				waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
+				waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
+			}
 
 			FsmState truckPBrakeFlipState = null;
 			if (hasLeverParkingBrake == true) {
@@ -717,23 +782,9 @@ namespace MSCMP.Game.Objects {
 				lightsState = lightsFsm.Fsm.GetState("Test");
 			}
 
-			FsmState accOnState = null;
-			FsmState testState = null;
-			FsmState accOn2State = null;
-			FsmState motorStartingState = null;
-			FsmState shutOffState = null;
-			FsmState motorOffState = null;
-			FsmState waitButtonState = null;
-			FsmState waitPlayerState = null;
-			if (dashboardFsm != null) {
-				accOnState = dashboardFsm.Fsm.GetState("ACC on");
-				testState = dashboardFsm.Fsm.GetState("Test");
-				accOn2State = dashboardFsm.Fsm.GetState("ACC on 2");
-				motorStartingState = dashboardFsm.Fsm.GetState("Motor starting");
-				shutOffState = dashboardFsm.Fsm.GetState("Shut off");
-				motorOffState = dashboardFsm.Fsm.GetState("Motor OFF");
-				waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
-				waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
+			FsmState wipersState = null;
+			if (hasWipers == true) {
+				wipersState = wipersFsm.Fsm.GetState("Test 2");
 			}
 
 			//Engine states
@@ -861,8 +912,15 @@ namespace MSCMP.Game.Objects {
 			// Lights
 			if (lightsState != null) {
 				PlayMakerUtils.AddNewAction(lightsState, new onLightsUsedAction(this));
-				FsmEvent mpFuelTapState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpFuelTapState, "Test");
+				FsmEvent mpLightsState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Test");
+			}
+
+			// Wipers
+			if (wipersState != null) {
+				PlayMakerUtils.AddNewAction(wipersState, new onWipersUsedAction(this));
+				FsmEvent mpWipersState = wipersFsm.Fsm.GetEvent(MP_WIPERS_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(wipersFsm, mpWipersState, "Test 2");
 			}
 		}
 
@@ -957,6 +1015,7 @@ namespace MSCMP.Game.Objects {
 			// Fuel tap
 			else if (state == SwitchIDs.FuelTap) {
 				// If clicking too quickly, it takes too long to get the FsmBool and check it, so tap becomes desynced.
+
 				//if (fuelTankFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
 					fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
 				//}
@@ -966,6 +1025,13 @@ namespace MSCMP.Game.Objects {
 			else if (state == SwitchIDs.Lights) {
 				if (lightsFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
 					lightsFsm.SendEvent(MP_LIGHTS_EVENT_NAME);
+				}
+			}
+
+			// Wipers
+			else if (state == SwitchIDs.Wipers) {
+				if (wipersFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
+					wipersFsm.SendEvent(MP_WIPERS_EVENT_NAME);
 				}
 			}
 		}
@@ -978,18 +1044,18 @@ namespace MSCMP.Game.Objects {
 			if (starterFsm != null) {
 				vinfo += "  > Starter\n";
 
-				vinfo += "     Active state: " + starterFsm.Fsm.ActiveStateName + " \n";
+				vinfo += $"     Active state: {starterFsm.Fsm.ActiveStateName}\n";
 				if (starterFsm.Fsm.PreviousActiveState != null) {
-					vinfo += "     Prev Active state: " + starterFsm.Fsm.PreviousActiveState.Name + " \n";
+					vinfo += $"     Prev Active state:  {starterFsm.Fsm.PreviousActiveState.Name}\n";
 				}
-				vinfo += "     Start time: " + starterFsm.Fsm.GetFsmFloat("StartTime").Value + " \n";
+				vinfo += $"     Start time: {starterFsm.Fsm.GetFsmFloat("StartTime").Value}\n";
 			}
 
 			if (dashboardFsm != null) {
 				vinfo += "  > Dashboard:\n";
-				vinfo += "     Active state: " + dashboardFsm.Fsm.ActiveStateName + " \n";
-				vinfo += "     Prev Active state: " + dashboardFsm.Fsm.PreviousActiveState.Name + " \n";
-				vinfo += "     Lights active state: " + lightsFsm.Fsm.ActiveStateName + " \n";
+				vinfo += $"     Active state: {dashboardFsm.Fsm.ActiveStateName}\n";
+				vinfo += $"     Prev Active state: {dashboardFsm.Fsm.PreviousActiveState.Name}\n";
+				vinfo += $"     Lights active state: {lightsFsm.Fsm.ActiveStateName}\n";
 			}
 
 			GUI.Label(new Rect(10, 200, 500, 500), vinfo);
