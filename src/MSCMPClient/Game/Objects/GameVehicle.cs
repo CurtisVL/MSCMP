@@ -684,14 +684,9 @@ namespace MSCMP.Game.Objects {
 				}
 			}
 
-			if (starterFsm == null) {
-				Logger.Log($"Missing vehicle starterFSM, vehicle: {gameObject.name}!");
+			if (starterFsm != null && dashboardFsm != null) {
+				SetupVehicleHooks();
 			}
-			if (handbrakeFsm == null) {
-				Logger.Log($"Missing vehicle handbrakeFsm, vehicle: {gameObject.name}!");
-			}
-
-			SetupVehicleHooks();
 		}
 
 		public void SetRemoteSteering(bool enabled) {
@@ -730,37 +725,15 @@ namespace MSCMP.Game.Objects {
 			FsmState startOrNotState = starterFsm.Fsm.GetState("Start or not");
 			FsmState motorRunningState = starterFsm.Fsm.GetState("Motor running");
 			FsmState accGlowplugState = starterFsm.Fsm.GetState("ACC / Glowplug");
-			if (starterFsm != null) {
-				waitForStartState = starterFsm.Fsm.GetState("Wait for start");
-				accState = starterFsm.Fsm.GetState("ACC");
-				turnKeyState = starterFsm.Fsm.GetState("Turn key");
-				checkClutchState = starterFsm.Fsm.GetState("Check clutch");
-				startingEngineState = starterFsm.Fsm.GetState("Starting engine");
-				startEngineState = starterFsm.Fsm.GetState("Start engine");
-				waitState = starterFsm.Fsm.GetState("Wait");
-				startOrNotState = starterFsm.Fsm.GetState("Start or not");
-				motorRunningState = starterFsm.Fsm.GetState("Motor running");
-				accGlowplugState = starterFsm.Fsm.GetState("ACC / Glowplug");
-			}
 
-			FsmState accOnState = null;
-			FsmState testState = null;
-			FsmState accOn2State = null;
-			FsmState motorStartingState = null;
-			FsmState shutOffState = null;
-			FsmState motorOffState = null;
-			FsmState waitButtonState = null;
-			FsmState waitPlayerState = null;
-			if (dashboardFsm != null) {
-				accOnState = dashboardFsm.Fsm.GetState("ACC on");
-				testState = dashboardFsm.Fsm.GetState("Test");
-				accOn2State = dashboardFsm.Fsm.GetState("ACC on 2");
-				motorStartingState = dashboardFsm.Fsm.GetState("Motor starting");
-				shutOffState = dashboardFsm.Fsm.GetState("Shut off");
-				motorOffState = dashboardFsm.Fsm.GetState("Motor OFF");
-				waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
-				waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
-			}
+			FsmState accOnState = dashboardFsm.Fsm.GetState("ACC on");
+			FsmState testState = dashboardFsm.Fsm.GetState("Test");
+			FsmState accOn2State = dashboardFsm.Fsm.GetState("ACC on 2");
+			FsmState motorStartingState = dashboardFsm.Fsm.GetState("Motor starting");
+			FsmState shutOffState = dashboardFsm.Fsm.GetState("Shut off");
+			FsmState motorOffState = dashboardFsm.Fsm.GetState("Motor OFF");
+			FsmState waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
+			FsmState waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
 
 			FsmState truckPBrakeFlipState = null;
 			if (hasLeverParkingBrake == true) {
@@ -1015,10 +988,9 @@ namespace MSCMP.Game.Objects {
 			// Fuel tap
 			else if (state == SwitchIDs.FuelTap) {
 				// If clicking too quickly, it takes too long to get the FsmBool and check it, so tap becomes desynced.
-
-				//if (fuelTankFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
+				if (fuelTankFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
 					fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
-				//}
+				}
 			}
 
 			// Lights
