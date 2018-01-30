@@ -1,5 +1,6 @@
 ﻿using HutongGames.PlayMaker;
 using UnityEngine;
+using MSCMP.Network;
 
 namespace MSCMP.Game.Objects {
 	/// <summary>
@@ -159,6 +160,7 @@ namespace MSCMP.Game.Objects {
 		GameObject seatGameObject = null;
 		GameObject starterGameObject = null;
 
+		// General
 		PlayMakerFSM starterFsm = null;
 		PlayMakerFSM handbrakeFsm = null;
 		PlayMakerFSM fuelTankFsm = null;
@@ -167,6 +169,13 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM fuelTapFsm = null;
 		PlayMakerFSM lightsFsm = null;
 		PlayMakerFSM wipersFsm = null;
+		PlayMakerFSM interiorLightFsm = null;
+
+		// Truck specific
+		PlayMakerFSM hydraulicPumpFsm = null;
+		PlayMakerFSM diffLockFsm = null;
+		PlayMakerFSM axleLiftFsm = null;
+		PlayMakerFSM spillValveFsm = null;
 
 		bool hasRange = false;
 		bool hasLeverParkingBrake = false;
@@ -174,7 +183,13 @@ namespace MSCMP.Game.Objects {
 		bool hasFuelTap = false;
 		bool hasLights = false;
 		bool hasWipers = false;
+		bool hasInteriorLight = false;
 
+		bool isTruck = false;
+
+		bool hydraulicPumpFirstRun = true;
+		bool diffLockFirstRun = true;
+		bool axleLiftFirstRun = true;
 
 		public Transform SeatTransform {
 			get {
@@ -220,6 +235,7 @@ namespace MSCMP.Game.Objects {
 			SpillValve,
 			FuelTap,
 			Tailgate,
+			TractorHydraulics,
 		}
 
 		// Engine
@@ -238,6 +254,10 @@ namespace MSCMP.Game.Objects {
 		string MP_TRUCK_PBRAKE_FLIP_EVENT_NAME = "MPFLIPBRAKE";
 		string MP_LIGHTS_EVENT_NAME = "MPLIGHTS";
 		string MP_WIPERS_EVENT_NAME = "MPWIPERS";
+		string MP_HYDRAULIC_PUMP_EVENT_NAME = "MPHYDRAULICPUMP";
+		string MP_AXLE_LIFT_EVENT_NAME = "MPAXLELIFT";
+		string MP_INTERIOR_LIGHT_EVENT_NAME = "MPINTERIORLIGHT";
+		string MP_DIFF_LOCK_EVENT_NAME = "MPDIFFLOCK";
 
 		// Dashboard
 		string MP_ACC_ON_EVENT_NAME = "MPACCON";
@@ -252,6 +272,7 @@ namespace MSCMP.Game.Objects {
 		// Misc
 		string MP_RANGE_SWITCH_EVENT_NAME = "MPRANGE";
 		string MP_FUEL_TAP_EVENT_NAME = "MPFUELTAP";
+		string MP_SPILL_VALVE_EVENT_NAME = "MPSPILLVALVE";
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -520,8 +541,7 @@ namespace MSCMP.Game.Objects {
 					return;
 				}
 
-				// Not entirely sure why, but the parking brake bool gets inverted at some point.
-				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, vehicle.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
+				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, !vehicle.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
 				Finish();
 			}
 		}
@@ -603,6 +623,121 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// PlayMaker state action executed when interior light is used
+		/// </summary>
+		private class onInteriorLightUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onInteriorLightUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_INTERIOR_LIGHT_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.InteriorLight, !vehicle.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when hydraulic pump is used.
+		/// </summary>
+		private class onHydraulicPumpUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onHydraulicPumpUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (vehicle.hydraulicPumpFirstRun == false) {
+					if (State.Fsm.LastTransition.EventName == vehicle.MP_HYDRAULIC_PUMP_EVENT_NAME) {
+						return;
+					}
+
+					vehicle.onVehicleSwitchChanges(SwitchIDs.HydraulicPump, !vehicle.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
+				}
+				else {
+					vehicle.hydraulicPumpFirstRun = false;
+				}
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when spill valve is used
+		/// </summary>
+		private class onSpillValveUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onSpillValveUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_SPILL_VALVE_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.SpillValve, !vehicle.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when axle lift is used
+		/// </summary>
+		private class onAxleLiftUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onAxleLiftUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (vehicle.axleLiftFirstRun == false) {
+					if (State.Fsm.LastTransition.EventName == vehicle.MP_AXLE_LIFT_EVENT_NAME) {
+						return;
+					}
+
+					vehicle.onVehicleSwitchChanges(SwitchIDs.AxleLift, !vehicle.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
+				}
+				else {
+					vehicle.axleLiftFirstRun = false;
+				}
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when diff lock is used.
+		/// </summary>
+		private class onDiffLockUsedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onDiffLockUsedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (vehicle.diffLockFirstRun == false) {
+					if (State.Fsm.LastTransition.EventName == vehicle.MP_DIFF_LOCK_EVENT_NAME) {
+						return;
+					}
+
+					vehicle.onVehicleSwitchChanges(SwitchIDs.DiffLock, !vehicle.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
+				}
+				else {
+					vehicle.diffLockFirstRun = false;
+				}
+				Finish();
+			}
+		}
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go">Vehicle game object.</param>
@@ -614,12 +749,17 @@ namespace MSCMP.Game.Objects {
 
 			driveTrain = gameObject.GetComponent<Drivetrain>();
 
-			if(driveTrain != null) {
+			if (driveTrain != null) {
 				driveTrain.canStall = false;
 			}
 
 			axisCarController = gameObject.GetComponent<AxisCarController>();
 			mpCarController = gameObject.AddComponent<MPCarController>();
+
+			// Used for creating truck-specific events
+			if (go.name.StartsWith("GIFU")) {
+				isTruck = true;
+			}
 
 			PlayMakerFSM[] fsms = gameObject.GetComponentsInChildren<PlayMakerFSM>();
 
@@ -672,15 +812,45 @@ namespace MSCMP.Game.Objects {
 				}
 
 				// Lights
-				else if (fsm.gameObject.name == "Lights" && fsm.FsmName == "Use") {
+				else if (fsm.gameObject.name == "Lights" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonLights" && fsm.FsmName == "Use") {
 					lightsFsm = fsm;
 					hasLights = true;
 				}
 
 				// Wipers
-				else if (fsm.gameObject.name == "ButtonWipers" && fsm.FsmName == "Use" || fsm.gameObject.name == "Wipers" && fsm.FsmName == "Use") {
+				else if (fsm.gameObject.name == "Wipers" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonWipers" && fsm.FsmName == "Use") {
 					wipersFsm = fsm;
 					hasWipers = true;
+				}
+
+				// Interior light
+				else if (fsm.gameObject.name == "ButtonInteriorLight" && fsm.FsmName == "Use") {
+					interiorLightFsm = fsm;
+					hasInteriorLight = true;
+				}
+
+				// Truck specific FSMs
+				if (isTruck == true) {
+
+					// Hydraulic pump
+					if (fsm.gameObject.name == "Hydraulics" && fsm.FsmName == "Use") {
+						hydraulicPumpFsm = fsm;
+					}
+
+					// Diff lock
+					if (fsm.gameObject.name == "Differential lock" && fsm.FsmName == "Use") {
+						diffLockFsm = fsm;
+					}
+
+					// Axle lift
+					if (fsm.gameObject.name == "Liftaxle" && fsm.FsmName == "Use") {
+						axleLiftFsm = fsm;
+					}
+
+					// Spill valve
+					if (fsm.gameObject.name == "OpenSpill" && fsm.FsmName == "Use") {
+						spillValveFsm = fsm;
+					}
 				}
 			}
 
@@ -760,6 +930,22 @@ namespace MSCMP.Game.Objects {
 				wipersState = wipersFsm.Fsm.GetState("Test 2");
 			}
 
+			FsmState interiorLightState = null;
+			if (hasInteriorLight == true) {
+				interiorLightState = interiorLightFsm.Fsm.GetState("Switch");
+			}
+
+			FsmState hydraulicPumpState = null;
+			FsmState diffLockState = null;
+			FsmState axleLiftState = null;
+			FsmState spillValveState = null;
+			if (isTruck == true) {
+				hydraulicPumpState = hydraulicPumpFsm.Fsm.GetState("Test");
+				diffLockState = diffLockFsm.Fsm.GetState("Test");
+				axleLiftState = axleLiftFsm.Fsm.GetState("Test");
+				spillValveState = spillValveFsm.Fsm.GetState("Switch");
+			}
+
 			//Engine states
 			if (waitForStartState != null) {
 				PlayMakerUtils.AddNewAction(waitForStartState, new onWaitForStartAction(this));
@@ -816,7 +1002,7 @@ namespace MSCMP.Game.Objects {
 			}
 
 			if (accGlowplugState != null) {
-				PlayMakerUtils.AddNewAction(accGlowplugState, new onMotorRunningAction(this));
+				PlayMakerUtils.AddNewAction(accGlowplugState, new onAccGlowplugAction(this));
 				FsmEvent mpAccGlowplugState = starterFsm.Fsm.GetEvent(MP_GLOWPLUG_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpAccGlowplugState, "ACC / Glowplug");
 			}
@@ -894,6 +1080,41 @@ namespace MSCMP.Game.Objects {
 				PlayMakerUtils.AddNewAction(wipersState, new onWipersUsedAction(this));
 				FsmEvent mpWipersState = wipersFsm.Fsm.GetEvent(MP_WIPERS_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(wipersFsm, mpWipersState, "Test 2");
+			}
+
+			// Interior light
+			if (interiorLightState != null) {
+				PlayMakerUtils.AddNewAction(interiorLightState, new onInteriorLightUsedAction(this));
+				FsmEvent mpInteriorLightState = interiorLightFsm.Fsm.GetEvent(MP_INTERIOR_LIGHT_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(interiorLightFsm, mpInteriorLightState, "Switch");
+			}
+
+			// Hydraulic pump
+			if (hydraulicPumpState != null) {
+				PlayMakerUtils.AddNewAction(hydraulicPumpState, new onHydraulicPumpUsedAction(this));
+				FsmEvent mpHydraulicPumpState = hydraulicPumpFsm.Fsm.GetEvent(MP_HYDRAULIC_PUMP_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(hydraulicPumpFsm, mpHydraulicPumpState, "Test");
+			}
+
+			// Spill valve
+			if (spillValveState != null) {
+				PlayMakerUtils.AddNewAction(spillValveState, new onSpillValveUsedAction(this));
+				FsmEvent mpSpillValveState = spillValveFsm.Fsm.GetEvent(MP_SPILL_VALVE_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(spillValveFsm, mpSpillValveState, "Switch");
+			}
+
+			// Axle lift
+			if (axleLiftState != null) {
+				PlayMakerUtils.AddNewAction(axleLiftState, new onAxleLiftUsedAction(this));
+				FsmEvent mpAxleLiftState = axleLiftFsm.Fsm.GetEvent(MP_AXLE_LIFT_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(axleLiftFsm, mpAxleLiftState, "Test");
+			}
+
+			// Diff lock
+			if (diffLockState != null) {
+				PlayMakerUtils.AddNewAction(diffLockState, new onDiffLockUsedAction(this));
+				FsmEvent mpDiffLockState = diffLockFsm.Fsm.GetEvent(MP_DIFF_LOCK_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(diffLockFsm, mpDiffLockState, "Test");
 			}
 		}
 
@@ -979,18 +1200,14 @@ namespace MSCMP.Game.Objects {
 
 			// Truck parking brake
 			if (state == SwitchIDs.HandbrakeLever) {
-				// Not sure why, but the parking brake value on the host is inverted compared to the remote.
-				if (handbrakeFsm.Fsm.GetFsmBool("Brake").Value == newValue) {
+				if (handbrakeFsm.Fsm.GetFsmBool("Brake").Value != newValue) {
 					handbrakeFsm.SendEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
 				}
 			}
 
 			// Fuel tap
 			else if (state == SwitchIDs.FuelTap) {
-				// If clicking too quickly, it takes too long to get the FsmBool and check it, so tap becomes desynced.
-				if (fuelTankFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
-					fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
-				}
+				fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
 			}
 
 			// Lights
@@ -1004,6 +1221,41 @@ namespace MSCMP.Game.Objects {
 			else if (state == SwitchIDs.Wipers) {
 				if (wipersFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
 					wipersFsm.SendEvent(MP_WIPERS_EVENT_NAME);
+				}
+			}
+
+			// Interior light
+			else if (state == SwitchIDs.InteriorLight) {
+				if (interiorLightFsm.Fsm.GetFsmBool("On").Value != newValue) {
+					interiorLightFsm.SendEvent(MP_INTERIOR_LIGHT_EVENT_NAME);
+				}
+			}
+
+			// Hydraulic pump
+			else if (state == SwitchIDs.HydraulicPump) {
+				if (hydraulicPumpFsm.Fsm.GetFsmBool("On").Value != newValue) {
+					hydraulicPumpFsm.SendEvent(MP_HYDRAULIC_PUMP_EVENT_NAME);
+				}
+			}
+
+			// Spill valve
+			else if (state == SwitchIDs.SpillValve) {
+				if (spillValveFsm.Fsm.GetFsmBool("Open").Value != newValue) {
+					spillValveFsm.SendEvent(MP_SPILL_VALVE_EVENT_NAME);
+				}
+			}
+
+			// Axle lift
+			else if (state == SwitchIDs.AxleLift) {
+				if (axleLiftFsm.Fsm.GetFsmBool("Up").Value != newValue) {
+					axleLiftFsm.SendEvent(MP_AXLE_LIFT_EVENT_NAME);
+				}
+			}
+
+			// Diff lock
+			else if (state == SwitchIDs.DiffLock) {
+				if (diffLockFsm.Fsm.GetFsmBool("Lock").Value != newValue) {
+					diffLockFsm.SendEvent(MP_DIFF_LOCK_EVENT_NAME);
 				}
 			}
 		}
