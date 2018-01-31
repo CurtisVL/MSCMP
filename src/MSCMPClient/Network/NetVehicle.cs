@@ -79,7 +79,6 @@ namespace MSCMP.Network {
 		/// </summary>
 		int lastGear = 0;
 		bool lastRange = false;
-		float lastHandbrake = 0;
 
 		/// <summary>
 		/// Constructor.
@@ -139,14 +138,14 @@ namespace MSCMP.Network {
 				GameObject.Brake = message.brake;
 				GameObject.ClutchInput = message.clutch;
 				GameObject.Fuel = message.fuel;
-				if (message.HasHandbrake) {
-					GameObject.HandbrakeInput = message.Handbrake;
-				}
 				if (message.HasGear) {
 					GameObject.Gear = message.Gear;
 				}
 				if (message.HasRange) {
 					GameObject.Range = message.Range;
+				}
+				if (message.HasHydraulic) {
+					GameObject.FrontHydraulic = message.Hydraulic;
 				}
 			}
 		}
@@ -227,17 +226,16 @@ namespace MSCMP.Network {
 			message.fuel = GameObject.Fuel;
 
 			//Only send following messages when they have changed
-			if (GameObject.HandbrakeInput != lastHandbrake) {
-				lastHandbrake = GameObject.HandbrakeInput;
-				message.Handbrake = GameObject.HandbrakeInput;
-			}
 			if (GameObject.Gear != lastGear) {
 				lastGear = GameObject.Gear;
 				message.Gear = GameObject.Gear;
 			}
-			if (GameObject.Range != lastRange) {
+			if (GameObject.hasRange == true && GameObject.Range != lastRange) {
 				lastRange = GameObject.Range;
 				message.Range = GameObject.Range;
+			}
+			if (GameObject.isTractor == true) {
+				message.Hydraulic = GameObject.FrontHydraulic;
 			}
 			return true;
 		}

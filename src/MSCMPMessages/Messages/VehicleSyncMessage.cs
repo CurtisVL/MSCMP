@@ -17,14 +17,13 @@ namespace MSCMPMessages.Messages {
 		float clutch;
 		float fuel;
 
-		// Remove at a later time, should be added to VehicleSwitchMessage
-		[Optional]
-		float handbrake;
-
 		[Optional]
 		int gear;
 
 		[Optional]
 		bool range;
+
+		[Optional]
+		float hydraulic;
 	}
 }

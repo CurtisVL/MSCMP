@@ -1,6 +1,5 @@
 ﻿using HutongGames.PlayMaker;
 using UnityEngine;
-using MSCMP.Network;
 
 namespace MSCMP.Game.Objects {
 	/// <summary>
@@ -78,38 +77,22 @@ namespace MSCMP.Game.Objects {
 
 		public float Throttle {
 			get {
-				return dynamics.carController.throttle;
+				return dynamics.carController.throttleInput;
 			}
 			set {
 				mpCarController.remoteThrottleInput = value;
 			}
 		}
+
 		public float Brake {
 			get {
-				return dynamics.carController.brake;
+				return dynamics.carController.brakeInput;
 			}
 			set {
 				mpCarController.remoteBrakeInput = value;
 			}
 		}
-		public float HandbrakeInput {
-			get {
-				// Van, Tractor, Ruscko
-				if (hasPushParkingBrake == true) {
-					return handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value;
-				}
-				// Truck, Jonnez
-				else {
-					return 0;
-				}
-			}
-			set {
-				// Van, Tractor, Rucsko
-				if (hasPushParkingBrake == true) {
-					handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value = value;
-				}
-			}
-		}
+
 		public float ClutchInput {
 			get {
 				return driveTrain.clutch.GetClutchPosition();
@@ -118,6 +101,7 @@ namespace MSCMP.Game.Objects {
 				driveTrain.clutch.SetClutchPosition(value);
 			}
 		}
+
 		public bool StartEngineInput {
 			get {
 				return dynamics.carController.startEngineInput;
@@ -138,7 +122,7 @@ namespace MSCMP.Game.Objects {
 
 		public bool Range {
 			get {
-				return true;
+				return rangeFsm.Fsm.GetFsmBool("Range").Value;
 			}
 			set {
 				if (hasRange == true) {
@@ -156,6 +140,15 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
+		public float FrontHydraulic {
+			get {
+				return frontHydraulicFsm.Fsm.GetFsmFloat("LeverPos").Value;
+			}
+			set {
+				frontHydraulicFsm.Fsm.GetFsmFloat("LeverPos").Value = value;
+			}
+		}
+
 
 		GameObject seatGameObject = null;
 		GameObject starterGameObject = null;
@@ -165,11 +158,13 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM handbrakeFsm = null;
 		PlayMakerFSM fuelTankFsm = null;
 		PlayMakerFSM rangeFsm = null;
+		PlayMakerFSM gearIndicatorFsm = null;
 		PlayMakerFSM dashboardFsm = null;
 		PlayMakerFSM fuelTapFsm = null;
 		PlayMakerFSM lightsFsm = null;
 		PlayMakerFSM wipersFsm = null;
 		PlayMakerFSM interiorLightFsm = null;
+		PlayMakerFSM frontHydraulicFsm = null;
 
 		// Truck specific
 		PlayMakerFSM hydraulicPumpFsm = null;
@@ -177,7 +172,7 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM axleLiftFsm = null;
 		PlayMakerFSM spillValveFsm = null;
 
-		bool hasRange = false;
+		public bool hasRange = false;
 		bool hasLeverParkingBrake = false;
 		bool hasPushParkingBrake = false;
 		bool hasFuelTap = false;
@@ -186,6 +181,7 @@ namespace MSCMP.Game.Objects {
 		bool hasInteriorLight = false;
 
 		bool isTruck = false;
+		public bool isTractor = false;
 
 		bool hydraulicPumpFirstRun = true;
 		bool diffLockFirstRun = true;
@@ -251,8 +247,11 @@ namespace MSCMP.Game.Objects {
 		string MP_GLOWPLUG_EVENT_NAME = "MPGLOWPLUG";
 
 		// Interior
+		string MP_PBRAKE_INCREASE_EVENT_NAME = "MPPBRAKEINCREASE";
+		string MP_PBRAKE_DECREASE_EVENT_NAME = "MPPBRAKEDECREASE";
 		string MP_TRUCK_PBRAKE_FLIP_EVENT_NAME = "MPFLIPBRAKE";
 		string MP_LIGHTS_EVENT_NAME = "MPLIGHTS";
+		string MP_LIGHTS_SWITCH_EVENT_NAME = "MPLIGHTSSWITCH";
 		string MP_WIPERS_EVENT_NAME = "MPWIPERS";
 		string MP_HYDRAULIC_PUMP_EVENT_NAME = "MPHYDRAULICPUMP";
 		string MP_AXLE_LIFT_EVENT_NAME = "MPAXLELIFT";
@@ -274,6 +273,7 @@ namespace MSCMP.Game.Objects {
 		string MP_FUEL_TAP_EVENT_NAME = "MPFUELTAP";
 		string MP_SPILL_VALVE_EVENT_NAME = "MPSPILLVALVE";
 
+
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
 		/// </summary>
@@ -290,6 +290,9 @@ namespace MSCMP.Game.Objects {
 						if (vehicle.onEnter != null) {
 							vehicle.onEnter();
 							vehicle.isDriver = true;
+							if (vehicle.driveTrain != null) {
+								vehicle.driveTrain.canStall = false;
+							}
 						}
 					}
 				});
@@ -313,6 +316,9 @@ namespace MSCMP.Game.Objects {
 						if (vehicle.onLeave != null) {
 							vehicle.onLeave();
 							vehicle.isDriver = false;
+							if (vehicle.driveTrain != null) {
+								vehicle.driveTrain.canStall = false;
+							}
 						}
 					}
 				});
@@ -527,6 +533,48 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// PlayMaker state action executed when parking brake is pulled.
+		/// </summary>
+		private class onParkingBrakeIncreaseAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onParkingBrakeIncreaseAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			// Called on exit so latest value is sent
+			public override void OnExit() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_PBRAKE_INCREASE_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, vehicle.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+				Finish();
+			}
+		}
+
+		/// <summary>
+		/// PlayMaker state action executed when parking brake is pushed.
+		/// </summary>
+		private class onParkingBrakeDecreaseAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onParkingBrakeDecreaseAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			// Called on exit so latest value is sent
+			public override void OnExit() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_PBRAKE_DECREASE_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, vehicle.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+				Finish();
+			}
+		}
+
+		/// <summary>
 		/// PlayMaker state action executed when truck parking brake is used.
 		/// </summary>
 		private class onTruckPBrakeFlipAction : FsmStateAction {
@@ -561,13 +609,13 @@ namespace MSCMP.Game.Objects {
 					return;
 				}
 
-				vehicle.onVehicleSwitchChanges(SwitchIDs.FuelTap, vehicle.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
+				vehicle.onVehicleSwitchChanges(SwitchIDs.FuelTap, !vehicle.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
 				Finish();
 			}
 		}
 
 		/// <summary>
-		/// PlayMaker state action executed when lights switch in vehicles is used.
+		/// PlayMaker state action executed when lights in vehicles are used.
 		/// </summary>
 		private class onLightsUsedAction : FsmStateAction {
 			private GameVehicle vehicle;
@@ -577,19 +625,11 @@ namespace MSCMP.Game.Objects {
 			}
 
 			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_EVENT_NAME) {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_EVENT_NAME || State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_SWITCH_EVENT_NAME) {
 					return;
 				}
 
-				int selection = vehicle.lightsFsm.Fsm.GetFsmInt("Selection").Value;
-				if (selection == 2) {
-					selection = 0;
-				}
-				else {
-					selection++;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.Lights, false, selection);
+				vehicle.onVehicleSwitchChanges(SwitchIDs.Lights, false, vehicle.lightsFsm.Fsm.GetFsmInt("Selection").Value);
 				Finish();
 			}
 		}
@@ -812,7 +852,7 @@ namespace MSCMP.Game.Objects {
 				}
 
 				// Lights
-				else if (fsm.gameObject.name == "Lights" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonLights" && fsm.FsmName == "Use") {
+				else if (fsm.gameObject.name == "Lights" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonLights" && fsm.FsmName == "Use" || fsm.gameObject.name == "knob" && fsm.FsmName == "Use") {
 					lightsFsm = fsm;
 					hasLights = true;
 				}
@@ -827,6 +867,17 @@ namespace MSCMP.Game.Objects {
 				else if (fsm.gameObject.name == "ButtonInteriorLight" && fsm.FsmName == "Use") {
 					interiorLightFsm = fsm;
 					hasInteriorLight = true;
+				}
+
+				// Gear indicator - Used to get Range position
+				else if (fsm.FsmName == "GearIndicator") {
+					gearIndicatorFsm = fsm;
+				}
+
+				// Tractor front hydraulic
+				else if (fsm.gameObject.name == "FrontHyd" && fsm.FsmName == "Use") {
+					frontHydraulicFsm = fsm;
+					isTractor = true;
 				}
 
 				// Truck specific FSMs
@@ -905,6 +956,13 @@ namespace MSCMP.Game.Objects {
 			FsmState waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
 			FsmState waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
 
+			FsmState pBrakeIncreaseState = null;
+			FsmState pBrakeDecreaseState = null;
+			if (hasPushParkingBrake == true) {
+				pBrakeIncreaseState = handbrakeFsm.Fsm.GetState("INCREASE");
+				pBrakeDecreaseState = handbrakeFsm.Fsm.GetState("DECREASE");
+			}
+
 			FsmState truckPBrakeFlipState = null;
 			if (hasLeverParkingBrake == true) {
 				truckPBrakeFlipState = handbrakeFsm.Fsm.GetState("Flip");
@@ -912,7 +970,12 @@ namespace MSCMP.Game.Objects {
 
 			FsmState rangeSwitchState = null;
 			if (hasRange == true) {
-				rangeSwitchState = rangeFsm.Fsm.GetState("Switch");
+				if (isTruck == true) {
+					rangeSwitchState = rangeFsm.Fsm.GetState("Switch");
+				}
+				else if (isTractor == true) {
+					rangeSwitchState = rangeFsm.Fsm.GetState("Flip");
+				}
 			}
 
 			FsmState fuelTapState = null;
@@ -922,7 +985,7 @@ namespace MSCMP.Game.Objects {
 
 			FsmState lightsState = null;
 			if (hasLights == true) {
-				lightsState = lightsFsm.Fsm.GetState("Test");
+				lightsState = lightsFsm.Fsm.GetState("Sound");
 			}
 
 			FsmState wipersState = null;
@@ -1048,6 +1111,19 @@ namespace MSCMP.Game.Objects {
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpWaitPlayerState, "Wait player");
 			}
 
+			// Parking brake
+			if (pBrakeDecreaseState != null) {
+				PlayMakerUtils.AddNewAction(pBrakeDecreaseState, new onParkingBrakeDecreaseAction(this));
+				FsmEvent mpParkingBrakeDecrease = handbrakeFsm.Fsm.GetEvent(MP_PBRAKE_DECREASE_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpParkingBrakeDecrease, "DECREASE");
+			}
+
+			if (pBrakeIncreaseState != null) {
+				PlayMakerUtils.AddNewAction(pBrakeIncreaseState, new onParkingBrakeIncreaseAction(this));
+				FsmEvent mpParkingBrakeIncrease = handbrakeFsm.Fsm.GetEvent(MP_PBRAKE_INCREASE_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpParkingBrakeIncrease, "INCREASE");
+			}
+
 			// Truck parking brake
 			if (truckPBrakeFlipState != null) {
 				PlayMakerUtils.AddNewAction(truckPBrakeFlipState, new onTruckPBrakeFlipAction(this));
@@ -1058,7 +1134,12 @@ namespace MSCMP.Game.Objects {
 			// Range selector
 			if (rangeSwitchState != null) {
 				FsmEvent mpRangeSwitchState = rangeFsm.Fsm.GetEvent(MP_RANGE_SWITCH_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(rangeFsm, mpRangeSwitchState, "Switch");
+				if (isTractor == true) {
+					PlayMakerUtils.AddNewGlobalTransition(rangeFsm, mpRangeSwitchState, "Flip");
+				}
+				else if (isTruck == true) {
+					PlayMakerUtils.AddNewGlobalTransition(rangeFsm, mpRangeSwitchState, "Switch");
+				}
 			}
 
 			// Fuel tap
@@ -1072,7 +1153,12 @@ namespace MSCMP.Game.Objects {
 			if (lightsState != null) {
 				PlayMakerUtils.AddNewAction(lightsState, new onLightsUsedAction(this));
 				FsmEvent mpLightsState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Test");
+				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound");
+			}
+
+			if (lightsState != null) {
+				FsmEvent mpLightsSwitchState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsSwitchState, "Test");
 			}
 
 			// Wipers
@@ -1128,13 +1214,10 @@ namespace MSCMP.Game.Objects {
 		/// Set vehicle state
 		/// </summary>
 		public void SetEngineState(EngineStates state, DashboardStates dashstate, float startTime) {
-			Logger.Debug($"Remote dashboard state {dashstate.ToString()} set on vehicle: {VehicleTransform.gameObject.name}");
 			//Start time
 			if (startTime != -1) {
 				starterFsm.Fsm.GetFsmFloat("StartTime").Value = startTime;
-				Logger.Debug($"Start time set to: {startTime}");
 			}
-			Logger.Debug($"Engine state set to: {state.ToString()}");
 
 			// Engine states
 			if (state == EngineStates.WaitForStart) {
@@ -1198,8 +1281,13 @@ namespace MSCMP.Game.Objects {
 		public void SetVehicleSwitch(SwitchIDs state, bool newValue, float newValueFloat) {
 			Logger.Debug($"Remote vehicle switch {state.ToString()} set on vehicle: {VehicleTransform.gameObject.name} (New value: {newValue} New value float: {newValueFloat})");
 
+			// Parking brake
+			if (state == SwitchIDs.HandbrakePull) {
+				handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value = newValueFloat;
+			}
+
 			// Truck parking brake
-			if (state == SwitchIDs.HandbrakeLever) {
+			else if (state == SwitchIDs.HandbrakeLever) {
 				if (handbrakeFsm.Fsm.GetFsmBool("Brake").Value != newValue) {
 					handbrakeFsm.SendEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
 				}
@@ -1207,13 +1295,15 @@ namespace MSCMP.Game.Objects {
 
 			// Fuel tap
 			else if (state == SwitchIDs.FuelTap) {
-				fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
+				if (fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
+					fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
+				}
 			}
 
 			// Lights
 			else if (state == SwitchIDs.Lights) {
 				if (lightsFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
-					lightsFsm.SendEvent(MP_LIGHTS_EVENT_NAME);
+					lightsFsm.SendEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
 				}
 			}
 
@@ -1279,7 +1369,12 @@ namespace MSCMP.Game.Objects {
 				vinfo += "  > Dashboard:\n";
 				vinfo += $"     Active state: {dashboardFsm.Fsm.ActiveStateName}\n";
 				vinfo += $"     Prev Active state: {dashboardFsm.Fsm.PreviousActiveState.Name}\n";
-				vinfo += $"     Lights active state: {lightsFsm.Fsm.ActiveStateName}\n";
+			}
+
+			if (lightsFsm != null) {
+				vinfo += "  > Lights:\n";
+				vinfo += $"     Active state: {lightsFsm.Fsm.ActiveStateName}\n";
+				vinfo += $"     Prev Active state: {lightsFsm.Fsm.PreviousActiveState.Name}\n";
 			}
 
 			GUI.Label(new Rect(10, 200, 500, 500), vinfo);
