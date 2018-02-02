@@ -50,22 +50,27 @@ namespace MSCMP.Game {
 
 			foreach (var go in gos) {
 
-				if (!go.name.StartsWith("Door")) {
+				if (!go.name.StartsWith("Door") && !go.name.StartsWith("Handle")) {
 					continue;
 				}
 
-
-				if (go.transform.childCount == 0) {
+				if (go.name == "Handle" && go.transform.parent.gameObject.name != "Door") {
 					continue;
 				}
 
-				Transform pivot = go.transform.GetChild(0);
-				if (pivot == null || pivot.name != "Pivot") {
-					continue;
+				PlayMakerFSM playMakerFsm = null;
+				if (go.name.StartsWith("Door")) {
+					playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
+				}
+				else {
+					playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
 				}
 
-				var playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
 				if (playMakerFsm == null) {
+					continue;
+				}
+
+				if (playMakerFsm.Fsm.GetFsmGameObject("Pivot") == null) {
 					continue;
 				}
 

@@ -85,6 +85,7 @@
     <Compile Include="Game\GamePickupableDatabase.cs" />
     <Compile Include="Game\GameWorld.cs" />
     <Compile Include="Game\Hooks\PlayMakerActionHooks.cs" />
+    <Compile Include="Game\Objects\PassengerSeat.cs" />
     <Compile Include="Game\Objects\BeerCase.cs" />
     <Compile Include="Game\LightSwitchManager.cs" />
     <Compile Include="Game\Objects\GameDoor.cs" />

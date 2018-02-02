@@ -122,7 +122,7 @@ namespace MSCMP.Game.Objects {
 
 		public bool Range {
 			get {
-				return rangeFsm.Fsm.GetFsmBool("Range").Value;
+				return gearIndicatorFsm.Fsm.GetFsmBool("Range").Value;
 			}
 			set {
 				if (hasRange == true) {
@@ -809,6 +809,28 @@ namespace MSCMP.Game.Objects {
 
 					// Temp - use player trigger..
 					seatGameObject = fsm.gameObject;
+
+					// Passenger seat testing
+					if (seatGameObject.name == "DriveTrigger") {
+						bool isEnabled = false; 
+						// Everything related to passenger seats are fully experimental.
+						// They will hopefully call events from within the drivers seat FSM.
+						// This could be used to fix the camera, and stop player movements, etc.
+						// This 'isEnabled' simply allows me to turn it off when testing other features.
+						if (isEnabled == true) {
+							Vector3 driverSeatPosition = seatGameObject.transform.position;
+							GameObject passengerSeat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+							passengerSeat.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+							passengerSeat.transform.SetParent(go.transform);
+							passengerSeat.transform.GetComponent<BoxCollider>().isTrigger = true;
+							passengerSeat.transform.position = new Vector3(driverSeatPosition.x + 0.7f, driverSeatPosition.y, driverSeatPosition.z);
+
+							PassengerSeat pSeatScript = passengerSeat.AddComponent(typeof(PassengerSeat)) as PassengerSeat;
+							pSeatScript.VehicleType = go.name;
+							pSeatScript.PrintDebug();
+						}
+					}
 				}
 
 				// Starter
@@ -985,7 +1007,12 @@ namespace MSCMP.Game.Objects {
 
 			FsmState lightsState = null;
 			if (hasLights == true) {
-				lightsState = lightsFsm.Fsm.GetState("Sound");
+				if (isTruck == true) {
+					lightsState = lightsFsm.Fsm.GetState("Sound 2");
+				}
+				else {
+					lightsState = lightsFsm.Fsm.GetState("Sound");
+				}
 			}
 
 			FsmState wipersState = null;
@@ -1153,7 +1180,12 @@ namespace MSCMP.Game.Objects {
 			if (lightsState != null) {
 				PlayMakerUtils.AddNewAction(lightsState, new onLightsUsedAction(this));
 				FsmEvent mpLightsState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound");
+				if (isTruck == true) {
+					PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound 2");
+				}
+				else {
+					PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound");
+				}
 			}
 
 			if (lightsState != null) {
