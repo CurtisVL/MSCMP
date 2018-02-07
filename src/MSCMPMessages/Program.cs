@@ -29,8 +29,12 @@
 			generator.GenerateMessage(typeof(Messages.WorldPeriodicalUpdateMessage));
 			generator.GenerateMessage(typeof(Messages.RemoveBottleMessage));
 			generator.GenerateMessage(typeof(Messages.LightSwitchMessage));
+			generator.GenerateMessage(typeof(Messages.LightSwithInitMessage));
 			generator.GenerateMessage(typeof(Messages.VehicleStateMessage));
 			generator.GenerateMessage(typeof(Messages.VehicleSwitchMessage));
+			generator.GenerateMessage(typeof(Messages.LightSwithInitMessage));
+			generator.GenerateMessage(typeof(Messages.WeatherUpdateMessage));
+			generator.GenerateEnum(typeof(Messages.WeatherUpdateMessage.WeatherType));
 			generator.EndGeneration();
 		}
 	}

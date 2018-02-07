@@ -197,6 +197,7 @@ namespace MSCMP.Network {
 				// Game reports 'next hour' - we want to have transition so correct it.
 				Game.GameWorld.Instance.WorldTime = (float) msg.sunClock - 2.0f;
 				Game.GameWorld.Instance.WorldDay = (int) msg.worldDay;
+				Game.GameWeatherManager.Instance.SetWeather(msg.currentWeather);
 			});
 		}
 
@@ -237,6 +238,7 @@ namespace MSCMP.Network {
 				var message = new Messages.WorldPeriodicalUpdateMessage();
 				message.sunClock = (Byte)Game.GameWorld.Instance.WorldTime;
 				message.worldDay = (Byte)Game.GameWorld.Instance.WorldDay;
+				Game.GameWeatherManager.Instance.WriteWeather(message.currentWeather);
 				netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 
 				timeToSendPeriodicalUpdate = PERIODICAL_UPDATE_INTERVAL;
@@ -317,6 +319,10 @@ namespace MSCMP.Network {
 			msg.dayTime = gameWorld.WorldTime;
 			msg.day = gameWorld.WorldDay;
 
+			// Write mailbox name
+
+			msg.mailboxName = gameWorld.PlayerLastName;
+
 			// Write doors
 
 			List<Game.Objects.GameDoor> doors = Game.GameDoorsManager.Instance.doors;
@@ -344,6 +350,10 @@ namespace MSCMP.Network {
 				lightMsg.toggle = light.SwitchStatus;
 				msg.lights[i] = lightMsg;
 			}
+
+			// Write weather
+
+			Game.GameWeatherManager.Instance.WriteWeather(msg.currentWeather);
 
 			// Write vehicles.
 
@@ -406,6 +416,10 @@ namespace MSCMP.Network {
 			gameWorld.WorldTime = msg.dayTime;
 			gameWorld.WorldDay = msg.day;
 
+			// Read mailbox name
+
+			gameWorld.PlayerLastName = msg.mailboxName;
+
 			// Doors.
 
 			foreach (Messages.DoorsInitMessage door in msg.doors) {
@@ -427,6 +441,10 @@ namespace MSCMP.Network {
 					lights.TurnOn(light.toggle);
 				}
 			}
+
+			// Weather.
+
+			Game.GameWeatherManager.Instance.SetWeather(msg.currentWeather);
 
 			// Vehicles.
 

@@ -28,5 +28,6 @@ namespace MSCMPMessages.Messages {
 		LightSwitch,
 		VehicleState,
 		VehicleSwitch,
+		WeatherSync,
 	}
 }
