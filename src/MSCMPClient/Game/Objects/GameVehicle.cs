@@ -37,11 +37,11 @@ namespace MSCMP.Game.Objects {
 		AxisCarController axisCarController = null;
 		MPCarController mpCarController = null;
 
-		public delegate void OnEnter();
+		public delegate void OnEnter(bool passenger);
 		public delegate void OnLeave();
 		public delegate void OnEngineStateChanged(EngineStates state, DashboardStates dashstate, float startTime);
 		public delegate void OnVehicleSwitchChanged(SwitchIDs id, bool newValue, float newValueFloat);
-		public OnEnter onEnter = () => {
+		public OnEnter onEnter = (bool passenger) => {
 			Logger.Log("On Enter");
 		};
 		public OnLeave onLeave = () => {
@@ -151,6 +151,7 @@ namespace MSCMP.Game.Objects {
 
 
 		GameObject seatGameObject = null;
+		GameObject pSeatGameObject = null;
 		GameObject starterGameObject = null;
 
 		// General
@@ -190,6 +191,12 @@ namespace MSCMP.Game.Objects {
 		public Transform SeatTransform {
 			get {
 				return seatGameObject.transform;
+			}
+		}
+
+		public Transform PassengerSeatTransform {
+			get {
+				return pSeatGameObject.transform;
 			}
 		}
 
@@ -288,8 +295,9 @@ namespace MSCMP.Game.Objects {
 				Utils.CallSafe("OnEnterHandler", () => {
 					if (Fsm.PreviousActiveState != null && Fsm.PreviousActiveState.Name == "Death") {
 						if (vehicle.onEnter != null) {
-							vehicle.onEnter();
+							vehicle.onEnter(false);
 							vehicle.isDriver = true;
+
 							if (vehicle.driveTrain != null) {
 								vehicle.driveTrain.canStall = false;
 							}
@@ -316,6 +324,7 @@ namespace MSCMP.Game.Objects {
 						if (vehicle.onLeave != null) {
 							vehicle.onLeave();
 							vehicle.isDriver = false;
+
 							if (vehicle.driveTrain != null) {
 								vehicle.driveTrain.canStall = false;
 							}
@@ -812,24 +821,26 @@ namespace MSCMP.Game.Objects {
 
 					// Passenger seat testing
 					if (seatGameObject.name == "DriveTrigger") {
-						bool isEnabled = false; 
-						// Everything related to passenger seats are fully experimental.
-						// They will hopefully call events from within the drivers seat FSM.
-						// This could be used to fix the camera, and stop player movements, etc.
-						// This 'isEnabled' simply allows me to turn it off when testing other features.
-						if (isEnabled == true) {
-							Vector3 driverSeatPosition = seatGameObject.transform.position;
-							GameObject passengerSeat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+						Vector3 driverSeatPosition = seatGameObject.transform.position;
+						GameObject passengerSeat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+						pSeatGameObject = passengerSeat;
 
-							passengerSeat.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-							passengerSeat.transform.SetParent(go.transform);
-							passengerSeat.transform.GetComponent<BoxCollider>().isTrigger = true;
-							passengerSeat.transform.position = new Vector3(driverSeatPosition.x + 0.7f, driverSeatPosition.y, driverSeatPosition.z);
+						passengerSeat.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+						passengerSeat.transform.SetParent(gameObject.transform);
+						passengerSeat.transform.GetComponent<BoxCollider>().isTrigger = true;
+						passengerSeat.transform.position = new Vector3(driverSeatPosition.x + 0.7f, driverSeatPosition.y, driverSeatPosition.z);
 
-							PassengerSeat pSeatScript = passengerSeat.AddComponent(typeof(PassengerSeat)) as PassengerSeat;
-							pSeatScript.VehicleType = go.name;
-							pSeatScript.PrintDebug();
-						}
+						PassengerSeat pSeatScript = passengerSeat.AddComponent(typeof(PassengerSeat)) as PassengerSeat;
+						pSeatScript.VehicleType = gameObject.name;
+
+						pSeatScript.onEnter = () => {
+							this.onEnter(true);
+							Logger.Log("Entered passenger seat");
+						};
+						pSeatScript.onLeave = () => {
+							this.onLeave();
+							Logger.Log("Exited passenger seat");
+						};
 					}
 				}
 

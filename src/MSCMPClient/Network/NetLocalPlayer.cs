@@ -175,7 +175,7 @@ namespace MSCMP.Network {
 
 			Messages.VehicleEnterMessage msg = new Messages.VehicleEnterMessage();
 			msg.vehicleId = vehicle.NetId;
-			msg.passenger = false;
+			msg.passenger = passenger;
 			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 

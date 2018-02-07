@@ -356,8 +356,14 @@ namespace MSCMP.Network {
 
 				if (characterGameObject != null) {
 					Game.Objects.GameVehicle vehicleGameObject = currentVehicle.GameObject;
-					Transform seatTransform = vehicleGameObject.SeatTransform;
-					Teleport(seatTransform.position, seatTransform.rotation);
+					if (state == State.DrivingVehicle) {
+						Transform seatTransform = vehicleGameObject.SeatTransform;
+						Teleport(seatTransform.position, seatTransform.rotation);
+					}
+					else if (state == State.Passenger) {
+						Transform passangerSeatTransform = vehicleGameObject.PassengerSeatTransform;
+						Teleport(passangerSeatTransform.position, passangerSeatTransform.rotation);
+					}
 
 					characterGameObject.transform.SetParent(vehicleGameObject.VehicleTransform, false);
 				}

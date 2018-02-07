@@ -179,8 +179,8 @@ namespace MSCMP.Network {
 		/// Callback called when game world gets loaded.
 		/// </summary>
 		public void OnGameWorldLoad() {
-			GameObject.onEnter = () => {
-				netManager.GetLocalPlayer().EnterVehicle(this, false);
+			GameObject.onEnter = (bool passenger) => {
+				netManager.GetLocalPlayer().EnterVehicle(this, passenger);
 			};
 
 			GameObject.onLeave = () => {
