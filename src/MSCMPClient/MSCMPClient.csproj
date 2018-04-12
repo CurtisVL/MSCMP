@@ -95,6 +95,7 @@
     <Compile Include="Logger.cs" />
     <Compile Include="Network\NetMessageHandler.cs" />
     <Compile Include="Network\NetPickupable.cs" />
+    <Compile Include="Network\PlayerAnimManager.cs" />
     <Compile Include="UI\Handlers\MessageBoxHandler.cs" />
     <Compile Include="UI\MPGUI.cs" />
     <Compile Include="Math\QuaternionInterpolator.cs" />

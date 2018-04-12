@@ -43,12 +43,6 @@ namespace MSCMP.Game {
 		/// </summary>
 		public void OnWorldLoad() {
 			beercases.Clear();
-			GameObject[] gos = GameObject.FindObjectsOfType<GameObject>();
-
-			//Register all beercases in game.
-			foreach (var go in gos) {
-				//AddBeerCase(go);
-			}
 		}
 
 		/// <summary>

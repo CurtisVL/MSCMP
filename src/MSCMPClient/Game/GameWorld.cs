@@ -223,9 +223,11 @@ namespace MSCMP.Game {
 			vehicles.Clear();
 
 			// Register all vehicles.
+			GameObject hayosiko = GameObject.Find("HAYOSIKO(1500kg, 250)");
+			vehicles.Add(new GameVehicle(CreateDublicateVehicle(hayosiko)));
 
 			vehicles.Add(new GameVehicle(GameObject.Find("JONNEZ ES(Clone)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("HAYOSIKO(1500kg, 250)")));
+			vehicles.Add(new GameVehicle(hayosiko));
 			vehicles.Add(new GameVehicle(GameObject.Find("SATSUMA(557kg, 248)")));
 			vehicles.Add(new GameVehicle(GameObject.Find("RCO_RUSCKO12(270)")));
 			vehicles.Add(new GameVehicle(GameObject.Find("KEKMET(350-400psi)")));
@@ -258,6 +260,16 @@ namespace MSCMP.Game {
 			GamePickupableDatabase.PrefabDesc prefabDescriptor = gamePickupableDatabase.GetPickupablePrefab(prefabId);
 			Client.Assert(prefabDescriptor != null, $"Unable to find pickupable prefab {prefabId}");
 			return prefabDescriptor.Spawn(position, rotation);
+		}
+
+		public GameObject CreateDublicateVehicle(GameObject gameObject) {
+			Utils.GetPlaymakerScriptByName(gameObject, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = "";
+
+			Vector3 newPos = gameObject.transform.position + gameObject.transform.rotation * Vector3.forward * 4.0f;
+			GameObject newVehicle = (GameObject)GameObject.Instantiate(gameObject, newPos, gameObject.transform.rotation);
+
+			Utils.GetPlaymakerScriptByName(gameObject, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = "VanTransform";
+			return newVehicle;
 		}
 	}
 }

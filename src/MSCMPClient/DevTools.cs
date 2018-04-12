@@ -11,7 +11,6 @@ namespace MSCMP {
 	class DevTools {
 
 		bool devView = false;
-		GameObject spawnedGo = null;
 
 		public void OnGUI(GameObject localPlayer) {
 			if (!devView) {
@@ -36,6 +35,15 @@ namespace MSCMP {
 			}
 		}
 
+		public void LateUpdate(GameObject localPlayer) {
+			if (ourDebugPlayer == null || localPlayer == null) return;
+			CheckBlendedAnimationStates();
+
+			float aimLook = localPlayer.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
+			Transform spine = ourDebugPlayer.transform.FindChild("pelvis/spine_mid/shoulders/head");
+			spine.rotation *= Quaternion.Euler(0, 0, -aimLook);
+		}
+
 		public void Update() {
 			if (Input.GetKeyDown(KeyCode.F3)) {
 				devView = !devView;
@@ -52,52 +60,39 @@ namespace MSCMP {
 
 				if (Input.GetKeyDown(KeyCode.Keypad8)) {
 					characterAnimationComponent.CrossFade("Walk");
-				}//test
+				}
 
 				if (Input.GetKeyDown(KeyCode.Keypad5)) {
-					characterAnimationComponent.CrossFade("Jump");
+					if (!IsPlayingAnim("Jump")) characterAnimationComponent.CrossFade("Jump");
+					else characterAnimationComponent.Blend("Jump", 0);
 				}
 
 				if (Input.GetKeyDown(KeyCode.Keypad4)) {
-					characterAnimationComponent.CrossFade("DrunkIdle");
+					if (!IsPlayingAnim("Drunk")) characterAnimationComponent.CrossFade("Drunk");
+					else characterAnimationComponent.Blend("Drunk", 0);
 				}
 
 				if (Input.GetKeyDown(KeyCode.Keypad1)) {
-					if (useLean) PlayActionAnim("Lean", false);
+					if (IsPlayingAnim("Lean")) PlayActionAnim("Lean", false);
 					else PlayActionAnim("Lean", true);
-
-					useLean = !useLean;
 				}
 
 				if (Input.GetKeyDown(KeyCode.Keypad3)) {
-					if (useHitchhike){
-						useHitchhike = false;
-						PlayActionAnim("Hitchhike", false);
-					}
+					if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
 
-					if (useFinger) PlayActionAnim("Finger", false);
+					if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
 					else PlayActionAnim("Finger", true);
-
-					useFinger = !useFinger;
 				}
 
 				if (Input.GetKeyDown(KeyCode.Keypad2)) {
-					if (useFinger) {
-						useFinger = false;
-						PlayActionAnim("Finger", false);
-					}
+					if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
 
-					if (useHitchhike) PlayActionAnim("Hitchhike", false);
+					if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
 					else PlayActionAnim("Hitchhike", true);
-
-					useHitchhike = !useHitchhike;
 				}
 			}
 		}
 
-		bool useLean = false;
-		bool useFinger = false;
-		bool useHitchhike = false;
 		public void PlayActionAnim(string animName, bool play) {
 			if (play) {
 				characterAnimationComponent[animName].wrapMode = WrapMode.ClampForever;
@@ -107,9 +102,31 @@ namespace MSCMP {
 			}
 			else {
 				characterAnimationComponent[animName].wrapMode = WrapMode.Once;
-				characterAnimationComponent[animName].time = characterAnimationComponent[animName].length;
+				if (characterAnimationComponent[animName].time > characterAnimationComponent[animName].length) {
+					characterAnimationComponent[animName].time = characterAnimationComponent[animName].length;
+				}
 				characterAnimationComponent[animName].speed = -1;
 				characterAnimationComponent[animName].weight = 1.0f;
+			}
+		}
+
+		public bool IsPlayingAnim(string animName) {
+			if (characterAnimationComponent == null) return false;
+			if (characterAnimationComponent[animName].enabled == true) return true;
+
+			return false;
+		}
+
+		public void CheckBlendedAnimationStates() {
+			if (characterAnimationComponent["Jump"].time != 0.0f && characterAnimationComponent["Jump"].weight == 0.0f) {
+				characterAnimationComponent["Jump"].enabled = false;
+				characterAnimationComponent["Jump"].time = 0;
+			}
+
+			if (characterAnimationComponent["Drunk"].time != 0.0f && characterAnimationComponent["Drunk"].weight == 0.0f)
+			{
+				characterAnimationComponent["Drunk"].enabled = false;
+				characterAnimationComponent["Drunk"].time = 0;
 			}
 		}
 
@@ -121,11 +138,13 @@ namespace MSCMP {
 
 			characterAnimationComponent = ourCustomPlayer.GetComponent<Animation>();
 			characterAnimationComponent["Jump"].layer = 1;
-			characterAnimationComponent["Lean"].layer = 2;
+			characterAnimationComponent["Drunk"].layer = 2;
+			characterAnimationComponent["Drunk"].blendMode = AnimationBlendMode.Additive;
+			characterAnimationComponent["Lean"].layer = 3;
 			characterAnimationComponent["Lean"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Finger"].layer = 2;
+			characterAnimationComponent["Finger"].layer = 3;
 			characterAnimationComponent["Finger"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Hitchhike"].layer = 2;
+			characterAnimationComponent["Hitchhike"].layer = 3;
 			characterAnimationComponent["Hitchhike"].blendMode = AnimationBlendMode.Additive;
 
 			ourCustomPlayer.transform.position = localPlayer.transform.position + Vector3.up * 0.60f + localPlayer.transform.rotation * Vector3.forward * 1.0f;
@@ -134,7 +153,7 @@ namespace MSCMP {
 			return ourCustomPlayer;
 		}
 
-		public bool ApplyCustomTextures(GameObject gameObject) {
+		public bool ApplyCustomColorTextures(GameObject gameObject) {
 			Renderer objectRenderer = ourDebugPlayer.GetComponentInChildren<Renderer>();
 			if (objectRenderer == null) return false;
 			//Logger.Log("Total Materials: " + testRenderer.materials.Length);
@@ -157,6 +176,44 @@ namespace MSCMP {
 			return true;
 		}
 
+		public enum MaterialId {
+			Face,
+			Shirt,
+			Pants
+		}
+		private string[] MaterialNames = new string[] {
+			"MPchar_face03",
+			"MPchar_shirt06",
+			"MPchar_pants03"
+		};
+
+		/// <summary>
+		/// Convert material id to it's name.
+		/// </summary>
+		/// <param name="material">The id of the material.</param>
+		/// <returns>Name of the material.</returns>
+		public string GetCharacterMaterialName(MaterialId material) {
+			return MaterialNames[(int)material];
+		}
+
+		public bool ApplyCustomTexture(GameObject gameObject, MaterialId material, string newTexture)
+		{
+			Renderer objectRenderer = ourDebugPlayer.GetComponentInChildren<Renderer>();
+			if (objectRenderer == null) return false;
+
+			for (int i = 0; i < objectRenderer.materials.Length; i++)
+			{
+				string addon = " (Instance)";
+				string materialName = GetCharacterMaterialName(material) + addon;
+				if (materialName != objectRenderer.materials[i].name) continue;
+
+				Texture2D texture = (Texture2D)Client.LoadAsset<Texture2D>("Assets/MPPlayerModel/Textures/" + newTexture);
+				objectRenderer.materials[i].mainTexture = texture;
+				break;
+			}
+			return true;
+		}
+
 		public void UpdatePlayer(GameObject localPlayer) {
 
 			if (!devView) {
@@ -165,8 +222,14 @@ namespace MSCMP {
 
 			// Testing New Model
 			if (Input.GetKey(KeyCode.KeypadMultiply) && localPlayer) {
+				bool useNewClothes = ourDebugPlayer == null;
+
 				ourDebugPlayer = LoadCustomCharacter(localPlayer);
-				//ApplyCustomTextures(ourDebugPlayer);
+				if (useNewClothes) {
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Face, "MPchar_face02.dds");
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Shirt, "MPchar_shirt05.dds");
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Pants, "MPchar_pants02.dds");
+				}
 			}
 
 			// Pseudo AirBrk
@@ -213,17 +276,23 @@ namespace MSCMP {
 
 
 			if (Input.GetKeyDown(KeyCode.F6) && localPlayer) {
+				GameObject hayosiko = GameObject.Find("HAYOSIKO(1500kg, 250)");
+				Utils.GetPlaymakerScriptByName(hayosiko, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = "";
 
+				Vector3 newPos = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 2.0f;
+				GameObject newHayosiko = (GameObject)GameObject.Instantiate(hayosiko, newPos, localPlayer.transform.rotation);
 
+				//NetWorld.RegisterVehicle("HAYOSIKO(1500kg, 250)(Clone)");
+				/*
 				GameObject prefab = GameObject.Find("JONNEZ ES(Clone)");
-				spawnedGo = GameObject.Instantiate(prefab);
+				GameObject spawnedGo = GameObject.Instantiate(prefab);
 
 				// Remove component that overrides spawn position of JONNEZ.
 				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(spawnedGo, "LOD");
 				GameObject.Destroy(fsm);
 
 				Vector3 direction = localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				spawnedGo.transform.position = localPlayer.transform.position + direction;
+				spawnedGo.transform.position = localPlayer.transform.position + direction;*/
 
 
 				/*StringBuilder builder = new StringBuilder();

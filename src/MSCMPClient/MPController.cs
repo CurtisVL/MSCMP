@@ -367,6 +367,15 @@ namespace MSCMP {
 		}
 
 		/// <summary>
+		/// Update after animations have been played.
+		/// </summary>
+		void LateUpdate() {
+			Utils.CallSafe("LateUpdate", () => {
+				netManager.LateUpdate();
+				if (localPlayer != null) devTools.LateUpdate(localPlayer);
+			});
+		}
+		/// <summary>
 		/// Wrapper around unitys load level method to call OnLevelSwitch even if level is the same.
 		/// </summary>
 		/// <param name="levelName">The name of the level to load.</param>
