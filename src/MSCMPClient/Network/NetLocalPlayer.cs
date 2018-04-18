@@ -83,7 +83,7 @@ namespace MSCMP.Network {
 				"\nstate: " + state +
 				"\nWorld time: " + GameWorld.Instance.WorldTime +
 				"\nWorld day: " + GameWorld.Instance.WorldDay +
-				"\nCrouch: " + Utils.GetPlaymakerScriptByName(GameWorld.Instance.Player.Object, "Crouch").Fsm.GetFsmFloat("Position").Value);
+				"\nRunning: " + Utils.GetPlaymakerScriptByName(GameWorld.Instance.Player.Object, "Running").Fsm.ActiveStateName);
 
 			if (currentVehicle != null) {
 				currentVehicle.UpdateIMGUI();
@@ -191,6 +191,8 @@ namespace MSCMP.Network {
 
 			Messages.AnimSyncMessage message = new Messages.AnimSyncMessage();
 
+			message.isRunning = (Utils.GetPlaymakerScriptByName(playerObject, "Running").Fsm.ActiveStateName == "Run");
+
 			float leanRotation = Utils.GetPlaymakerScriptByName(playerObject, "Reach").Fsm.GetFsmFloat("Position").Value;
 			if (leanRotation != 0.0f) message.isLeaning = true;
 			else message.isLeaning = false;
@@ -198,6 +200,7 @@ namespace MSCMP.Network {
 			message.isGrounded = playerObject.GetComponentInChildren<CharacterMotor>().grounded;
 			message.activeHandState = animManager.GetActiveHandState(playerObject);
 			message.aimRot = playerObject.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
+			message.crouchPosition = Utils.GetPlaymakerScriptByName(playerObject, "Crouch").Fsm.GetFsmFloat("Position").Value;
 
 			GameObject DrunkObject = playerObject.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera").gameObject;
 			float DrunkValue = Utils.GetPlaymakerScriptByName(DrunkObject, "Drunk Mode").Fsm.GetFsmFloat("DrunkYmax").Value;
