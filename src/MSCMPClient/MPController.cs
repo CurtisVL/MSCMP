@@ -14,7 +14,7 @@ namespace MSCMP {
 	class MPController : MonoBehaviour {
 
 		public const string MOD_DEVELOPMENT_STAGE = "Pre-Alpha";
-		public const string MOD_VERSION_STRING = "0.1";
+		public const string MOD_VERSION_STRING = "0.11";
 
 		public static MPController Instance = null;
 

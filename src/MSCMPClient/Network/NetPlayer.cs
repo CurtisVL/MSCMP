@@ -84,7 +84,7 @@ namespace MSCMP.Network {
 		/// Network time when sync packet was received.
 		/// </summary>
 		private ulong syncReceiveTime = 0;
-
+		
 		/// <summary>
 		/// Name of the game object we use as prefab for characters.
 		/// </summary>

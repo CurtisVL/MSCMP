@@ -54,7 +54,7 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Timeout time of the connection.
 		/// </summary>
-		const float TIMEOUT_TIME = 20.0f;
+		const float TIMEOUT_TIME = 60.0f;
 
 		/// <summary>
 		/// How many seconds left before sending next heartbeat?

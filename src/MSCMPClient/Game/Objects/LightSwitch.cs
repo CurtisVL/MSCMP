@@ -9,11 +9,20 @@ namespace MSCMP.Game.Objects {
 	class LightSwitch {
 		GameObject go = null;
 		PlayMakerFSM fsm = null;
+		LightSwitchManager.SwitchTypes type = LightSwitchManager.SwitchTypes.LightSwitch;
 
 		//Get switch status
 		public bool SwitchStatus {
 			get {
-				return fsm.FsmVariables.FindFsmBool("Switch").Value;
+				if (type == LightSwitchManager.SwitchTypes.LightSwitch) {
+					return fsm.FsmVariables.FindFsmBool("Switch").Value;
+				}
+				else if (type == LightSwitchManager.SwitchTypes.TiemoSwitch) {
+					return fsm.FsmVariables.FindFsmBool("SwitchOn").Value;
+				}
+				else {
+					return false;
+				}
 			}
 		}
 
@@ -36,8 +45,9 @@ namespace MSCMP.Game.Objects {
 		/// Constructor.
 		/// </summary>
 		/// <param name="gameObject">Game object of the light switch to represent by this wrapper.</param>
-		public LightSwitch(GameObject gameObject) {
+		public LightSwitch(GameObject gameObject, LightSwitchManager.SwitchTypes switchType) {
 			go = gameObject;
+			type = switchType;
 
 			fsm = Utils.GetPlaymakerScriptByName(go, "Use");
 			if (fsm.Fsm.HasEvent(EVENT_NAME)) {
@@ -45,9 +55,16 @@ namespace MSCMP.Game.Objects {
 				Logger.Log($"Light switch {go.name} is already hooked!");
 			}
 			else {
-				FsmEvent mpEventOn = fsm.Fsm.GetEvent(EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(fsm, mpEventOn, "Switch");
-				PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Switch"), new OnLightSwitchUseAction(this));
+				if (type == LightSwitchManager.SwitchTypes.LightSwitch) {
+					FsmEvent mpEventOn = fsm.Fsm.GetEvent(EVENT_NAME);
+					PlayMakerUtils.AddNewGlobalTransition(fsm, mpEventOn, "Switch");
+					PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Switch"), new OnLightSwitchUseAction(this));
+				}
+				else if (type == LightSwitchManager.SwitchTypes.TiemoSwitch) {
+					FsmEvent mpEventOn = fsm.Fsm.GetEvent(EVENT_NAME);
+					PlayMakerUtils.AddNewGlobalTransition(fsm, mpEventOn, "Position");
+					PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Position"), new OnLightSwitchUseAction(this));
+				}
 			}
 		}
 
@@ -63,7 +80,7 @@ namespace MSCMP.Game.Objects {
 
 			public override void OnEnter() {
 				Finish();
-				Logger.Debug($"Light switch set to: {!lightSwitch.SwitchStatus}");
+				Logger.Debug($"Switch set to: {!lightSwitch.SwitchStatus}");
 
 				// If use was triggered from our custom event we do not send it.
 				if (State.Fsm.LastTransition.EventName == EVENT_NAME) {

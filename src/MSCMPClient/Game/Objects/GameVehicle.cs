@@ -173,13 +173,12 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM axleLiftFsm = null;
 		PlayMakerFSM spillValveFsm = null;
 
+		// Misc
+		PlayMakerFSM waspNestFsm = null;
+
 		public bool hasRange = false;
 		bool hasLeverParkingBrake = false;
 		bool hasPushParkingBrake = false;
-		bool hasFuelTap = false;
-		bool hasLights = false;
-		bool hasWipers = false;
-		bool hasInteriorLight = false;
 
 		bool isTruck = false;
 		public bool isTractor = false;
@@ -239,6 +238,7 @@ namespace MSCMP.Game.Objects {
 			FuelTap,
 			Tailgate,
 			TractorHydraulics,
+			DestroyWaspNest,
 		}
 
 		// Engine
@@ -279,6 +279,7 @@ namespace MSCMP.Game.Objects {
 		string MP_RANGE_SWITCH_EVENT_NAME = "MPRANGE";
 		string MP_FUEL_TAP_EVENT_NAME = "MPFUELTAP";
 		string MP_SPILL_VALVE_EVENT_NAME = "MPSPILLVALVE";
+		string MP_DESTROY_WASP_NEST_EVENT_NAME = "MPDESTROYNEST";
 
 
 		/// <summary>
@@ -634,8 +635,14 @@ namespace MSCMP.Game.Objects {
 			}
 
 			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_EVENT_NAME || State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_SWITCH_EVENT_NAME) {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_EVENT_NAME) {
 					return;
+				}
+
+				if (State.Fsm.LastTransition.EventName == "FINISHED") {
+					if (vehicle.isDriver == false) {
+						return;
+					}
 				}
 
 				vehicle.onVehicleSwitchChanges(SwitchIDs.Lights, false, vehicle.lightsFsm.Fsm.GetFsmInt("Selection").Value);
@@ -787,6 +794,29 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// PlayMaker state action executed when diff lock is used.
+		/// </summary>
+		private class onWaspNestDestroyedAction : FsmStateAction {
+			private GameVehicle vehicle;
+
+			public onWaspNestDestroyedAction(GameVehicle veh) {
+				vehicle = veh;
+			}
+
+			public override void OnEnter() {
+				if (State.Fsm.LastTransition.EventName == vehicle.MP_DESTROY_WASP_NEST_EVENT_NAME) {
+					return;
+				}
+
+				vehicle.onVehicleSwitchChanges(SwitchIDs.DestroyWaspNest, false, -1);
+				Logger.Debug("Wasp nest destroyed!");
+
+				Finish();
+			}
+		}
+
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go">Vehicle game object.</param>
@@ -820,18 +850,17 @@ namespace MSCMP.Game.Objects {
 					seatGameObject = fsm.gameObject;
 
 					// Passenger seat testing
-					if (seatGameObject.name == "DriveTrigger") {
+					if (seatGameObject.name == "DriveTrigger" && !gameObject.name.StartsWith("JONNEZ") && !gameObject.name.StartsWith("KEKMET")) {
 						Vector3 driverSeatPosition = seatGameObject.transform.position;
 						GameObject passengerSeat = GameObject.CreatePrimitive(PrimitiveType.Cube);
 						pSeatGameObject = passengerSeat;
 
-						passengerSeat.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
 						passengerSeat.transform.SetParent(gameObject.transform);
 						passengerSeat.transform.GetComponent<BoxCollider>().isTrigger = true;
-						passengerSeat.transform.position = new Vector3(driverSeatPosition.x + 0.7f, driverSeatPosition.y, driverSeatPosition.z);
 
 						PassengerSeat pSeatScript = passengerSeat.AddComponent(typeof(PassengerSeat)) as PassengerSeat;
 						pSeatScript.VehicleType = gameObject.name;
+						pSeatScript.DriversSeat = fsm.gameObject;
 
 						pSeatScript.onEnter = () => {
 							this.onEnter(true);
@@ -881,25 +910,21 @@ namespace MSCMP.Game.Objects {
 				// Fuel tap
 				else if (fsm.gameObject.name == "FuelTap" && fsm.FsmName == "Use") {
 					fuelTapFsm = fsm;
-					hasFuelTap = true;
 				}
 
 				// Lights
 				else if (fsm.gameObject.name == "Lights" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonLights" && fsm.FsmName == "Use" || fsm.gameObject.name == "knob" && fsm.FsmName == "Use") {
 					lightsFsm = fsm;
-					hasLights = true;
 				}
 
 				// Wipers
 				else if (fsm.gameObject.name == "Wipers" && fsm.FsmName == "Use" || fsm.gameObject.name == "ButtonWipers" && fsm.FsmName == "Use") {
 					wipersFsm = fsm;
-					hasWipers = true;
 				}
 
 				// Interior light
 				else if (fsm.gameObject.name == "ButtonInteriorLight" && fsm.FsmName == "Use") {
 					interiorLightFsm = fsm;
-					hasInteriorLight = true;
 				}
 
 				// Gear indicator - Used to get Range position
@@ -913,8 +938,13 @@ namespace MSCMP.Game.Objects {
 					isTractor = true;
 				}
 
+				// Wasp nest
+				else if (fsm.gameObject.name == "WaspHive" && fsm.FsmName == "Data") {
+					waspNestFsm = fsm;
+				}
+
 				// Truck specific FSMs
-				if (isTruck == true) {
+					if (isTruck == true) {
 
 					// Hydraulic pump
 					if (fsm.gameObject.name == "Hydraulics" && fsm.FsmName == "Use") {
@@ -1012,12 +1042,12 @@ namespace MSCMP.Game.Objects {
 			}
 
 			FsmState fuelTapState = null;
-			if (hasFuelTap == true) {
+			if (fuelTapFsm != null) {
 				fuelTapState = fuelTapFsm.Fsm.GetState("Test");
 			}
 
 			FsmState lightsState = null;
-			if (hasLights == true) {
+			if (lightsFsm != null) {
 				if (isTruck == true) {
 					lightsState = lightsFsm.Fsm.GetState("Sound 2");
 				}
@@ -1027,12 +1057,12 @@ namespace MSCMP.Game.Objects {
 			}
 
 			FsmState wipersState = null;
-			if (hasWipers == true) {
+			if (wipersFsm != null) {
 				wipersState = wipersFsm.Fsm.GetState("Test 2");
 			}
 
 			FsmState interiorLightState = null;
-			if (hasInteriorLight == true) {
+			if (interiorLightFsm != null) {
 				interiorLightState = interiorLightFsm.Fsm.GetState("Switch");
 			}
 
@@ -1045,6 +1075,11 @@ namespace MSCMP.Game.Objects {
 				diffLockState = diffLockFsm.Fsm.GetState("Test");
 				axleLiftState = axleLiftFsm.Fsm.GetState("Test");
 				spillValveState = spillValveFsm.Fsm.GetState("Switch");
+			}
+
+			FsmState waspNestDestroyState = null;
+			if (waspNestFsm != null) {
+				waspNestDestroyState = waspNestFsm.Fsm.GetState("State 2");
 			}
 
 			//Engine states
@@ -1245,6 +1280,13 @@ namespace MSCMP.Game.Objects {
 				FsmEvent mpDiffLockState = diffLockFsm.Fsm.GetEvent(MP_DIFF_LOCK_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(diffLockFsm, mpDiffLockState, "Test");
 			}
+
+			// Wasp nest
+			if (waspNestDestroyState != null) {
+				PlayMakerUtils.AddNewAction(waspNestDestroyState, new onWaspNestDestroyedAction(this));
+				FsmEvent mpNestDestroyedState = waspNestFsm.Fsm.GetEvent(MP_DESTROY_WASP_NEST_EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(waspNestFsm, mpNestDestroyedState, "State 2");
+			}
 		}
 
 		public void SetPosAndRot(Vector3 pos, Quaternion rot) {
@@ -1390,6 +1432,11 @@ namespace MSCMP.Game.Objects {
 				if (diffLockFsm.Fsm.GetFsmBool("Lock").Value != newValue) {
 					diffLockFsm.SendEvent(MP_DIFF_LOCK_EVENT_NAME);
 				}
+			}
+
+			// Destroy wasp nest
+			else if (state == SwitchIDs.DestroyWaspNest) {
+				waspNestFsm.SendEvent(MP_DESTROY_WASP_NEST_EVENT_NAME);
 			}
 		}
 

@@ -47,6 +47,7 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Vehicle transform interpolator.
 		/// </summary>
+		
 		TransformInterpolator interpolator = new TransformInterpolator();
 
 		/// <summary>

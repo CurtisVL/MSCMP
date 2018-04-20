@@ -24,6 +24,11 @@ namespace MSCMP.Game {
 		/// </summary>
 		public OnLightSwitchUsed onLightSwitchUsed;
 
+		public enum SwitchTypes {
+			LightSwitch,
+			TiemoSwitch
+		}
+
 		public LightSwitchManager() {
 			Instance = this;
 		}
@@ -53,19 +58,25 @@ namespace MSCMP.Game {
 		/// <param name="lightGO">LightSwitch GameObject.</param>
 		public void AddLightSwitch(GameObject lightGO) {
 			PlayMakerFSM playMakerFsm = Utils.GetPlaymakerScriptByName(lightGO, "Use");
+			SwitchTypes switchType = SwitchTypes.LightSwitch;
 			if (playMakerFsm == null) {
 				return;
 			}
 
 			bool isValid = false;
+			// Normal light switch
 			if (playMakerFsm.FsmVariables.FindFsmBool("Switch") != null) {
 				isValid = true;
 			}
+			else if (playMakerFsm.FsmVariables.FindFsmBool("SwitchOn") != null) {
+				isValid = true;
+				switchType = SwitchTypes.TiemoSwitch;
+			}
 
 			if (isValid) {
-				LightSwitch light = new LightSwitch(lightGO);
+				LightSwitch light = new LightSwitch(lightGO, switchType);
 				lightSwitches.Add(light);
-				Logger.Log($"Registered new light switch: {lightGO.name}");
+				Logger.Log($"Registered new switch: {lightGO.name} Type: {switchType}");
 
 				light.onLightSwitchUse = (lightObj, turnedOn) => {
 					onLightSwitchUsed(lightGO, !light.SwitchStatus);

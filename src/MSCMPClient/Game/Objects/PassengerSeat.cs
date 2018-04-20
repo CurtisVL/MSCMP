@@ -10,9 +10,12 @@ namespace MSCMP.Game.Objects {
 	/// <param name="other"></param>
 	public class PassengerSeat : MonoBehaviour {
 		public string VehicleType = null;
+		public GameObject DriversSeat = null;
 
 		GameObject player = null;
 		GameObject trigger = null;
+
+		CapsuleCollider playerCollider = null;
 
 		bool canSit = false;
 		bool isSitting = false;
@@ -56,9 +59,35 @@ namespace MSCMP.Game.Objects {
 				}
 			}
 
+			// Set seat position and size based on vehicle
 			trigger = this.gameObject;
 
-			trigger.GetComponentInChildren<MeshRenderer>().enabled = false;
+			// Van
+			if (VehicleType.StartsWith("HAYOSIKO")) {
+				trigger.transform.position = new Vector3(DriversSeat.transform.position.x + 0.7f, DriversSeat.transform.position.y - 0.1f, DriversSeat.transform.position.z);
+				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+			}
+
+			// Truck
+			if (VehicleType.StartsWith("GIFU")) {
+				trigger.transform.position = new Vector3(DriversSeat.transform.position.x - 0.1f, DriversSeat.transform.position.y - 0.08f, DriversSeat.transform.position.z - 1.35f);
+				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+			}
+
+			// Old car
+			if (VehicleType.StartsWith("RCO_RUSCKO")) {
+				trigger.transform.position = new Vector3(DriversSeat.transform.position.x + 0.7f, DriversSeat.transform.position.y, DriversSeat.transform.position.z);
+				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+			}
+
+			// Satsuma
+			if (VehicleType.StartsWith("SATSUMA")) {
+				trigger.transform.position = new Vector3(DriversSeat.transform.position.x - 0.6f, DriversSeat.transform.position.y - 0.25f, DriversSeat.transform.position.z);
+				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+			}
+
+			// Disables the cube mesh render
+			//trigger.GetComponentInChildren<MeshRenderer>().enabled = false;
 		}
 
 		/// <summary>
@@ -76,6 +105,11 @@ namespace MSCMP.Game.Objects {
 				if (player == null) {
 					player = other.gameObject;
 					motor = player.GetComponentInChildren<CharacterMotor>();
+				}
+
+				if (playerCollider == null) {
+					playerCollider = player.GetComponentInChildren<CapsuleCollider>();
+					playerCollider.enabled = false;
 				}
 			}
 		}
@@ -104,9 +138,11 @@ namespace MSCMP.Game.Objects {
 				iconsFsm.Fsm.GetFsmBool("GUIpassenger").Value = true;
 			}
 
-			if (canSit == true && Input.GetKeyDown(KeyCode.Return) == true) {
-				isSitting = !isSitting;
-				if (isSitting == true) {
+			if (Input.GetKeyDown(KeyCode.Return) == true) {
+				// Enter seat
+				if (isSitting == false && canSit == true) {
+					isSitting = true;
+
 					player.transform.parent = this.gameObject.transform;
 					motor.enabled = false;
 
@@ -116,8 +152,16 @@ namespace MSCMP.Game.Objects {
 
 					onEnter();
 				}
-				else {
+				// Leave seat
+				else if (isSitting == true) {
+					isSitting = false;
+
 					player.transform.parent = null;
+					
+					// Resets player rotation on leaving the seat
+					Quaternion currentRotation = player.transform.rotation;
+					currentRotation = new Quaternion(currentRotation.x, 0, currentRotation.z, currentRotation.w);
+
 					motor.enabled = true;
 
 					showGUI = true;
