@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Objects;
 
@@ -6,7 +6,7 @@ namespace MSCMP.Game {
 	/// <summary>
 	/// Class managing state of the light switches in game.
 	/// </summary>
-	class LightSwitchManager {
+	class LightSwitchManager : IGameObjectCollector {
 		/// <summary>
 		/// Singleton of the light switch manager.
 		/// </summary>
@@ -33,18 +33,19 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Builds light switch list on world load.
+		/// Collect light switches.
 		/// </summary>
-		public void OnWorldLoad() {
-			lightSwitches.Clear();
-			GameObject[] gos = GameObject.FindObjectsOfType<GameObject>();
-
-			//Register all light switches in game.
-			foreach (var go in gos) {
-				if (go.name.StartsWith("switch_")) {
-					AddLightSwitch(go);
-				}
+		public void CollectGameObject(GameObject gameObject) {
+			if (gameObject.name.StartsWith("switch_")) {
+				AddLightSwitch(gameObject);
 			}
+		}
+
+		/// <summary>
+		/// Destroy all collected objects references.
+		/// </summary>
+		public void DestroyObjects() {
+			lightSwitches.Clear();
 		}
 
 		/// <summary>

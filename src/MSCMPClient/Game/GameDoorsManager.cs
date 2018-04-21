@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Objects;
 
@@ -6,7 +6,7 @@ namespace MSCMP.Game {
 	/// <summary>
 	/// Class managing state of the doors in game.
 	/// </summary>
-	class GameDoorsManager {
+	class GameDoorsManager : IGameObjectCollector {
 
 		/// <summary>
 		/// Singleton of the doors manager.
@@ -40,56 +40,67 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Builds doors list on world load.
+		/// Handle collected objects destroy.
 		/// </summary>
-		public void OnWorldLoad() {
+		public void DestroyObjects() {
 			doors.Clear();
-			GameObject []gos = GameObject.FindObjectsOfType<GameObject>();
+		}
 
-			// Register all doors in game.
+		/// <summary>
+		/// Handle doors action.
+		/// </summary>
+		/// <param name="door">The doors that sent the action.</param>
+		/// <param name="open">Is action door open or door close?</param>
+		public void HandleDoorsAction(GameDoor door, bool open) {
+			if (open) {
+				onDoorsOpen?.Invoke(door.GameObject);
+			}
+			else {
+				onDoorsClose?.Invoke(door.GameObject);
+			}
+		}
 
-			foreach (var go in gos) {
 
-				if (!go.name.StartsWith("Door")) {
-					continue;
-				}
+		/// <summary>
+		/// Registers given gameObject as door if it's door.
+		/// </summary>
+		/// <param name="gameObject">The game object to check and eventually register.</param>
+		public void CollectGameObject(GameObject gameObject) {
+			if (!gameObject.name.StartsWith("Door")) {
+				return;
+			}
 
 
-				if (go.transform.childCount == 0) {
-					continue;
-				}
+			if (gameObject.transform.childCount == 0) {
+				return;
+			}
 
-				Transform pivot = go.transform.GetChild(0);
-				if (pivot == null || pivot.name != "Pivot") {
-					continue;
-				}
+			Transform pivot = gameObject.transform.GetChild(0);
+			if (pivot == null || pivot.name != "Pivot") {
+				return;
+			}
 
-				var playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
-				if (playMakerFsm == null) {
-					continue;
-				}
+			var playMakerFsm = Utils.GetPlaymakerScriptByName(gameObject, "Use");
+			if (playMakerFsm == null) {
+				return;
+			}
 
-				bool isValid = false;
-				foreach (var e in playMakerFsm.FsmEvents) {
-					if (e.Name == "OPENDOOR") {
-						isValid = true;
-						break;
-					}
-				}
-
-				if (isValid) {
-					GameDoor door = new GameDoor(go);
-					door.onOpen = (doorObj) => {
-						onDoorsOpen(door.getGameObject);
-					};
-					door.onClose = (doorObj) => {
-						onDoorsClose(door.getGameObject);
-					};
-					doors.Add(door);
-
-					Logger.Log("Registered doors " + go.name);
+			bool isValid = false;
+			foreach (var e in playMakerFsm.FsmEvents) {
+				if (e.Name == "OPENDOOR") {
+					isValid = true;
+					break;
 				}
 			}
+
+			if (!isValid) {
+				return;
+			}
+
+			GameDoor door = new GameDoor(this, gameObject);
+			doors.Add(door);
+
+			Logger.Debug("Registered doors " + gameObject.name);
 		}
 
 		/// <summary>

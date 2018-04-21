@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Objects;
 using MSCMP.Game;
@@ -7,7 +7,7 @@ namespace MSCMP.Game {
 	/// <summary>
 	/// Class managing state of the beercases in game.
 	/// </summary>
-	class BeerCaseManager {
+	class BeerCaseManager : IGameObjectCollector {
 		/// <summary>
 		/// Singleton of the beercase manager.
 		/// </summary>
@@ -39,43 +39,49 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Builds beercase list on world load.
+		/// Collect all beer cases.
 		/// </summary>
-		public void OnWorldLoad() {
-			beercases.Clear();
-			GameObject[] gos = GameObject.FindObjectsOfType<GameObject>();
+		public void CollectGameObject(GameObject gameObject) {
+			var metaData = gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
+			if (metaData == null) {
+				return;
+			}
 
-			//Register all beercases in game.
-			foreach (var go in gos) {
-				//AddBeerCase(go);
+			if (metaData.PrefabDescriptor.type == GamePickupableDatabase.PrefabType.BeerCase) {
+				AddBeerCase(gameObject);
 			}
 		}
+
+		/// <summary>
+		/// Destroy all references to collected objects.
+		/// </summary>
+		public void DestroyObjects() {
+			beercases.Clear();
+		}
+
 
 		/// <summary>
 		/// Adds beercase by GameObject
 		/// </summary>
 		/// <param name="beerGO">BeerCase GameObject.</param>
 		public void AddBeerCase(GameObject beerGO) {
-			var metaData = beerGO.GetComponent<Game.Components.PickupableMetaDataComponent>();
+			bool isDuplicate = false;
 
-			if (metaData.PrefabDescriptor.type == GamePickupableDatabase.PrefabType.BeerCase) {
-				bool isDuplicate = false;
-
-				foreach(BeerCase beer in beercases) {
-					GameObject beerGameObject = beer.GetGameObject;
-					if (beerGameObject == beerGO) {
-						Logger.Debug($"Duplicate beercase rejected: {beerGameObject.name}");
-						isDuplicate = true;
-					}
+			foreach (BeerCase beer in beercases) {
+				GameObject beerGameObject = beer.GetGameObject;
+				if (beerGameObject == beerGO) {
+					Logger.Debug($"Duplicate beercase rejected: {beerGameObject.name}");
+					isDuplicate = true;
 				}
-				if (isDuplicate == false) {
-					BeerCase beer = new BeerCase(beerGO);
-					beercases.Add(beer);
+			}
 
-					beer.onConsumedBeer = (beerObj) => {
-						onBottleConsumed(beer.GetGameObject);
-					};
-				}
+			if (isDuplicate == false) {
+				BeerCase beer = new BeerCase(beerGO);
+				beercases.Add(beer);
+
+				beer.onConsumedBeer = (beerObj) => {
+					onBottleConsumed(beer.GetGameObject);
+				};
 			}
 		}
 
