@@ -207,6 +207,11 @@ namespace MSCMP.Network {
 			if (DrunkValue >= 4.5f) message.isDrunk = true;
 			else message.isDrunk = false;
 
+			if (!animManager.AreDrinksPreloaded()) animManager.PreloadDrinkObjects(playerObject);
+
+			//if (animManager.GetHandState(message.activeHandState) == PlayerAnimManager.HandStateId.Drinking)
+				message.drinkId = animManager.GetDrinkingObject(playerObject);
+
 			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
 				return false;
 			}
@@ -322,7 +327,6 @@ namespace MSCMP.Network {
 			return Steamworks.SteamFriends.GetPersonaName();
 		}
 
-
 		/// <summary>
 		/// Teleport player to the given location.
 		/// </summary>
@@ -340,6 +344,5 @@ namespace MSCMP.Network {
 			playerObject.transform.position = pos;
 			playerObject.transform.rotation = rot;
 		}
-
 	}
 }
