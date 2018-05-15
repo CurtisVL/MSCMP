@@ -50,6 +50,8 @@ namespace MSCMP.Game {
 
 			foreach (var go in gos) {
 
+				// && !go.name.StartsWith("flatbed_hatch") - Could be added to the end to enable flatbed trailer tailgate sync.
+				// Currently doesn't work as the idle position of the trailer isn't synced.
 				if (!go.name.StartsWith("Door") && !go.name.StartsWith("Handle")) {
 					continue;
 				}
@@ -58,13 +60,7 @@ namespace MSCMP.Game {
 					continue;
 				}
 
-				PlayMakerFSM playMakerFsm = null;
-				if (go.name.StartsWith("Door")) {
-					playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
-				}
-				else {
-					playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
-				}
+				PlayMakerFSM playMakerFsm = Utils.GetPlaymakerScriptByName(go, "Use");
 
 				if (playMakerFsm == null) {
 					continue;

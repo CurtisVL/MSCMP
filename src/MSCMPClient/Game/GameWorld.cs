@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Objects;
+using MSCMP.Game.Components;
 using HutongGames.PlayMaker;
 
 namespace MSCMP.Game {
@@ -223,15 +224,23 @@ namespace MSCMP.Game {
 			vehicles.Clear();
 
 			// Register all vehicles.
+			string[] vehicleNames = {
+				"JONNEZ ES(Clone)",
+				"HAYOSIKO(1500kg, 250)",
+				"SATSUMA(557kg, 248)",
+				"RCO_RUSCKO12(270)",
+				"KEKMET(350-400psi)",
+				"FLATBED",
+				"FERNDALE(1630kg)",
+				"GIFU(750/450psi)"
+			};
 
-			vehicles.Add(new GameVehicle(GameObject.Find("JONNEZ ES(Clone)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("HAYOSIKO(1500kg, 250)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("SATSUMA(557kg, 248)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("RCO_RUSCKO12(270)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("KEKMET(350-400psi)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("FLATBED")));
-			vehicles.Add(new GameVehicle(GameObject.Find("FERNDALE(1630kg)")));
-			vehicles.Add(new GameVehicle(GameObject.Find("GIFU(750/450psi)")));
+			for (int i = 0; i < vehicleNames.Length; i++) {
+				GameObject vehicle = GameObject.Find(vehicleNames[i]);
+				vehicles.Add(new GameVehicle(vehicle));
+				// vehicle.transform.FindChild("CarCollider").gameObject.AddComponent<ObjectSyncComponent>();
+				// Doesn't actually work yet.
+			}
 		}
 
 		public GameVehicle FindVehicleByName(string name) {

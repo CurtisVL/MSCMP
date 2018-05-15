@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using MSCMP.Game.Components;
 
 namespace MSCMP.Network {
 	class NetWorld {
@@ -83,6 +84,7 @@ namespace MSCMP.Network {
 				Messages.PickupableSpawnMessage msg = new Messages.PickupableSpawnMessage();
 				msg.id = freeId;
 				msg.prefabId = metaData.prefabId;
+				msg.objectId = pickupable.GetComponent<ObjectSyncComponent>().ObjectID;
 				msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
 				msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
 				msg.active = instance.activeSelf;
@@ -110,6 +112,17 @@ namespace MSCMP.Network {
 					Messages.PickupableSpawnMessage msg = new Messages.PickupableSpawnMessage();
 					msg.id = pickupable.NetId;
 					msg.prefabId = metaData.prefabId;
+					if (instance.GetComponent<ObjectSyncComponent>() != null) {
+						msg.objectId = instance.GetComponent<ObjectSyncComponent>().ObjectID;
+					}
+					else {
+						ObjectSyncComponent osc = instance.AddComponent<ObjectSyncComponent>();
+						while (osc.ObjectID == -1) {
+
+						}
+						msg.objectId = osc.ObjectID;
+
+					}
 					msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
 					msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
 					netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
@@ -382,6 +395,7 @@ namespace MSCMP.Network {
 				pickupableMsg.id = pickupable.NetId;
 				var metaData = pickupable.gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
 				pickupableMsg.prefabId = metaData.prefabId;
+				pickupableMsg.objectId = pickupable.gameObject.GetComponent<ObjectSyncComponent>().ObjectID;
 				Transform transform = pickupable.gameObject.transform;
 				pickupableMsg.transform.position = Utils.GameVec3ToNet(transform.position);
 				pickupableMsg.transform.rotation = Utils.GameQuatToNet(transform.rotation);
@@ -420,6 +434,18 @@ namespace MSCMP.Network {
 
 			gameWorld.PlayerLastName = msg.mailboxName;
 
+			// Vehicles.
+
+			foreach (Messages.VehicleInitMessage vehicleMsg in msg.vehicles) {
+				Vector3 pos = Utils.NetVec3ToGame(vehicleMsg.transform.position);
+				Quaternion rot = Utils.NetQuatToGame(vehicleMsg.transform.rotation);
+
+				NetVehicle vehicle = GetVehicle(vehicleMsg.id);
+				Client.Assert(vehicle != null, $"Received info about non existing vehicle {vehicleMsg.id} in full world sync. (pos: {pos}, rot: {rot})");
+
+				vehicle.Teleport(pos, rot);
+			}
+
 			// Doors.
 
 			foreach (Messages.DoorsInitMessage door in msg.doors) {
@@ -445,18 +471,6 @@ namespace MSCMP.Network {
 			// Weather.
 
 			Game.GameWeatherManager.Instance.SetWeather(msg.currentWeather);
-
-			// Vehicles.
-
-			foreach (Messages.VehicleInitMessage vehicleMsg in msg.vehicles) {
-				Vector3 pos = Utils.NetVec3ToGame(vehicleMsg.transform.position);
-				Quaternion rot = Utils.NetQuatToGame(vehicleMsg.transform.rotation);
-
-				NetVehicle vehicle = GetVehicle(vehicleMsg.id);
-				Client.Assert(vehicle != null, $"Received info about non existing vehicle {vehicleMsg.id} in full world sync. (pos: {pos}, rot: {rot})");
-
-				vehicle.Teleport(pos, rot);
-			}
 
 			// Pickupables
 
@@ -576,6 +590,7 @@ namespace MSCMP.Network {
 						gameObject.SetActive(msg.active);
 						gameObject.transform.position = position;
 						gameObject.transform.rotation = rotation;
+						gameObject.AddComponent<ObjectSyncComponent>().ObjectID = msg.objectId;
 						if (msg.HasData) {
 							HandlePickupablesSpawnData(gameObject, desc.type, msg.Data);
 						}
@@ -628,6 +643,10 @@ namespace MSCMP.Network {
 				if (pickupable.name != "beer case") {
 					Game.BeerCaseManager.Instance.AddBeerCase(pickupable);
 				}
+			}
+
+			if (pickupable.GetComponent<ObjectSyncComponent>() == null) {
+				pickupable.AddComponent<ObjectSyncComponent>();
 			}
 		}
 

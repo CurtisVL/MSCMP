@@ -1,5 +1,7 @@
-﻿using MSCMP.Game;
+﻿using System;
+using MSCMP.Game;
 using MSCMP.Game.Objects;
+using MSCMP.Game.Components;
 using UnityEngine;
 
 namespace MSCMP.Network {
@@ -8,6 +10,11 @@ namespace MSCMP.Network {
 	/// Class handling local player state.
 	/// </summary>
 	class NetLocalPlayer : NetPlayer {
+
+		/// <summary>
+		/// Instance.
+		/// </summary>
+		public static NetLocalPlayer Instance = null;
 
 		/// <summary>
 		/// How much time in seconds left until next synchronization packet will be sent.
@@ -20,12 +27,19 @@ namespace MSCMP.Network {
 		public const ulong SYNC_INTERVAL = 100;
 
 		/// <summary>
+		/// SteamID of local player.
+		/// </summary>
+		private Steamworks.CSteamID steamID;
+
+		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="netManager">The network manager owning this player.</param>
 		/// <param name="netWorld">Network world owning this player.</param>
 		/// <param name="steamId">The steam id of the player.</param>
 		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId) {
+			Instance = this;
+			steamID = steamId;
 
 			GameDoorsManager.Instance.onDoorsOpen = (GameObject door) => {
 				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
@@ -248,6 +262,48 @@ namespace MSCMP.Network {
 					msg.pickedUpObject = netWorld.GetPickupableNetId(pickedUpObject);
 				}
 			}
+		}
+
+		/// <summary>
+		/// Send object sync.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		/// <param name="setOwner">Set owner of the object.</param>
+		public void SendObjectSync(int objectID, Vector3 pos, Quaternion rot, int setOwner) {
+			Messages.ObjectSyncMessage msg = new Messages.ObjectSyncMessage();
+			msg.objectID = objectID;
+			msg.position = Utils.GameVec3ToNet(pos);
+			msg.rotation = Utils.GameQuatToNet(rot);
+			if (setOwner != -1) {
+				msg.Owner = setOwner;
+			}
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Setup new object on remote client.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		/// <param name="objectPath">If request to take sync ownership was accepted.</param>
+		public void SendNewObject(int objectID, string objectName, Vector3 pos, Quaternion rot) {
+			Messages.ObjectSyncAddMessage msg = new Messages.ObjectSyncAddMessage();
+			msg.objectID = objectID;
+			msg.objectName = objectName;
+			msg.pos = Utils.GameVec3ToNet(pos);
+			msg.rot = Utils.GameQuatToNet(rot);
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Send object sync.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		/// <param name="accepted">If request to take sync ownership was accepted.</param>
+		public void SendObjectSyncResponse(int objectID, bool accepted) {
+			Messages.ObjectSyncResponseMessage msg = new Messages.ObjectSyncResponseMessage();
+			msg.objectID = objectID;
+			msg.accepted = accepted;
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 		/// <summary>

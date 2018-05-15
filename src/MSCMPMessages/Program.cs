@@ -32,6 +32,10 @@
 			generator.GenerateMessage(typeof(Messages.VehicleStateMessage));
 			generator.GenerateMessage(typeof(Messages.VehicleSwitchMessage));
 			generator.GenerateMessage(typeof(Messages.WeatherUpdateMessage));
+			generator.GenerateMessage(typeof(Messages.ObjectSyncMessage));
+			generator.GenerateMessage(typeof(Messages.ObjectInitMessage));
+			generator.GenerateMessage(typeof(Messages.ObjectSyncResponseMessage));
+			generator.GenerateMessage(typeof(Messages.ObjectSyncAddMessage));
 			generator.GenerateEnum(typeof(Messages.WeatherUpdateMessage.WeatherType));
 			generator.EndGeneration();
 		}

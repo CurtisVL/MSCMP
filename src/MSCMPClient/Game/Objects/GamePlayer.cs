@@ -1,5 +1,7 @@
 ﻿using HutongGames.PlayMaker;
 using UnityEngine;
+using MSCMP.Game.Components;
+using MSCMP.Network;
 
 namespace MSCMP.Game.Objects {
 	/// <summary>
@@ -92,6 +94,15 @@ namespace MSCMP.Game.Objects {
 
 			PlayMakerUtils.AddNewAction(pickupFsm.Fsm.GetState("Throw part"), new OnThrowAction(this));
 			PlayMakerUtils.AddNewAction(pickupFsm.Fsm.GetState("Drop part"), new OnDropAction(this));
+
+			GameObject trigger = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+			trigger.transform.localScale = new Vector3(100, 100, 100);
+			trigger.GetComponent<SphereCollider>().isTrigger = true;
+			GameObject.Destroy(trigger.GetComponent<MeshRenderer>());
+
+			trigger.transform.position = gameObject.transform.position;
+			trigger.transform.parent = gameObject.transform;
+			ObjectSyncPlayerComponent ospc = trigger.AddComponent<ObjectSyncPlayerComponent>();
 		}
 
 

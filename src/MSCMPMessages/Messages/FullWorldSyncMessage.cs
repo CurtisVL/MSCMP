@@ -10,6 +10,11 @@
 		TransformMessage transform;
 	}
 
+	class ObjectInitMessage {
+		int objectID;
+		TransformMessage transform;
+	}
+
 	[NetMessageDesc(MessageIds.FullWorldSync)]
 	class FullWorldSyncMessage {
 		string						mailboxName;
@@ -20,5 +25,6 @@
 		PickupableSpawnMessage[]	pickupables;
 		LightSwitchMessage[]		lights;
 		WeatherUpdateMessage		currentWeather;
+		ObjectInitMessage[]         objects;
 	}
 }

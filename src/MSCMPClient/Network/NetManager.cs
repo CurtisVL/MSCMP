@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using MSCMP.UI;
+using MSCMP.Game;
+using MSCMP.Game.Components;
 
 namespace MSCMP.Network {
 	class NetManager {
@@ -94,9 +96,21 @@ namespace MSCMP.Network {
 		/// </summary>
 		NetWorld netWorld = null;
 
+		/// <summary>
+		/// Local player's Steam ID.
+		/// </summary>
+		Steamworks.CSteamID steamID;
+
+		/// <summary>
+		/// Object sync manager.
+		/// </summary>
+		private ObjectSyncManager objectSyncManager;
+
 		public NetManager() {
 			this.netManagerCreationTime = DateTime.UtcNow;
 			netWorld = new NetWorld(this);
+			steamID = Steamworks.SteamUser.GetSteamID();
+			objectSyncManager = new ObjectSyncManager(Steamworks.SteamUser.GetSteamID());
 
 			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create((Steamworks.P2PSessionRequest_t result) => {
 				if (!Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
@@ -324,6 +338,80 @@ namespace MSCMP.Network {
 			BindMessageHandler((Steamworks.CSteamID sender, Messages.LightSwitchMessage msg) => {
 				Game.Objects.LightSwitch light = Game.LightSwitchManager.Instance.FindLightSwitch(Utils.NetVec3ToGame(msg.pos));
 				light.TurnOn(msg.toggle);
+			});
+
+			BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncMessage msg) => {
+				ObjectSyncComponent osc;
+				try {
+					osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				}
+				catch {
+					Logger.Log("Specified object is not yet added to the ObjectID's Dictionary!");
+					return;
+				}
+				if (osc != null) {
+					// Set owner, or set owner if not set correctly.
+					if (msg.Owner == 1 || osc.Owner == 0 && msg.Owner == -1) {
+						if (osc.Owner == 0) {
+							osc.Owner = sender.m_SteamID;
+							Logger.Log($"Owner set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+							GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
+						}
+						else {
+							Logger.Log($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner})");
+						}
+					}
+					// Remove owner.
+					else if (msg.Owner == 2) {
+						if (osc.Owner == sender.m_SteamID) {
+							osc.Owner = 0;
+							Logger.Log($"Owner removed for object: {osc.transform.name}");
+						}
+					}
+					// Force set owner.
+					else if (msg.Owner == 3) {
+						osc.Owner = sender.m_SteamID;
+						Logger.Log($"Owner force set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+						GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
+					}
+					if (osc.Owner == sender.m_SteamID) {
+						if (osc.transform.name == "CarColliderAI") {
+							osc.transform.parent.position = Utils.NetVec3ToGame(msg.position);
+							osc.transform.parent.rotation = Utils.NetQuatToGame(msg.rotation);
+						}
+						else {
+							osc.transform.position = Utils.NetVec3ToGame(msg.position);
+							osc.transform.rotation = Utils.NetQuatToGame(msg.rotation);
+						}
+					}
+				}
+			});
+
+			BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncResponseMessage msg) => {
+				ObjectSyncComponent osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				if (msg.accepted) {
+					osc.SyncEnabled = true;
+					osc.Owner = steamID.m_SteamID;
+					Logger.Log($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
+				}
+			});
+
+			BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncAddMessage msg) => {
+				GameObject prefab = GameObject.Find(msg.objectName);
+				if (prefab != null) {
+					if (prefab.transform.FindChild("CarColliderAI") != null) {
+						//GameObject spawnedGo = GameObject.Instantiate(prefab, Utils.NetVec3ToGame(msg.pos), Utils.NetQuatToGame(msg.rot)) as GameObject;
+						GameObject carCollider = prefab.transform.FindChild("CarColliderAI").gameObject;
+						carCollider.AddComponent<ObjectSyncComponent>().ObjectID = msg.objectID;
+						// Need to find a way to find prefabs for AI vehicles.
+					}
+					else {
+						Logger.Log($"Found object '{msg.objectName}' but object has no add actions listed!");
+					}
+				}
+				else {
+					Logger.Log($"Attempted to spawn object from remote client with name '{msg.objectName}' but the prefab wasn't found!");
+				}
 			});
 		}
 

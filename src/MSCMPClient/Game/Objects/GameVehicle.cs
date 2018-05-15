@@ -1,5 +1,6 @@
 ﻿using HutongGames.PlayMaker;
 using UnityEngine;
+using System;
 
 namespace MSCMP.Game.Objects {
 	/// <summary>
@@ -236,9 +237,9 @@ namespace MSCMP.Game.Objects {
 			InteriorLight,
 			SpillValve,
 			FuelTap,
-			Tailgate,
 			TractorHydraulics,
 			DestroyWaspNest,
+			FlatbedHatch,
 		}
 
 		// Engine
@@ -280,7 +281,6 @@ namespace MSCMP.Game.Objects {
 		string MP_FUEL_TAP_EVENT_NAME = "MPFUELTAP";
 		string MP_SPILL_VALVE_EVENT_NAME = "MPSPILLVALVE";
 		string MP_DESTROY_WASP_NEST_EVENT_NAME = "MPDESTROYNEST";
-
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -794,7 +794,7 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
-		/// PlayMaker state action executed when diff lock is used.
+		/// PlayMaker state action executed when wasp next is destroyed.
 		/// </summary>
 		private class onWaspNestDestroyedAction : FsmStateAction {
 			private GameVehicle vehicle;
@@ -846,16 +846,18 @@ namespace MSCMP.Game.Objects {
 				if (fsm.FsmName == "PlayerTrigger") {
 					SetupPlayerTriggerHooks(fsm);
 
-					// Temp - use player trigger..
+					// Temp - use player trigger. (No idea what this comment meant, it's now many months later. :P)
 					seatGameObject = fsm.gameObject;
 
-					// Passenger seat testing
+					// Add Passenger seat.
 					if (seatGameObject.name == "DriveTrigger" && !gameObject.name.StartsWith("JONNEZ") && !gameObject.name.StartsWith("KEKMET")) {
-						Vector3 driverSeatPosition = seatGameObject.transform.position;
 						GameObject passengerSeat = GameObject.CreatePrimitive(PrimitiveType.Cube);
 						pSeatGameObject = passengerSeat;
 
-						passengerSeat.transform.SetParent(gameObject.transform);
+						passengerSeat.transform.parent = fsm.gameObject.transform.parent;
+						passengerSeat.transform.position = passengerSeat.transform.parent.position;
+						passengerSeat.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+
 						passengerSeat.transform.GetComponent<BoxCollider>().isTrigger = true;
 
 						PassengerSeat pSeatScript = passengerSeat.AddComponent(typeof(PassengerSeat)) as PassengerSeat;
@@ -864,11 +866,9 @@ namespace MSCMP.Game.Objects {
 
 						pSeatScript.onEnter = () => {
 							this.onEnter(true);
-							Logger.Log("Entered passenger seat");
 						};
 						pSeatScript.onLeave = () => {
 							this.onLeave();
-							Logger.Log("Exited passenger seat");
 						};
 					}
 				}
@@ -1090,9 +1090,14 @@ namespace MSCMP.Game.Objects {
 			}
 
 			if (accState != null) {
-				PlayMakerUtils.AddNewAction(accState, new onACCAction(this));
-				FsmEvent mpACCEvent = starterFsm.Fsm.GetEvent(MP_ACC_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpACCEvent, "ACC");
+				EventHook.Add(starterFsm, "ACC", new Action(() => {
+					Logger.Log($"Boop, this is a test from {this.gameObject.transform.name}!");
+
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC" || this.isDriver == false) {
+						return;
+					}
+					this.onEngineStateChanged(EngineStates.ACC, DashboardStates.Test, -1);
+				}));
 			}
 
 			if (turnKeyState != null) {
@@ -1469,8 +1474,5 @@ namespace MSCMP.Game.Objects {
 
 			GUI.Label(new Rect(10, 200, 500, 500), vinfo);
 		}
-
-
-
 	}
 }

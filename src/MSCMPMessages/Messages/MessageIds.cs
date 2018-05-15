@@ -29,5 +29,8 @@ namespace MSCMPMessages.Messages {
 		VehicleState,
 		VehicleSwitch,
 		WeatherSync,
+		ObjectSync,
+		ObjectSyncResponse,
+		ObjectSyncAdd,
 	}
 }

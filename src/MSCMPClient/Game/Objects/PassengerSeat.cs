@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using HutongGames.PlayMaker;
 
 namespace MSCMP.Game.Objects {
 	/// <summary>
@@ -64,30 +63,26 @@ namespace MSCMP.Game.Objects {
 
 			// Van
 			if (VehicleType.StartsWith("HAYOSIKO")) {
-				trigger.transform.position = new Vector3(DriversSeat.transform.position.x + 0.7f, DriversSeat.transform.position.y - 0.1f, DriversSeat.transform.position.z);
-				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+				trigger.transform.localPosition = new Vector3(-DriversSeat.transform.localPosition.x + 0.1f, -DriversSeat.transform.localPosition.y + 0.35f,  -DriversSeat.transform.localPosition.z - 0.7f);
 			}
 
 			// Truck
 			if (VehicleType.StartsWith("GIFU")) {
-				trigger.transform.position = new Vector3(DriversSeat.transform.position.x - 0.1f, DriversSeat.transform.position.y - 0.08f, DriversSeat.transform.position.z - 1.35f);
-				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+				trigger.transform.localPosition = new Vector3(-DriversSeat.transform.localPosition.x, -DriversSeat.transform.localPosition.y, -DriversSeat.transform.localPosition.z + 0.15f);
 			}
 
 			// Old car
 			if (VehicleType.StartsWith("RCO_RUSCKO")) {
-				trigger.transform.position = new Vector3(DriversSeat.transform.position.x + 0.7f, DriversSeat.transform.position.y, DriversSeat.transform.position.z);
-				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+				trigger.transform.localPosition = -DriversSeat.transform.localPosition;
 			}
 
 			// Satsuma
 			if (VehicleType.StartsWith("SATSUMA")) {
-				trigger.transform.position = new Vector3(DriversSeat.transform.position.x - 0.6f, DriversSeat.transform.position.y - 0.25f, DriversSeat.transform.position.z);
-				trigger.transform.localScale = new Vector3(0.3f, 0.2f, 0.3f);
+				trigger.transform.localPosition = new Vector3(-DriversSeat.transform.localPosition.x, -DriversSeat.transform.localPosition.y, -DriversSeat.transform.localPosition.z + 0.15f);
 			}
 
-			// Disables the cube mesh render
-			//trigger.GetComponentInChildren<MeshRenderer>().enabled = false;
+			// Destroys the cube mesh render
+			//GameObject.Destroy(trigger.GetComponentInChildren<MeshRenderer>());
 		}
 
 		/// <summary>
