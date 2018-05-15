@@ -10,11 +10,6 @@
 		TransformMessage transform;
 	}
 
-	class ObjectInitMessage {
-		int objectID;
-		TransformMessage transform;
-	}
-
 	[NetMessageDesc(MessageIds.FullWorldSync)]
 	class FullWorldSyncMessage {
 		string						mailboxName;
@@ -25,6 +20,13 @@
 		PickupableSpawnMessage[]	pickupables;
 		LightSwitchMessage[]		lights;
 		WeatherUpdateMessage		currentWeather;
-		ObjectInitMessage[]         objects;
+
+		// Informations about player we have connected to.
+
+		Vector3Message spawnPosition;
+		QuaternionMessage spawnRotation;
+		byte occupiedVehicleId;
+		bool passenger;
+		ushort pickedUpObject;
 	}
 }

@@ -80,6 +80,26 @@ struct SteamWrapper
 	}
 };
 
+const AppId_t GAME_APP_ID = 516750;
+const char *const GAME_APP_ID_STR = "516750";
+
+
+/**
+ * Check if operating system we are running on is 64 bit.
+ *
+ * @return @c true if operating system is 64 bit, @c false otherwise.
+ */
+bool IsOS64Bit(void)
+{
+	// As launcher currently is only compiled as 32bit process this check is sufficient.
+
+	BOOL Wow64Process = FALSE;
+	if (!IsWow64Process(GetCurrentProcess(), &Wow64Process)) {
+		return false;
+	}
+	return Wow64Process != 0;
+}
+
 /**
  * Launcher entry point.
  *
@@ -93,15 +113,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	ISteamApps *const steamApps = SteamApps();
-	const AppId_t appid = 516750;
 
-	if (!steamApps->BIsAppInstalled(appid)) {
+	if (!steamApps->BIsAppInstalled(GAME_APP_ID)) {
 		MessageBox(NULL, "To run My Summer Car Multiplayer you need to have installed My Summer Car game.", "Fatal error", MB_ICONERROR);
 		return 0;
 	}
 
 	char installFolder[MAX_PATH] = { 0 };
-	steamApps->GetAppInstallDir(appid, installFolder, MAX_PATH);
+	steamApps->GetAppInstallDir(GAME_APP_ID, installFolder, MAX_PATH);
 
 	const char ExecutableName[] = "mysummercar.exe";
 
@@ -112,7 +131,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	PROCESS_INFORMATION processInformation = { 0 };
 	startupInfo.cb = sizeof(startupInfo);
 
-	SetEnvironmentVariable("SteamAppID", "516750");
+	SetEnvironmentVariable("SteamAppID", GAME_APP_ID_STR);
 
 	if (GetFileAttributes(gameExePath) == INVALID_FILE_ATTRIBUTES) {
 		MessageBox(NULL, "Unable to find game .exe file.", "Fatal error", MB_ICONERROR);
@@ -121,6 +140,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	if (!CreateProcess(gameExePath, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, installFolder, &startupInfo, &processInformation)) {
 		MessageBox(NULL, "Cannot create game process.", "Fatal error", MB_ICONERROR);
+		return 0;
+	}
+
+	BOOL Wow64Process = FALSE;
+	if (!IsWow64Process(processInformation.hProcess, &Wow64Process)) {
+		MessageBox(NULL, "Failed to determinate game process architecture.", "Fatal error", MB_ICONERROR);
+		TerminateProcess(processInformation.hProcess, 0);
+		return 0;
+	}
+
+	if (!Wow64Process && IsOS64Bit()) {
+		MessageBox(NULL, "Mod does not support 64bit version of the game. To play multiplayer go to steam and opt out of 64bit beta.", "Fatal error", MB_ICONERROR);
+		TerminateProcess(processInformation.hProcess, 0);
 		return 0;
 	}
 
@@ -144,6 +176,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	if (!InjectDll(processInformation.hProcess, injectorDllPath)) {
+		const DWORD InjectionError = GetLastError();
 		MessageBox(NULL, "Could not inject dll into the game process. Please try launching the game again.", "Fatal error", MB_ICONERROR);
 		TerminateProcess(processInformation.hProcess, 0);
 		return 0;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Text;
 using System.IO;
 using System;
@@ -8,18 +8,81 @@ namespace MSCMP {
 	/// <summary>
 	/// Development tools.
 	/// </summary>
-	class DevTools {
+	static class DevTools {
 
-		bool devView = false;
-		GameObject spawnedGo = null;
+		static bool devView = false;
 
-		public void OnGUI(GameObject localPlayer) {
+		static bool displayClosestObjectNames = false;
+		static bool airBreak = false;
+
+		public static bool netStats = false;
+		public static bool displayPlayerDebug = false;
+
+		/// <summary>
+		/// Game object representing local player.
+		/// </summary>
+		static GameObject localPlayer = null;
+
+		const float DEV_MENU_BUTTON_WIDTH = 150.0f;
+		const float TITLE_SECTION_WIDTH = 50.0f;
+		static Rect devMenuButtonsRect = new Rect(5, 0.0f, DEV_MENU_BUTTON_WIDTH, 25.0f);
+
+		public static void OnGUI() {
+			if (displayClosestObjectNames) {
+				DrawClosestObjectNames();
+			}
+
 			if (!devView) {
 				return;
 			}
 
-			foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>()) {
 
+			devMenuButtonsRect.x = 5.0f;
+			devMenuButtonsRect.y = 0.0f;
+
+			NewSection("Toggles:");
+			Checkbox("Net stats", ref netStats);
+			Checkbox("Net stats - players dbg", ref displayPlayerDebug);
+			Checkbox("Display object names", ref displayClosestObjectNames);
+			Checkbox("AirBreak", ref airBreak);
+
+			NewSection("Actions:");
+
+			if (Action("Dump world")) {
+				DumpWorld(Application.loadedLevelName);
+			}
+
+			if (Action("Dump local player")) {
+				DumpLocalPlayer();
+			}
+		}
+
+		static void NewSection(string title) {
+			devMenuButtonsRect.x = 5.0f;
+			devMenuButtonsRect.y += 25.0f;
+
+			GUI.color = Color.white;
+			GUI.Label(devMenuButtonsRect, title);
+			devMenuButtonsRect.x += TITLE_SECTION_WIDTH;
+		}
+
+		static void Checkbox(string name, ref bool state) {
+			GUI.color = state ? Color.green : Color.white;
+			if (GUI.Button(devMenuButtonsRect, name)) {
+				state = !state;
+			}
+			devMenuButtonsRect.x += DEV_MENU_BUTTON_WIDTH;
+		}
+
+		static bool Action(string name) {
+			GUI.color = Color.white;
+			bool execute = GUI.Button(devMenuButtonsRect, name);
+			devMenuButtonsRect.x += DEV_MENU_BUTTON_WIDTH;
+			return execute;
+		}
+
+		static void DrawClosestObjectNames() {
+			foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>()) {
 				if (localPlayer) {
 					if ((go.transform.position - localPlayer.transform.position).sqrMagnitude > 10) {
 						continue;
@@ -36,89 +99,52 @@ namespace MSCMP {
 			}
 		}
 
-		public void Update() {
+		public static void Update() {
+			if (localPlayer == null) {
+				localPlayer = GameObject.Find("PLAYER");
+			}
+			else {
+				UpdatePlayer();
+			}
+
 			if (Input.GetKeyDown(KeyCode.F3)) {
 				devView = !devView;
 			}
+		}
 
-			if (Input.GetKeyDown(KeyCode.F5)) {
-				DumpWorld(Application.loadedLevelName);
+		public static void UpdatePlayer() {
+
+			if (airBreak) {
+				// Pseudo AirBrk
+				if (Input.GetKey(KeyCode.KeypadPlus) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position + Vector3.up * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.KeypadMinus) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position - Vector3.up * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad8) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad2) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.forward * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad4) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.right * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad6) && localPlayer) {
+					localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.right * 5.0f;
+				}
 			}
 		}
 
-		public void UpdatePlayer(GameObject localPlayer) {
+		static void DumpLocalPlayer() {
+			StringBuilder builder = new StringBuilder();
+			Utils.PrintTransformTree(localPlayer.transform, 0, (int level, string text) => {
 
-			if (!devView) {
-				return;
-			}
-
-			// Pseudo AirBrk
-			if (Input.GetKey(KeyCode.KeypadPlus) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + Vector3.up * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.KeypadMinus) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - Vector3.up * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad8) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad2) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.forward * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad4) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.right * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad6) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.right * 5.0f;
-			}
-
-			if (Input.GetKeyDown(KeyCode.G) && localPlayer) {
-				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(localPlayer, "PlayerFunctions");
-				if (fsm != null) {
-					fsm.SendEvent("MIDDLEFINGER");
-				}
-				else {
-					GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					go.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				}
-			}
-
-			if (Input.GetKeyDown(KeyCode.I) && localPlayer) {
-
-				StringBuilder builder = new StringBuilder();
-				Utils.PrintTransformTree(localPlayer.transform, 0, (int level, string text) => {
-
-					for (int i = 0; i < level; ++i) builder.Append("    ");
-					builder.Append(text + "\n");
-				});
-				System.IO.File.WriteAllText(Client.GetPath("localPlayer.txt"), builder.ToString());
-			}
-
-
-			if (Input.GetKeyDown(KeyCode.F6) && localPlayer) {
-
-
-				GameObject prefab = GameObject.Find("JONNEZ ES(Clone)");
-				spawnedGo = GameObject.Instantiate(prefab);
-
-				// Remove component that overrides spawn position of JONNEZ.
-				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(spawnedGo, "LOD");
-				GameObject.Destroy(fsm);
-
-				Vector3 direction = localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				spawnedGo.transform.position = localPlayer.transform.position + direction;
-
-
-				/*StringBuilder builder = new StringBuilder();
-				PrintTrans(go.transform, 0, (int level, string text) => {
-
-					for (int i = 0; i < level; ++i)	builder.Append("    ");
-					builder.Append(text + "\n");
-				});
-				System.IO.File.WriteAllText("J:\\projects\\MSCMP\\MSCMP\\Debug\\charTree.txt", builder.ToString());*/
-
-
-			}
+				for (int i = 0; i < level; ++i) builder.Append("    ");
+				builder.Append(text + "\n");
+			});
+			System.IO.File.WriteAllText(Client.GetPath("localPlayer.txt"), builder.ToString());
 		}
 
 		public static void DumpWorld(string levelName) {

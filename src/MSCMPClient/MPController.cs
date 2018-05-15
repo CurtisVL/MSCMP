@@ -1,9 +1,7 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using System.Collections.Generic;
-using System.IO;
 using System;
-using System.Diagnostics;
 using MSCMP.Network;
 using MSCMP.Game;
 
@@ -13,17 +11,7 @@ namespace MSCMP {
 	/// </summary>
 	class MPController : MonoBehaviour {
 
-		public const string MOD_DEVELOPMENT_STAGE = "Pre-Alpha";
-		public const string MOD_VERSION_STRING = "0.11";
-
 		public static MPController Instance = null;
-
-#if !PUBLIC_RELEASE
-		/// <summary>
-		/// Various utilities used for development.
-		/// </summary>
-		DevTools devTools = new DevTools();
-#endif
 
 		/// <summary>
 		/// Object managing whole networking.
@@ -34,13 +22,6 @@ namespace MSCMP {
 		/// Name of the currently loaded level.
 		/// </summary>
 		string currentLevelName = "";
-
-#if !PUBLIC_RELEASE
-		/// <summary>
-		/// Game object representing local player.
-		/// </summary>
-		GameObject localPlayer = null;
-#endif
 
 		/// <summary>
 		/// Current scroll value of the invite panel.
@@ -110,7 +91,7 @@ namespace MSCMP {
 		/// </summary>
 		void OnGUI() {
 			GUI.color = Color.white;
-			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + MOD_VERSION_STRING + " " + MOD_DEVELOPMENT_STAGE);
+			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + Client.GetMODDisplayVersion());
 
 			GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.25f);
 			GUI.DrawTexture(new Rect(2, Screen.height - 80, 76, 66), modLogo);
@@ -126,6 +107,8 @@ namespace MSCMP {
 				GUI.Label(new Rect(2, 2, 500, 20), "OFFLINE");
 			}
 
+			MessagesList.Draw();
+
 			// Friends widget.
 
 			if (ShouldSeeInvitePanel()) {
@@ -133,9 +116,11 @@ namespace MSCMP {
 			}
 
 #if !PUBLIC_RELEASE
-			devTools.OnGUI(localPlayer);
+			DevTools.OnGUI();
 
-			netManager.DrawDebugGUI();
+			if (DevTools.netStats) {
+				netManager.DrawDebugGUI();
+			}
 
 			gameWorld.UpdateIMGUI();
 #endif
@@ -359,14 +344,7 @@ namespace MSCMP {
 
 				// Development stuff.
 #if !PUBLIC_RELEASE
-				devTools.Update();
-
-				if (localPlayer == null) {
-					localPlayer = GameObject.Find("PLAYER");
-				}
-				else {
-					devTools.UpdatePlayer(localPlayer);
-				}
+				DevTools.Update();
 #endif
 			});
 		}

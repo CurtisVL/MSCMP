@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -9,6 +9,8 @@ using MSCMP.Game.Components;
 namespace MSCMP.Network {
 	class NetManager {
 		private const int MAX_PLAYERS = 2;
+		private const int PROTOCOL_VERSION = 1;
+
 		private Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t> gameLobbyJoinRequestedCallback = null;
 		private Steamworks.Callback<Steamworks.P2PSessionRequest_t> p2pSessionRequestCallback = null;
 		private Steamworks.CallResult<Steamworks.LobbyCreated_t> lobbyCreatedCallResult = null;
@@ -45,9 +47,6 @@ namespace MSCMP.Network {
 
 		private NetPlayer[] players = new NetPlayer[MAX_PLAYERS];
 
-		delegate void HandleMessageLowLevel(Steamworks.CSteamID sender, BinaryReader reader);
-		private Dictionary<byte, HandleMessageLowLevel> messageHandlers = new Dictionary<byte, HandleMessageLowLevel>();
-
 		/// <summary>
 		/// The interval between sending individual heartbeat.
 		/// </summary>
@@ -79,14 +78,6 @@ namespace MSCMP.Network {
 		uint ping = 0;
 
 		/// <summary>
-		/// Delegate type for network messages handler.
-		/// </summary>
-		/// <typeparam name="T">The type of the network message.</typeparam>
-		/// <param name="sender">Steam id that sent us the message.</param>
-		/// <param name="message">The deserialized image.</param>
-		public delegate void MessageHandler<T>(Steamworks.CSteamID sender, T message);
-
-		/// <summary>
 		/// The time when network manager was created in UTC.
 		/// </summary>
 		DateTime netManagerCreationTime;
@@ -106,11 +97,22 @@ namespace MSCMP.Network {
 		/// </summary>
 		private ObjectSyncManager objectSyncManager;
 
+		/// <summary>
+		/// The network message handler.
+		/// </summary>
+		NetMessageHandler netMessageHandler = null;
+
+		/// <summary>
+		/// Get net manager's message handler.
+		/// </summary>
+		public NetMessageHandler MessageHandler {
+			get { return netMessageHandler;  }
+		}
+
 		public NetManager() {
 			this.netManagerCreationTime = DateTime.UtcNow;
+			netMessageHandler = new NetMessageHandler(this);
 			netWorld = new NetWorld(this);
-			steamID = Steamworks.SteamUser.GetSteamID();
-			objectSyncManager = new ObjectSyncManager(Steamworks.SteamUser.GetSteamID());
 
 			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create((Steamworks.P2PSessionRequest_t result) => {
 				if (!Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
@@ -131,6 +133,8 @@ namespace MSCMP.Network {
 				}
 
 				Logger.Log("Hey you! I have lobby id for you! " + result.m_ulSteamIDLobby);
+
+				MessagesList.AddMessage("Session started.", MessageSeverity.Info);
 
 				// Setup local player.
 				players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
@@ -153,38 +157,35 @@ namespace MSCMP.Network {
 
 				Logger.Log("Oh hello! " + result.m_ulSteamIDLobby);
 
+				MessagesList.AddMessage("Entered lobby.", MessageSeverity.Info);
+
 				mode = Mode.Player;
 				state = State.LoadingGameWorld;
 				currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
 
 				ShowLoadingScreen(true);
-				SendHandshake();
+				SendHandshake(players[1]);
 			});
 
-			// TODO: Move message handlers to some class.
+			RegisterProtocolMessagesHandlers();
+		}
 
-			BindMessageHandler((Steamworks.CSteamID sender, Messages.HandshakeMessage msg) => {
-				remoteClock = msg.clock;
+		/// <summary>
+		/// Register protocol related network messages handlers.
+		/// </summary>
+		void RegisterProtocolMessagesHandlers() {
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.HandshakeMessage msg) => {
 				HandleHandshake(sender, msg);
 			});
 
-			BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerSyncMessage msg) => {
-				if (players[1] == null) {
-					Logger.Log("Received synchronization packet but no remote player is currently connected.");
-					return;
-				}
-
-				players[1].HandleSynchronize(msg);
-			});
-
-			BindMessageHandler((Steamworks.CSteamID sender, Messages.HeartbeatMessage msg) => {
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.HeartbeatMessage msg) => {
 				var message = new Messages.HeartbeatResponseMessage();
 				message.clientClock = msg.clientClock;
 				message.clock = GetNetworkClock();
 				BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 			});
 
-			BindMessageHandler((Steamworks.CSteamID sender, Messages.HeartbeatResponseMessage msg) => {
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.HeartbeatResponseMessage msg) => {
 				ping = (uint)(GetNetworkClock() - msg.clientClock);
 
 				// TODO: Some smart lag compensation.
@@ -193,9 +194,10 @@ namespace MSCMP.Network {
 				timeSinceLastHeartbeat = 0.0f;
 			});
 
-			BindMessageHandler((Steamworks.CSteamID sender, Messages.DisconnectMessage msg) => {
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.DisconnectMessage msg) => {
 				HandleDisconnect(false);
 			});
+		}
 
 			BindMessageHandler((Steamworks.CSteamID sender, Messages.OpenDoorsMessage msg) => {
 				NetPlayer player = players[1];
@@ -443,22 +445,6 @@ namespace MSCMP.Network {
 			return (ulong)((DateTime.UtcNow - this.netManagerCreationTime).TotalMilliseconds);
 		}
 
-		/// <summary>
-		/// Binds handler for the given message. (There can be only one handler per message)
-		/// </summary>
-		/// <typeparam name="T">The type of message to register handler for.</typeparam>
-		/// <param name="Handler">The handler lambda.</param>
-		public void BindMessageHandler<T>(MessageHandler<T> Handler) where T: INetMessage, new() {
-			T message = new T();
-
-			messageHandlers.Add(message.MessageId, (Steamworks.CSteamID sender, BinaryReader reader) => {
-				if (! message.Read(reader)) {
-					Logger.Log("Failed to read network message " + message.MessageId + " received from " + sender.ToString());
-					return;
-				}
-				Handler(sender, message);
-			});
-		}
 
 		/// <summary>
 		/// Broadcasts message to connected players.
@@ -472,6 +458,7 @@ namespace MSCMP.Network {
 			if (players[1] == null) {
 				return false;
 			}
+
 			MemoryStream stream = new MemoryStream();
 			BinaryWriter writer = new BinaryWriter(stream);
 
@@ -481,8 +468,39 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			players[1].SendPacket(stream.GetBuffer(), sendType, channel);
+			foreach (NetPlayer player in players) {
+				if (player is NetLocalPlayer) {
+					continue;
+				}
+
+				player?.SendPacket(stream.GetBuffer(), sendType, channel);
+			}
 			return true;
+		}
+
+		/// <summary>
+		/// Send message to given player.
+		/// </summary>
+		/// <typeparam name="T">The type of the message to broadcast.</typeparam>
+		/// <param name="player">Player to who message should be send.</param>
+		/// <param name="message">The message to broadcast.</param>
+		/// <param name="sendType">The send type.</param>
+		/// <param name="channel">The channel used to deliver message.</param>
+		/// <returns>true if message was sent false otherwise</returns>
+		public bool SendMessage<T>(NetPlayer player, T message, Steamworks.EP2PSend sendType, int channel = 0) where T : INetMessage {
+			if (player == null) {
+				return false;
+			}
+			MemoryStream stream = new MemoryStream();
+			BinaryWriter writer = new BinaryWriter(stream);
+
+			writer.Write((byte)message.MessageId);
+			if (! message.Write(writer)) {
+				Client.FatalError("Failed to write network message " + message.MessageId);
+				return false;
+			}
+
+			return player.SendPacket(stream.GetBuffer(), sendType, channel);
 		}
 
 		/// <summary>
@@ -581,6 +599,11 @@ namespace MSCMP.Network {
 		/// <param name="timeout">Was the disconnect caused by timeout?</param>
 		private void HandleDisconnect(bool timeout) {
 			ShowLoadingScreen(false);
+
+			if (IsHost) {
+				string reason = timeout ? "timeout" : "part";
+				MessagesList.AddMessage($"Player {players[1].GetName()} disconnected. ({reason})", MessageSeverity.Info);
+			}
 			CleanupPlayer();
 
 			// Go to main menu if we are normal player - the session just closed.
@@ -654,18 +677,11 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				if (players[1] != null && players[1].SteamId != senderSteamId) {
-					Logger.Log("Received network message from user that is not in the session. (" + senderSteamId + ")");
-					continue;
-				}
-
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
 
 				byte messageId = reader.ReadByte();
-				if (messageHandlers.ContainsKey(messageId)) {
-					messageHandlers[messageId](senderSteamId, reader);
-				}
+				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}
 
@@ -708,13 +724,17 @@ namespace MSCMP.Network {
 
 			GUI.color = Color.white;
 
-			foreach (NetPlayer player in players) {
-				if (player != null) {
-					player.DrawDebugGUI();
+			if (DevTools.displayPlayerDebug) {
+				foreach (NetPlayer player in players) {
+					if (player != null) {
+						player.DrawDebugGUI();
+					}
 				}
 			}
 
-			Rect debugPanel = new Rect(10, 50, 500, 20);
+			Rect debugPanel = new Rect(10, 90, 500, 20);
+			GUI.Label(debugPanel, "Protocol version: " + PROTOCOL_VERSION);
+			debugPanel.y += 20.0f;
 			GUI.Label(debugPanel, "Time since last heartbeat: " + timeSinceLastHeartbeat);
 			debugPanel.y += 20.0f;
 			GUI.Label(debugPanel, "Time to send next heartbeat: " + timeToSendHeartbeat);
@@ -738,6 +758,18 @@ namespace MSCMP.Network {
 		/// <param name="senderSteamId">The steam id of the sender.</param>
 		/// <param name="msg">Hand shake message.</param>
 		private void HandleHandshake(Steamworks.CSteamID senderSteamId, Messages.HandshakeMessage msg) {
+			// Check if protocol version matches.
+
+			if (IsPlayer && (msg.protocolVersion != PROTOCOL_VERSION)) {
+				string errorMessage = $"Failed to join lobby. Protocol version mismatch. (Client: {PROTOCOL_VERSION}, Host: {msg.protocolVersion})";
+				MPGUI.Instance.ShowMessageBox(errorMessage);
+				Logger.Error(errorMessage);
+				MPController.Instance.LoadLevel("MainMenu");
+				return;
+			}
+
+			// All looks fine
+
 			if (IsHost) {
 				if (players[1] != null) {
 					Logger.Log("Received handshake from player but player is already here.");
@@ -750,11 +782,24 @@ namespace MSCMP.Network {
 				timeSinceLastHeartbeat = 0.0f;
 				players[1] = new NetPlayer(this, netWorld, senderSteamId);
 
+				// Check if version matches - if not ignore this player.
+
+				if (msg.protocolVersion != PROTOCOL_VERSION) {
+					MessagesList.AddMessage($"Player {players[1].GetName()} connection rejected. Version mismatch.", MessageSeverity.Error);
+
+					Logger.Error($"Player disconnected. Version mismatch. (Client: {PROTOCOL_VERSION}, Player: {msg.protocolVersion}).");
+					SendHandshake(players[1]);
+					players[1].Dispose();
+					players[1] = null;
+					return;
+				}
+
 				// Player can be spawned here safely. Host is already in game and all game objects are here.
 
 				players[1].Spawn();
+				SendHandshake(players[1]);
 
-				SendHandshake();
+				MessagesList.AddMessage($"Player {players[1].GetName()} joined.", MessageSeverity.Info);
 			}
 			else {
 				if (players[1] == null) {
@@ -763,37 +808,25 @@ namespace MSCMP.Network {
 					return;
 				}
 
-				Logger.Log("CONNECTION ESTABLISHED!");
+				MessagesList.AddMessage($"Connection established!", MessageSeverity.Info);
 
 				MPController.Instance.LoadLevel("GAME");
 
 				// Host will be spawned when game will be loaded and OnGameWorldLoad callback will be called.
 			}
 
-			// Set player state.
-
-			players[1].Teleport(Utils.NetVec3ToGame(msg.spawnPosition), Utils.NetQuatToGame(msg.spawnRotation));
-			if (msg.occupiedVehicleId != NetVehicle.INVALID_ID) {
-				var vehicle = netWorld.GetVehicle(msg.occupiedVehicleId);
-				Client.Assert(vehicle != null, $"Player {players[1].GetName()} ({players[1].SteamId}) you tried to join reported that he drives car that does not exists in your game. Vehicle id: {msg.occupiedVehicleId}, passenger: {msg.passenger}");
-				players[1].EnterVehicle(vehicle, msg.passenger);
-			}
-
-			if (msg.pickedUpObject != NetPickupable.INVALID_ID) {
-				players[1].PickupObject(msg.pickedUpObject);
-			}
-
+			remoteClock = msg.clock;
 			players[1].hasHandshake = true;
 		}
 
 		/// <summary>
 		/// Sends handshake to the connected player.
 		/// </summary>
-		private void SendHandshake() {
+		private void SendHandshake(NetPlayer player) {
 			Messages.HandshakeMessage message = new Messages.HandshakeMessage();
-			message.clock = GetNetworkClock();
-			GetLocalPlayer().WriteHandshake(message);
-			BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
+			message.protocolVersion		= PROTOCOL_VERSION;
+			message.clock				= GetNetworkClock();
+			SendMessage(player, message, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 		/// <summary>
@@ -818,6 +851,28 @@ namespace MSCMP.Network {
 		/// <returns>Local player object.</returns>
 		public NetLocalPlayer GetLocalPlayer() {
 			return (NetLocalPlayer)players[0];
+		}
+
+		/// <summary>
+		/// Get network player object by steam id.
+		/// </summary>
+		/// <param name="steamId">The steam id used to find player for.</param>
+		/// <returns>Network player object or null if there is not player matching given steam id.</returns>
+		public NetPlayer GetPlayer(Steamworks.CSteamID steamId) {
+			foreach (NetPlayer player in players) {
+				if (player?.SteamId == steamId) {
+					return player;
+				}
+			}
+			return null;
+		}
+
+
+		/// <summary>
+		/// Called after whole network world is loaded.
+		/// </summary>
+		public void OnNetworkWorldLoaded() {
+			state = State.Playing;
 		}
 	}
 }

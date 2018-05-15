@@ -979,6 +979,19 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// Set remote steering state.
+		/// </summary>
+		public bool RemoteSteering {
+			set {
+				axisCarController.enabled = !value;
+				mpCarController.enabled = value;
+			}
+			get {
+				return axisCarController.enabled;
+			}
+		}
+
+		/// <summary>
 		/// Setup player trigger related hooks.
 		/// </summary>
 		/// <param name="fsm">The fsm to hook.</param>
