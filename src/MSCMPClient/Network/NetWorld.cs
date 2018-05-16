@@ -350,8 +350,6 @@ namespace MSCMP.Network {
 				player.ReleaseObject(msg.drop);
 			});
 
-
-
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.LightSwitchMessage msg) => {
 				Game.Objects.LightSwitch light = Game.LightSwitchManager.Instance.FindLightSwitch(Utils.NetVec3ToGame(msg.pos));
 				light.TurnOn(msg.toggle);
@@ -562,7 +560,7 @@ namespace MSCMP.Network {
 
 			netManager.GetLocalPlayer().WriteSpawnState(msg);
 		}
-
+		
 
 		/// <summary>
 		/// Handle full world sync message.
@@ -581,15 +579,6 @@ namespace MSCMP.Network {
 			gameWorld.PlayerLastName = msg.mailboxName;
 
 			// Doors.
-
-				NetVehicle vehicle = GetVehicle(vehicleMsg.id);
-				Client.Assert(vehicle != null, $"Received info about non existing vehicle {vehicleMsg.id} in full world sync. (pos: {pos}, rot: {rot})");
-
-				vehicle.Teleport(pos, rot);
-			}
-
-			// Doors.
-
 			foreach (Messages.DoorsInitMessage door in msg.doors) {
 				Vector3 position = Utils.NetVec3ToGame(door.position);
 				Game.Objects.GameDoor doors = Game.GameDoorsManager.Instance.FindGameDoors(position);
@@ -635,8 +624,8 @@ namespace MSCMP.Network {
 				}
 
 				DestroyPickupableLocal(id);
-			}
-		}
+            }
+        }
 
 		/// <summary>
 		/// Ask host for full world sync.

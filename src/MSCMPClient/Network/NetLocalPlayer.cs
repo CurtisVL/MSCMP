@@ -203,7 +203,6 @@ namespace MSCMP.Network {
 		}
 
 		/// <summary>
-<<<<<<< HEAD
 		/// Write vehicle engine state into state message.
 		/// </summary>
 		/// <param name="state">The engine state to write.</param>
@@ -236,12 +235,7 @@ namespace MSCMP.Network {
 		}
 
 		/// <summary>
-		/// Write player state into handshake message.
-||||||| Updated lightswitch synchronization to changes in network messages.
-		/// Write player state into handshake message.
-=======
 		/// Write player state into the network message.
->>>>>>> master
 		/// </summary>
 		/// <param name="msg">Message to write to.</param>
 		public void WriteSpawnState(Messages.FullWorldSyncMessage msg) {

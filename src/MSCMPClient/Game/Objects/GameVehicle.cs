@@ -242,30 +242,6 @@ namespace MSCMP.Game.Objects {
 			FlatbedHatch,
 		}
 
-		// Engine
-		string MP_WAIT_FOR_START_EVENT_NAME = "MPWAITFORSTART";
-		string MP_ACC_EVENT_NAME = "MPACC";
-		string MP_TURN_KEY_EVENT_NAME = "MPTURNKEY";
-		string MP_CHECK_CLUTCH_EVENT_NAME = "MPCHECKCLUTCH";
-		string MP_STARTING_ENGINE_EVENT_NAME = "MPSTARTINGENGINE";
-		string MP_START_ENGINE_EVENT_NAME = "MPSTARTENGINE";
-		string MP_START_OR_NOT_EVENT_NAME = "MPSTARTORNOT";
-		string MP_MOTOR_RUNNING_EVENT_NAME = "MPMOTORRUNNING";
-		string MP_WAIT_EVENT_NAME = "MPWAIT";
-		string MP_GLOWPLUG_EVENT_NAME = "MPGLOWPLUG";
-
-		// Interior
-		string MP_PBRAKE_INCREASE_EVENT_NAME = "MPPBRAKEINCREASE";
-		string MP_PBRAKE_DECREASE_EVENT_NAME = "MPPBRAKEDECREASE";
-		string MP_TRUCK_PBRAKE_FLIP_EVENT_NAME = "MPFLIPBRAKE";
-		string MP_LIGHTS_EVENT_NAME = "MPLIGHTS";
-		string MP_LIGHTS_SWITCH_EVENT_NAME = "MPLIGHTSSWITCH";
-		string MP_WIPERS_EVENT_NAME = "MPWIPERS";
-		string MP_HYDRAULIC_PUMP_EVENT_NAME = "MPHYDRAULICPUMP";
-		string MP_AXLE_LIFT_EVENT_NAME = "MPAXLELIFT";
-		string MP_INTERIOR_LIGHT_EVENT_NAME = "MPINTERIORLIGHT";
-		string MP_DIFF_LOCK_EVENT_NAME = "MPDIFFLOCK";
-
 		// Dashboard
 		string MP_ACC_ON_EVENT_NAME = "MPACCON";
 		string MP_TEST_EVENT_NAME = "MPTEST";
@@ -278,9 +254,6 @@ namespace MSCMP.Game.Objects {
 
 		// Misc
 		string MP_RANGE_SWITCH_EVENT_NAME = "MPRANGE";
-		string MP_FUEL_TAP_EVENT_NAME = "MPFUELTAP";
-		string MP_SPILL_VALVE_EVENT_NAME = "MPSPILLVALVE";
-		string MP_DESTROY_WASP_NEST_EVENT_NAME = "MPDESTROYNEST";
 
 		/// <summary>
 		/// PlayMaker state action executed when local player enters vehicle.
@@ -335,486 +308,6 @@ namespace MSCMP.Game.Objects {
 				Finish();
 			}
 		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Wait for start state.
-		/// </summary>
-		private class onWaitForStartAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onWaitForStartAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				//LastTransition is null on new vehicle spawn
-				if (State.Fsm.LastTransition != null) {
-					if (State.Fsm.LastTransition.EventName == vehicle.MP_WAIT_FOR_START_EVENT_NAME || vehicle.isDriver == false) {
-						return;
-					}
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.WaitForStart, DashboardStates.MotorOff, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters ACC state.
-		/// </summary>
-		private class onACCAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onACCAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_ACC_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.ACC, DashboardStates.Test, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Turn key state.
-		/// </summary>
-		private class onTurnKeyAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onTurnKeyAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_TURN_KEY_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.TurnKey, DashboardStates.ACCon2, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Check clutch engine state.
-		/// </summary>
-		private class onCheckClutchAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onCheckClutchAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_CHECK_CLUTCH_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.CheckClutch, DashboardStates.Null, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Starting engine state.
-		/// </summary>
-		private class onStartingEngineAction : FsmStateAction {
-			private GameVehicle vehicle;
-			float startTime = 0;
-
-			public onStartingEngineAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_STARTING_ENGINE_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				startTime = vehicle.starterFsm.Fsm.GetFsmFloat("StartTime").Value;
-
-				vehicle.onEngineStateChanged(EngineStates.StartingEngine, DashboardStates.MotorStarting, startTime);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Start engine state.
-		/// </summary>
-		private class onStartEngineAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onStartEngineAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_START_ENGINE_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.StartEngine, DashboardStates.Null, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Motor running engine state.
-		/// </summary>
-		private class onMotorRunningAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onMotorRunningAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_MOTOR_RUNNING_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.MotorRunning, DashboardStates.WaitPlayer, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Wait engine state.
-		/// </summary>
-		private class onWaitAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onWaitAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_WAIT_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.Wait, DashboardStates.Null, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Start or not engine state.
-		/// </summary>
-		private class onAccGlowplugAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onAccGlowplugAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_GLOWPLUG_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.Glowplug, DashboardStates.Null, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when vehicle enters Wait engine state.
-		/// </summary>
-		private class onStartOrNotAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onStartOrNotAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_START_OR_NOT_EVENT_NAME || vehicle.isDriver == false) {
-					return;
-				}
-
-				vehicle.onEngineStateChanged(EngineStates.StartOrNot, DashboardStates.Null, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when parking brake is pulled.
-		/// </summary>
-		private class onParkingBrakeIncreaseAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onParkingBrakeIncreaseAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			// Called on exit so latest value is sent
-			public override void OnExit() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_PBRAKE_INCREASE_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, vehicle.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when parking brake is pushed.
-		/// </summary>
-		private class onParkingBrakeDecreaseAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onParkingBrakeDecreaseAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			// Called on exit so latest value is sent
-			public override void OnExit() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_PBRAKE_DECREASE_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, vehicle.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when truck parking brake is used.
-		/// </summary>
-		private class onTruckPBrakeFlipAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onTruckPBrakeFlipAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_TRUCK_PBRAKE_FLIP_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, !vehicle.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when bike fuel tap is used.
-		/// </summary>
-		private class onFuelTapUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onFuelTapUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_FUEL_TAP_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.FuelTap, !vehicle.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when lights in vehicles are used.
-		/// </summary>
-		private class onLightsUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onLightsUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_LIGHTS_EVENT_NAME) {
-					return;
-				}
-
-				if (State.Fsm.LastTransition.EventName == "FINISHED") {
-					if (vehicle.isDriver == false) {
-						return;
-					}
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.Lights, false, vehicle.lightsFsm.Fsm.GetFsmInt("Selection").Value);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when wipers are used.
-		/// </summary>
-		private class onWipersUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onWipersUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_WIPERS_EVENT_NAME) {
-					return;
-				}
-
-				int selection = vehicle.wipersFsm.Fsm.GetFsmInt("Selection").Value;
-				if (selection == 2) {
-					selection = 0;
-				}
-				else {
-					selection++;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.Wipers, false, selection);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when interior light is used
-		/// </summary>
-		private class onInteriorLightUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onInteriorLightUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_INTERIOR_LIGHT_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.InteriorLight, !vehicle.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when hydraulic pump is used.
-		/// </summary>
-		private class onHydraulicPumpUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onHydraulicPumpUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (vehicle.hydraulicPumpFirstRun == false) {
-					if (State.Fsm.LastTransition.EventName == vehicle.MP_HYDRAULIC_PUMP_EVENT_NAME) {
-						return;
-					}
-
-					vehicle.onVehicleSwitchChanges(SwitchIDs.HydraulicPump, !vehicle.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
-				}
-				else {
-					vehicle.hydraulicPumpFirstRun = false;
-				}
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when spill valve is used
-		/// </summary>
-		private class onSpillValveUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onSpillValveUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_SPILL_VALVE_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.SpillValve, !vehicle.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when axle lift is used
-		/// </summary>
-		private class onAxleLiftUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onAxleLiftUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (vehicle.axleLiftFirstRun == false) {
-					if (State.Fsm.LastTransition.EventName == vehicle.MP_AXLE_LIFT_EVENT_NAME) {
-						return;
-					}
-
-					vehicle.onVehicleSwitchChanges(SwitchIDs.AxleLift, !vehicle.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
-				}
-				else {
-					vehicle.axleLiftFirstRun = false;
-				}
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when diff lock is used.
-		/// </summary>
-		private class onDiffLockUsedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onDiffLockUsedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (vehicle.diffLockFirstRun == false) {
-					if (State.Fsm.LastTransition.EventName == vehicle.MP_DIFF_LOCK_EVENT_NAME) {
-						return;
-					}
-
-					vehicle.onVehicleSwitchChanges(SwitchIDs.DiffLock, !vehicle.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
-				}
-				else {
-					vehicle.diffLockFirstRun = false;
-				}
-				Finish();
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when wasp next is destroyed.
-		/// </summary>
-		private class onWaspNestDestroyedAction : FsmStateAction {
-			private GameVehicle vehicle;
-
-			public onWaspNestDestroyedAction(GameVehicle veh) {
-				vehicle = veh;
-			}
-
-			public override void OnEnter() {
-				if (State.Fsm.LastTransition.EventName == vehicle.MP_DESTROY_WASP_NEST_EVENT_NAME) {
-					return;
-				}
-
-				vehicle.onVehicleSwitchChanges(SwitchIDs.DestroyWaspNest, false, -1);
-				Logger.Debug("Wasp nest destroyed!");
-
-				Finish();
-			}
-		}
-
 
 		/// <summary>
 		/// Constructor.
@@ -1012,26 +505,6 @@ namespace MSCMP.Game.Objects {
 		/// Setup vehicle event hooks.
 		/// </summary>
 		private void SetupVehicleHooks() {
-			FsmState waitForStartState = starterFsm.Fsm.GetState("Wait for start");
-			FsmState accState = starterFsm.Fsm.GetState("ACC");
-			FsmState turnKeyState = starterFsm.Fsm.GetState("Turn key");
-			FsmState checkClutchState = starterFsm.Fsm.GetState("Check clutch");
-			FsmState startingEngineState = starterFsm.Fsm.GetState("Starting engine");
-			FsmState startEngineState = starterFsm.Fsm.GetState("Start engine");
-			FsmState waitState = starterFsm.Fsm.GetState("Wait");
-			FsmState startOrNotState = starterFsm.Fsm.GetState("Start or not");
-			FsmState motorRunningState = starterFsm.Fsm.GetState("Motor running");
-			FsmState accGlowplugState = starterFsm.Fsm.GetState("ACC / Glowplug");
-
-			FsmState accOnState = dashboardFsm.Fsm.GetState("ACC on");
-			FsmState testState = dashboardFsm.Fsm.GetState("Test");
-			FsmState accOn2State = dashboardFsm.Fsm.GetState("ACC on 2");
-			FsmState motorStartingState = dashboardFsm.Fsm.GetState("Motor starting");
-			FsmState shutOffState = dashboardFsm.Fsm.GetState("Shut off");
-			FsmState motorOffState = dashboardFsm.Fsm.GetState("Motor OFF");
-			FsmState waitButtonState = dashboardFsm.Fsm.GetState("Wait button");
-			FsmState waitPlayerState = dashboardFsm.Fsm.GetState("Wait player");
-
 			FsmState pBrakeIncreaseState = null;
 			FsmState pBrakeDecreaseState = null;
 			if (hasPushParkingBrake == true) {
@@ -1096,16 +569,20 @@ namespace MSCMP.Game.Objects {
 			}
 
 			//Engine states
-			if (waitForStartState != null) {
-				PlayMakerUtils.AddNewAction(waitForStartState, new onWaitForStartAction(this));
-				FsmEvent mpWaitForStartEvent = starterFsm.Fsm.GetEvent(MP_WAIT_FOR_START_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpWaitForStartEvent, "Wait for start");
+			if (starterFsm.Fsm.GetState("Wait for start") != null) {
+				EventHook.Add(starterFsm, "Wait for start", new Action(() => {
+					if (starterFsm.Fsm.LastTransition != null) {
+						if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait for start" || this.isDriver == false) {
+							return;
+						}
+					}
+
+					this.onEngineStateChanged(EngineStates.WaitForStart, DashboardStates.MotorOff, -1);
+				}));
 			}
 
-			if (accState != null) {
+			if (starterFsm.Fsm.GetState("ACC") != null) {
 				EventHook.Add(starterFsm, "ACC", new Action(() => {
-					Logger.Log($"Boop, this is a test from {this.gameObject.transform.name}!");
-
 					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC" || this.isDriver == false) {
 						return;
 					}
@@ -1113,118 +590,164 @@ namespace MSCMP.Game.Objects {
 				}));
 			}
 
-			if (turnKeyState != null) {
-				PlayMakerUtils.AddNewAction(turnKeyState, new onTurnKeyAction(this));
-				FsmEvent mpTurnKeyEvent = starterFsm.Fsm.GetEvent(MP_TURN_KEY_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpTurnKeyEvent, "Turn key");
+			if (starterFsm.Fsm.GetState("Turn key") != null) {
+				EventHook.Add(starterFsm, "Turn key", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Turn key" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.TurnKey, DashboardStates.ACCon2, -1);
+				}));
 			}
 
-			if (checkClutchState != null) {
-				PlayMakerUtils.AddNewAction(checkClutchState, new onCheckClutchAction(this));
-				FsmEvent mpCheckClutchState = starterFsm.Fsm.GetEvent(MP_CHECK_CLUTCH_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpCheckClutchState, "Check clutch");
+			if (starterFsm.Fsm.GetState("Check clutch") != null) {
+				EventHook.Add(starterFsm, "Check clutch", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Check clutch" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.CheckClutch, DashboardStates.Null, -1);
+				}));
 			}
 
-			if (startingEngineState != null) {
-				PlayMakerUtils.AddNewAction(startingEngineState, new onStartingEngineAction(this));
-				FsmEvent mpStartingEngineState = starterFsm.Fsm.GetEvent(MP_STARTING_ENGINE_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpStartingEngineState, "Starting engine");
+			if (starterFsm.Fsm.GetState("Starting engine") != null) {
+				EventHook.Add(starterFsm, "Starting engine", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Starting engine" || this.isDriver == false) {
+						return;
+					}
+
+					float startTime = this.starterFsm.Fsm.GetFsmFloat("StartTime").Value;
+
+					this.onEngineStateChanged(EngineStates.StartingEngine, DashboardStates.MotorStarting, startTime);
+				}));
 			}
 
-			if (startEngineState != null) {
-				PlayMakerUtils.AddNewAction(startEngineState, new onStartEngineAction(this));
-				FsmEvent mpStartEngineState = starterFsm.Fsm.GetEvent(MP_START_ENGINE_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpStartEngineState, "Start engine");
+			if (starterFsm.Fsm.GetState("Start engine") != null) {
+				EventHook.Add(starterFsm, "Start engine", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start engine" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.StartEngine, DashboardStates.Null, -1);
+				}));
 			}
 
-			if (waitState != null) {
-				PlayMakerUtils.AddNewAction(waitState, new onWaitAction(this));
-				FsmEvent mpWaitState = starterFsm.Fsm.GetEvent(MP_WAIT_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpWaitState, "Wait");
+			if (starterFsm.Fsm.GetState("Wait") != null) {
+				EventHook.Add(starterFsm, "Wait", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.Wait, DashboardStates.Null, -1);
+				}));
 			}
 
-			if (startOrNotState != null) {
-				PlayMakerUtils.AddNewAction(startOrNotState, new onStartOrNotAction(this));
-				FsmEvent mpStartOrNotState = starterFsm.Fsm.GetEvent(MP_START_OR_NOT_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpStartOrNotState, "Start or not");
+			if (starterFsm.Fsm.GetState("Start or not") != null) {
+				EventHook.Add(starterFsm, "Start or not", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start or not" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.StartOrNot, DashboardStates.Null, -1);
+				}));
 			}
 
-			if (motorRunningState != null) {
-				PlayMakerUtils.AddNewAction(motorRunningState, new onMotorRunningAction(this));
-				FsmEvent mpMotorRunningState = starterFsm.Fsm.GetEvent(MP_MOTOR_RUNNING_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpMotorRunningState, "Motor running");
+			if (starterFsm.Fsm.GetState("Motor running") != null) {
+				EventHook.Add(starterFsm, "Motor running", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Motor running" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.MotorRunning, DashboardStates.WaitPlayer, -1);
+				}));
 			}
 
-			if (accGlowplugState != null) {
-				PlayMakerUtils.AddNewAction(accGlowplugState, new onAccGlowplugAction(this));
-				FsmEvent mpAccGlowplugState = starterFsm.Fsm.GetEvent(MP_GLOWPLUG_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(starterFsm, mpAccGlowplugState, "ACC / Glowplug");
+			if (starterFsm.Fsm.GetState("ACC / Glowplug") != null) {
+				EventHook.Add(starterFsm, "ACC / Glowplug", new Action(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC / Glowplug" || this.isDriver == false) {
+						return;
+					}
+
+					this.onEngineStateChanged(EngineStates.Glowplug, DashboardStates.Null, -1);
+				}));
 			}
 
 			// Dashboard
-			if (accOnState != null) {
+			if (dashboardFsm.Fsm.GetState("ACC on") != null) {
 				FsmEvent mpAccOnState = dashboardFsm.Fsm.GetEvent(MP_ACC_ON_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpAccOnState, "ACC on");
 			}
 
-			if (testState != null) {
+			if (dashboardFsm.Fsm.GetState("Test") != null) {
 				FsmEvent mpTestState = dashboardFsm.Fsm.GetEvent(MP_TEST_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpTestState, "Test");
 			}
 
-			if (accOn2State != null) {
+			if (dashboardFsm.Fsm.GetState("ACC on 2") != null) {
 				FsmEvent mpAccOn2State = dashboardFsm.Fsm.GetEvent(MP_ACC_ON_2_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpAccOn2State, "ACC on 2");
 			}
 
-			if (motorStartingState != null) {
+			if (dashboardFsm.Fsm.GetState("Motor starting") != null) {
 				FsmEvent mpMotorStartingState = dashboardFsm.Fsm.GetEvent(MP_MOTOR_STARTING_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpMotorStartingState, "Motor starting");
 			}
 
-			if (shutOffState != null) {
+			if (dashboardFsm.Fsm.GetState("Shut off") != null) {
 				FsmEvent mpShutOffState = dashboardFsm.Fsm.GetEvent(MP_SHUT_OFF_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpShutOffState, "Shut off");
 			}
 
-			if (motorOffState != null) {
+			if (dashboardFsm.Fsm.GetState("Motor OFF") != null) {
 				FsmEvent mpMotorOffState = dashboardFsm.Fsm.GetEvent(MP_MOTOR_OFF_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpMotorOffState, "Motor OFF");
 			}
 
-			if (waitButtonState != null) {
+			if (dashboardFsm.Fsm.GetState("Wait button") != null) {
 				FsmEvent mpWaitButtonState = dashboardFsm.Fsm.GetEvent(MP_WAIT_BUTTON_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpWaitButtonState, "Wait button");
 			}
 
-			if (waitPlayerState != null) {
+			if (dashboardFsm.Fsm.GetState("Wait player") != null) {
 				FsmEvent mpWaitPlayerState = dashboardFsm.Fsm.GetEvent(MP_WAIT_PLAYER_EVENT_NAME);
 				PlayMakerUtils.AddNewGlobalTransition(dashboardFsm, mpWaitPlayerState, "Wait player");
 			}
 
 			// Parking brake
 			if (pBrakeDecreaseState != null) {
-				PlayMakerUtils.AddNewAction(pBrakeDecreaseState, new onParkingBrakeDecreaseAction(this));
-				FsmEvent mpParkingBrakeDecrease = handbrakeFsm.Fsm.GetEvent(MP_PBRAKE_DECREASE_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpParkingBrakeDecrease, "DECREASE");
+				EventHook.Add(handbrakeFsm, "DECREASE", new Action(() => {
+					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_DECREASE") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+				}));
 			}
 
 			if (pBrakeIncreaseState != null) {
-				PlayMakerUtils.AddNewAction(pBrakeIncreaseState, new onParkingBrakeIncreaseAction(this));
-				FsmEvent mpParkingBrakeIncrease = handbrakeFsm.Fsm.GetEvent(MP_PBRAKE_INCREASE_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpParkingBrakeIncrease, "INCREASE");
+				EventHook.Add(handbrakeFsm, "INCREASE", new Action(() => {
+					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_INCREASE") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+				}));
 			}
 
 			// Truck parking brake
 			if (truckPBrakeFlipState != null) {
-				PlayMakerUtils.AddNewAction(truckPBrakeFlipState, new onTruckPBrakeFlipAction(this));
-				FsmEvent mpTruckPBrakeFlipState = handbrakeFsm.Fsm.GetEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(handbrakeFsm, mpTruckPBrakeFlipState, "Flip");
+				EventHook.Add(handbrakeFsm, "Flip", new Action(() => {
+					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_Flip") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, !this.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
+				}));
 			}
 
 			// Range selector
 			if (rangeSwitchState != null) {
-				FsmEvent mpRangeSwitchState = rangeFsm.Fsm.GetEvent(MP_RANGE_SWITCH_EVENT_NAME);
+				FsmEvent mpRangeSwitchState = rangeFsm.Fsm.GetEvent("MP_Range");
 				if (isTractor == true) {
 					PlayMakerUtils.AddNewGlobalTransition(rangeFsm, mpRangeSwitchState, "Flip");
 				}
@@ -1235,75 +758,134 @@ namespace MSCMP.Game.Objects {
 
 			// Fuel tap
 			if (fuelTapState != null) {
-				PlayMakerUtils.AddNewAction(fuelTapState, new onFuelTapUsedAction(this));
-				FsmEvent mpFuelTapState = fuelTapFsm.Fsm.GetEvent(MP_FUEL_TAP_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(fuelTapFsm, mpFuelTapState, "Test");
+				EventHook.Add(fuelTapFsm, "Test", new Action(() => {
+					if (fuelTapFsm.Fsm.LastTransition.EventName == "MP_Test") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.FuelTap, !this.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
+				}));
 			}
 
 			// Lights
 			if (lightsState != null) {
-				PlayMakerUtils.AddNewAction(lightsState, new onLightsUsedAction(this));
-				FsmEvent mpLightsState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_EVENT_NAME);
-				if (isTruck == true) {
-					PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound 2");
-				}
-				else {
-					PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsState, "Sound");
-				}
-			}
+				EventHook.Add(lightsFsm, "Test", new Action(() => {
+					if (lightsFsm.Fsm.LastTransition.EventName == "MP_Test") {
+						return;
+					}
 
-			if (lightsState != null) {
-				FsmEvent mpLightsSwitchState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsSwitchState, "Test");
+					if (lightsFsm.Fsm.LastTransition.EventName == "FINISHED") {
+						if (this.isDriver == false) {
+							return;
+						}
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.Lights, false, this.lightsFsm.Fsm.GetFsmInt("Selection").Value);
+				}));
+				// Keeping in case this brakes with new method of hooking events.
+				//FsmEvent mpLightsSwitchState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
+				//PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsSwitchState, "Test");
 			}
 
 			// Wipers
 			if (wipersState != null) {
-				PlayMakerUtils.AddNewAction(wipersState, new onWipersUsedAction(this));
-				FsmEvent mpWipersState = wipersFsm.Fsm.GetEvent(MP_WIPERS_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(wipersFsm, mpWipersState, "Test 2");
+				EventHook.Add(wipersFsm, "Test 2", new Action(() => {
+					if (wipersFsm.Fsm.LastTransition.EventName == "MP_Test 2") {
+						return;
+					}
+
+					int selection = this.wipersFsm.Fsm.GetFsmInt("Selection").Value;
+					if (selection == 2) {
+						selection = 0;
+					}
+					else {
+						selection++;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.Wipers, false, selection);
+				}));
 			}
 
 			// Interior light
 			if (interiorLightState != null) {
-				PlayMakerUtils.AddNewAction(interiorLightState, new onInteriorLightUsedAction(this));
-				FsmEvent mpInteriorLightState = interiorLightFsm.Fsm.GetEvent(MP_INTERIOR_LIGHT_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(interiorLightFsm, mpInteriorLightState, "Switch");
+				EventHook.Add(interiorLightFsm, "Switch", new Action(() => {
+					if (interiorLightFsm.Fsm.LastTransition.EventName == "MP_Switch") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
+				}));
 			}
 
 			// Hydraulic pump
 			if (hydraulicPumpState != null) {
-				PlayMakerUtils.AddNewAction(hydraulicPumpState, new onHydraulicPumpUsedAction(this));
-				FsmEvent mpHydraulicPumpState = hydraulicPumpFsm.Fsm.GetEvent(MP_HYDRAULIC_PUMP_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(hydraulicPumpFsm, mpHydraulicPumpState, "Test");
+				EventHook.Add(hydraulicPumpFsm, "Test", new Action(() => {
+					if (this.hydraulicPumpFirstRun == false) {
+						if (hydraulicPumpFsm.Fsm.LastTransition.EventName == "MP_Test") {
+							return;
+						}
+
+						this.onVehicleSwitchChanges(SwitchIDs.HydraulicPump, !this.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
+					}
+					else {
+						this.hydraulicPumpFirstRun = false;
+					}
+				}));
 			}
 
 			// Spill valve
 			if (spillValveState != null) {
-				PlayMakerUtils.AddNewAction(spillValveState, new onSpillValveUsedAction(this));
-				FsmEvent mpSpillValveState = spillValveFsm.Fsm.GetEvent(MP_SPILL_VALVE_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(spillValveFsm, mpSpillValveState, "Switch");
+				EventHook.Add(spillValveFsm, "Switch", new Action(() => {
+					if (spillValveFsm.Fsm.LastTransition.EventName == "MP_Switch") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.SpillValve, !this.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
+				}));
 			}
 
 			// Axle lift
 			if (axleLiftState != null) {
-				PlayMakerUtils.AddNewAction(axleLiftState, new onAxleLiftUsedAction(this));
-				FsmEvent mpAxleLiftState = axleLiftFsm.Fsm.GetEvent(MP_AXLE_LIFT_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(axleLiftFsm, mpAxleLiftState, "Test");
+				EventHook.Add(axleLiftFsm, "Test", new Action(() => {
+					if (this.axleLiftFirstRun == false) {
+						if (axleLiftFsm.Fsm.LastTransition.EventName == "MP_Test") {
+							return;
+						}
+
+						this.onVehicleSwitchChanges(SwitchIDs.AxleLift, !this.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
+					}
+					else {
+						this.axleLiftFirstRun = false;
+					}
+				}));
 			}
 
 			// Diff lock
 			if (diffLockState != null) {
-				PlayMakerUtils.AddNewAction(diffLockState, new onDiffLockUsedAction(this));
-				FsmEvent mpDiffLockState = diffLockFsm.Fsm.GetEvent(MP_DIFF_LOCK_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(diffLockFsm, mpDiffLockState, "Test");
+				EventHook.Add(diffLockFsm, "Test", new Action(() => {
+					if (this.diffLockFirstRun == false) {
+						if (diffLockFsm.Fsm.LastTransition.EventName == "MP_Test") {
+							return;
+						}
+
+						this.onVehicleSwitchChanges(SwitchIDs.DiffLock, !this.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
+					}
+					else {
+						this.diffLockFirstRun = false;
+					}
+				}));
 			}
 
 			// Wasp nest
 			if (waspNestDestroyState != null) {
-				PlayMakerUtils.AddNewAction(waspNestDestroyState, new onWaspNestDestroyedAction(this));
-				FsmEvent mpNestDestroyedState = waspNestFsm.Fsm.GetEvent(MP_DESTROY_WASP_NEST_EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(waspNestFsm, mpNestDestroyedState, "State 2");
+				EventHook.Add(waspNestFsm, "State 2", new Action(() => {
+					if (waspNestFsm.Fsm.LastTransition.EventName == "MP_State 2") {
+						return;
+					}
+
+					this.onVehicleSwitchChanges(SwitchIDs.DestroyWaspNest, false, -1);
+					Logger.Debug("Wasp nest destroyed!");
+				}));
 			}
 		}
 
@@ -1324,34 +906,34 @@ namespace MSCMP.Game.Objects {
 
 			// Engine states
 			if (state == EngineStates.WaitForStart) {
-				starterFsm.SendEvent(MP_WAIT_FOR_START_EVENT_NAME);
+				starterFsm.SendEvent("MP_Wait for start");
 			}
 			else if (state == EngineStates.ACC) {
-				starterFsm.SendEvent(MP_ACC_EVENT_NAME);
+				starterFsm.SendEvent("MP_ACC");
 			}
 			else if (state == EngineStates.TurnKey) {
-				starterFsm.SendEvent(MP_TURN_KEY_EVENT_NAME);
+				starterFsm.SendEvent("MP_Turn key");
 			}
 			else if (state == EngineStates.StartingEngine) {
-				starterFsm.SendEvent(MP_STARTING_ENGINE_EVENT_NAME);
+				starterFsm.SendEvent("MP_Starting engine");
 			}
 			else if (state == EngineStates.StartEngine) {
-				starterFsm.SendEvent(MP_START_ENGINE_EVENT_NAME);
+				starterFsm.SendEvent("MP_Start engine");
 			}
 			else if (state == EngineStates.MotorRunning) {
-				starterFsm.SendEvent(MP_MOTOR_RUNNING_EVENT_NAME);
+				starterFsm.SendEvent("MP_Motor running");
 			}
 			else if (state == EngineStates.Wait) {
-				starterFsm.SendEvent(MP_WAIT_EVENT_NAME);
+				starterFsm.SendEvent("MP_Wait");
 			}
 			else if (state == EngineStates.CheckClutch) {
-				starterFsm.SendEvent(MP_CHECK_CLUTCH_EVENT_NAME);
+				starterFsm.SendEvent("MP_Check clutch");
 			}
 			else if (state == EngineStates.StartOrNot) {
-				starterFsm.SendEvent(MP_START_OR_NOT_EVENT_NAME);
+				starterFsm.SendEvent("MP_Start or not");
 			}
 			else if (state == EngineStates.Glowplug) {
-				starterFsm.SendEvent(MP_GLOWPLUG_EVENT_NAME);
+				starterFsm.SendEvent("MP_ACC / Glowplug");
 			}
 
 			// Dashboard states
@@ -1392,69 +974,69 @@ namespace MSCMP.Game.Objects {
 			// Truck parking brake
 			else if (state == SwitchIDs.HandbrakeLever) {
 				if (handbrakeFsm.Fsm.GetFsmBool("Brake").Value != newValue) {
-					handbrakeFsm.SendEvent(MP_TRUCK_PBRAKE_FLIP_EVENT_NAME);
+					handbrakeFsm.SendEvent("MP_Flip");
 				}
 			}
 
 			// Fuel tap
 			else if (state == SwitchIDs.FuelTap) {
 				if (fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value != newValue) {
-					fuelTapFsm.SendEvent(MP_FUEL_TAP_EVENT_NAME);
+					fuelTapFsm.SendEvent("MP_Test");
 				}
 			}
 
 			// Lights
 			else if (state == SwitchIDs.Lights) {
 				if (lightsFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
-					lightsFsm.SendEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
+					lightsFsm.SendEvent("MP_Test");
 				}
 			}
 
 			// Wipers
 			else if (state == SwitchIDs.Wipers) {
 				if (wipersFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
-					wipersFsm.SendEvent(MP_WIPERS_EVENT_NAME);
+					wipersFsm.SendEvent("MP_Test 2");
 				}
 			}
 
 			// Interior light
 			else if (state == SwitchIDs.InteriorLight) {
 				if (interiorLightFsm.Fsm.GetFsmBool("On").Value != newValue) {
-					interiorLightFsm.SendEvent(MP_INTERIOR_LIGHT_EVENT_NAME);
+					interiorLightFsm.SendEvent("MP_Switch");
 				}
 			}
 
 			// Hydraulic pump
 			else if (state == SwitchIDs.HydraulicPump) {
 				if (hydraulicPumpFsm.Fsm.GetFsmBool("On").Value != newValue) {
-					hydraulicPumpFsm.SendEvent(MP_HYDRAULIC_PUMP_EVENT_NAME);
+					hydraulicPumpFsm.SendEvent("MP_Test");
 				}
 			}
 
 			// Spill valve
 			else if (state == SwitchIDs.SpillValve) {
 				if (spillValveFsm.Fsm.GetFsmBool("Open").Value != newValue) {
-					spillValveFsm.SendEvent(MP_SPILL_VALVE_EVENT_NAME);
+					spillValveFsm.SendEvent("MP_Switch");
 				}
 			}
 
 			// Axle lift
 			else if (state == SwitchIDs.AxleLift) {
 				if (axleLiftFsm.Fsm.GetFsmBool("Up").Value != newValue) {
-					axleLiftFsm.SendEvent(MP_AXLE_LIFT_EVENT_NAME);
+					axleLiftFsm.SendEvent("MP_Test");
 				}
 			}
 
 			// Diff lock
 			else if (state == SwitchIDs.DiffLock) {
 				if (diffLockFsm.Fsm.GetFsmBool("Lock").Value != newValue) {
-					diffLockFsm.SendEvent(MP_DIFF_LOCK_EVENT_NAME);
+					diffLockFsm.SendEvent("MP_Test");
 				}
 			}
 
 			// Destroy wasp nest
 			else if (state == SwitchIDs.DestroyWaspNest) {
-				waspNestFsm.SendEvent(MP_DESTROY_WASP_NEST_EVENT_NAME);
+				waspNestFsm.SendEvent("MP_State 2");
 			}
 		}
 
