@@ -10,6 +10,7 @@ namespace MSCMP.Network {
 	class NetManager {
 		private const int MAX_PLAYERS = 2;
 		private const int PROTOCOL_VERSION = 1;
+		private const uint PROTOCOL_ID = 0x6d73636d;
 
 		private Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t> gameLobbyJoinRequestedCallback = null;
 		private Steamworks.Callback<Steamworks.P2PSessionRequest_t> p2pSessionRequestCallback = null;
@@ -340,6 +341,25 @@ namespace MSCMP.Network {
 			return (ulong)((DateTime.UtcNow - this.netManagerCreationTime).TotalMilliseconds);
 		}
 
+		/// <summary>
+		/// Writes given network message into a given stream.
+		/// </summary>
+		/// <param name="message">The message to write.</param>
+		/// <param name="stream">The stream to write message to.</param>
+		/// <returns>true if message was written successfully, false otherwise</returns>
+		private bool WriteMessage(INetMessage message, MemoryStream stream) {
+			BinaryWriter writer = new BinaryWriter(stream);
+
+			writer.Write(PROTOCOL_ID);
+			writer.Write((byte)message.MessageId);
+			if (!message.Write(writer)) {
+				Client.FatalError("Failed to write network message " + message.MessageId);
+				return false;
+			}
+
+			Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
+			return true;
+		}
 
 		/// <summary>
 		/// Broadcasts message to connected players.
@@ -355,11 +375,7 @@ namespace MSCMP.Network {
 			}
 
 			MemoryStream stream = new MemoryStream();
-			BinaryWriter writer = new BinaryWriter(stream);
-
-			writer.Write((byte)message.MessageId);
-			if (!message.Write(writer)) {
-				Client.FatalError("Failed to write network message " + message.MessageId);
+			if (!WriteMessage(message, stream)) {
 				return false;
 			}
 
@@ -386,12 +402,9 @@ namespace MSCMP.Network {
 			if (player == null) {
 				return false;
 			}
-			MemoryStream stream = new MemoryStream();
-			BinaryWriter writer = new BinaryWriter(stream);
 
-			writer.Write((byte)message.MessageId);
-			if (!message.Write(writer)) {
-				Client.FatalError("Failed to write network message " + message.MessageId);
+			MemoryStream stream = new MemoryStream();
+			if (!WriteMessage(message, stream)) {
 				return false;
 			}
 
@@ -546,14 +559,14 @@ namespace MSCMP.Network {
 		/// Process incomming network messages.
 		/// </summary>
 		private void ProcessMessages() {
-
-
 			uint size = 0;
 			while (Steamworks.SteamNetworking.IsP2PPacketAvailable(out size)) {
 				if (size == 0) {
 					Logger.Log("Received empty p2p packet");
 					continue;
 				}
+
+				Logger.Debug($"Trying to read p2p packet of size {size}.");
 
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
 
@@ -562,20 +575,28 @@ namespace MSCMP.Network {
 				uint msgSize = 0;
 				Steamworks.CSteamID senderSteamId = Steamworks.CSteamID.Nil;
 				if (!Steamworks.SteamNetworking.ReadP2PPacket(data, size, out msgSize, out senderSteamId)) {
+					Logger.Error("Failed to read p2p packet!");
 					continue;
 				}
-
-				// TODO: Joining of the messages if are split?
 
 				if (msgSize != size || msgSize == 0) {
-					Logger.Log("Invalid packet size");
+					Logger.Error("Invalid packet size");
 					continue;
 				}
+
+				Logger.Debug($"Received p2p packet from user {senderSteamId}.");
 
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
 
+				uint protocolId = reader.ReadUInt32();
+				if (protocolId != PROTOCOL_ID) {
+					Logger.Error("The received message was not sent by MSCMP network layer.");
+					continue;
+				}
+
 				byte messageId = reader.ReadByte();
+				Logger.Debug($"Received message {messageId}.");
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}

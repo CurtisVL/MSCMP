@@ -131,9 +131,6 @@ namespace MSCMP.Game {
 		public void SetupMailbox(GameObject mailboxGameObject) {
 			lastnameTextMesh = mailboxGameObject.GetComponent<TextMesh>();
 			lastnameFSM = mailboxGameObject.GetComponent<PlayMakerFSM>();
-
-			Client.Assert(lastnameFSM != null, "Mailbox FSM couldn't be found!");
-			Client.Assert(lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 		}
 
 		List<IGameObjectCollector> gameObjectUsers = new List<IGameObjectCollector>();
@@ -186,7 +183,7 @@ namespace MSCMP.Game {
 				WorldTime = worldTimeCached;
 			}
 
-			if (gameObject.transform.parent.name == "mailbox_bottom_player" && gameObject.name == "YARD") {
+			if (gameObject.transform.parent != null && gameObject.transform.parent.name == "mailbox_bottom_player" && gameObject.name == "Name") {
 				SetupMailbox(gameObject);
 			}
 
@@ -230,6 +227,8 @@ namespace MSCMP.Game {
 			// Check mandatory objects.
 
 			Client.Assert(worldTimeFsm != null, "Now world time FSM found :(");
+			Client.Assert(lastnameFSM != null, "Mailbox FSM couldn't be found!");
+			Client.Assert(lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 
 			// Notify different parts of the mod about the world load.
 
