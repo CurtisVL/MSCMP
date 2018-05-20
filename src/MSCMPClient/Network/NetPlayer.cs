@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace MSCMP.Network {
@@ -231,32 +231,24 @@ namespace MSCMP.Network {
 
 		}
 
-#if !PUBLIC_RELEASE
 		/// <summary>
-		/// Update debug IMGUI of this player.
+		/// Draw this player name tag.
 		/// </summary>
-		public virtual void DrawDebugGUI() {
-			if (characterGameObject == null) return;
-
-			GUI.Label(new Rect(300, 200, 300, 200), "Remote player\n" +
-				"position = "	+ interpolator.CurrentPosition.ToString() + "\n" +
-				"anim = "		+ animManager.currentAnim + "\n" +
-				"animSpeed = "	+ (animManager.activeAnimationState == null ? 0 : animManager.activeAnimationState.speed) + "\n" +
-				"state = "		+ state + "\n"
-			);
-
-			Vector3 spos = Camera.main.WorldToScreenPoint(characterGameObject.transform.position + Vector3.up * 1.2f);
-			if (spos.z > 0.0f) {
-				float width = 100.0f;
-				spos.x -= width / 2.0f;
-				GUI.color = Color.black;
-				GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName());
-				GUI.color = Color.cyan;
-				GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName());
-				GUI.color = Color.white;
+		public void DrawNametag() {
+			if (characterGameObject != null) {
+				Vector3 spos = Camera.main.WorldToScreenPoint(characterGameObject.transform.position + Vector3.up * 2.0f);
+				if (spos.z > 0.0f) {
+					float width = 100.0f;
+					spos.x -= width / 2.0f;
+					GUI.color = Color.black;
+					GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName());
+					GUI.color = Color.cyan;
+					GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName());
+					GUI.color = Color.white;
+				}
 			}
 		}
-#endif
+
 		/// <summary>
 		/// Handle received synchronization message.
 		/// </summary>

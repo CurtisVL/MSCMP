@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using HutongGames.PlayMaker;
 using System;
 using System.Reflection;
@@ -319,6 +319,70 @@ namespace MSCMP {
 			}
 			catch (Exception e) {
 				Client.FatalError("Safe call " + name + " failed.\n" + e.Message + "\n" + e.StackTrace);
+			}
+		}
+
+
+		/// <summary>
+		/// Calculate jenkins hash of the given string.
+		/// </summary>
+		/// <param name="str">The string to calculate jenkins hash of.</param>
+		/// <returns>The jenkins hash of the given string.</returns>
+		public static int StringJenkinsHash(string str) {
+			int i = 0;
+			int hash = 0;
+			while (i != str.Length) {
+				hash += str[i++];
+				hash += hash << 10;
+				hash ^= hash >> 6;
+			}
+			hash += hash << 3;
+			hash ^= hash >> 11;
+			hash += hash << 15;
+			return hash;
+		}
+
+		/// <summary>
+		/// Check if hierarchy of the given game object matches.
+		/// </summary>
+		/// <param name="obj">The game object.</param>
+		/// <param name="hierarchy">The hierarchy pattern to check.</param>
+		/// <returns>true if hierarchy is matching, false otherwise</returns>
+		public static bool IsGameObjectHierarchyMatching(GameObject obj, string hierarchy) {
+			Transform current = obj.transform;
+			var names = hierarchy.Split('/');
+			for (int i = names.Length; i > 0; --i) {
+				if (current == null) {
+					return false;
+				}
+
+				if (names[i - 1] == "*") {
+					continue;
+				}
+
+				if (current.name != names[i - 1]) {
+					return false;
+				}
+
+				current = current.parent;
+			}
+			return true;
+		}
+
+
+		/// <summary>
+		/// Convert p2p session error to string.
+		/// </summary>
+		/// <param name="sessionError">The session error.</param>
+		/// <returns>Session error string.</returns>
+		public static string P2PSessionErrorToString(Steamworks.EP2PSessionError sessionError) {
+			switch (sessionError) {
+				case Steamworks.EP2PSessionError.k_EP2PSessionErrorNone: return "none";
+				case Steamworks.EP2PSessionError.k_EP2PSessionErrorNotRunningApp: return "not running app";
+				case Steamworks.EP2PSessionError.k_EP2PSessionErrorNoRightsToApp: return "no rights to app";
+				case Steamworks.EP2PSessionError.k_EP2PSessionErrorDestinationNotLoggedIn: return "user not logged in";
+				case Steamworks.EP2PSessionError.k_EP2PSessionErrorTimeout: return "timeout";
+				default:return  "unknown";
 			}
 		}
 	}

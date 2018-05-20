@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace MSCMP.Game.Components {
 	/// <summary>
@@ -8,15 +8,27 @@ namespace MSCMP.Game.Components {
 		public int prefabId = -1;
 
 		/// <summary>
+		/// Register this pickupable.
+		/// </summary>
+		private void OnEnable() {
+			GamePickupableDatabase.Instance.RegisterPickupable(gameObject);
+		}
+
+		/// <summary>
+		/// Unregister this pickupable.
+		/// </summary>
+		private void OnDisable() {
+			GamePickupableDatabase.Instance.UnregisterPickupable(gameObject);
+		}
+
+		/// <summary>
 		/// Getter for the prefab descriptor.
 		/// </summary>
 		public GamePickupableDatabase.PrefabDesc PrefabDescriptor
 		{
 			get {
-				if (prefabId != -1) {
-					return GamePickupableDatabase.Instance.GetPickupablePrefab(prefabId);
-				}
-				return null;
+				Client.Assert(prefabId != -1, "Prefab id is not set!");
+				return GamePickupableDatabase.Instance.GetPickupablePrefab(prefabId);
 			}
 		}
 	}

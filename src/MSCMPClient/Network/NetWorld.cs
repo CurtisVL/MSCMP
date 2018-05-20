@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -131,6 +131,7 @@ namespace MSCMP.Network {
 
 				NetPickupable pickupable = GetPickupableByGameObject(instance);
 				if (pickupable == null) {
+					Logger.Debug($"Pickupable {instance.name} has been destroyed however it is not registered, skipping removal.");
 					return;
 				}
 
@@ -447,7 +448,7 @@ namespace MSCMP.Network {
 		public void RegisterPickupables() {
 			netPickupables.Clear();
 
-			var pickupables = Game.GamePickupableDatabase.Instance.CollectAllPickupables(false);
+			var pickupables = Game.GamePickupableDatabase.Instance.Pickupables;
 			foreach (var pickupable in pickupables) {
 				if (netPickupables.Count == MAX_PICKUPABLES) {
 					throw new Exception("Out of pickupables pool!");
@@ -471,6 +472,8 @@ namespace MSCMP.Network {
 		/// <param name="msg">The message to write to.</param>
 		public void WriteFullWorldSync(Messages.FullWorldSyncMessage msg) {
 
+			Logger.Debug("Writing full world synchronization message.");
+
 			// Write time
 
 			Game.GameWorld gameWorld = Game.GameWorld.Instance;
@@ -487,6 +490,7 @@ namespace MSCMP.Network {
 			int doorsCount = doors.Count;
 			msg.doors = new Messages.DoorsInitMessage[doorsCount];
 
+			Logger.Debug($"Writing state of {doorsCount} doors.");
 			for (int i = 0; i < doorsCount; ++i) {
 				var doorMsg = new Messages.DoorsInitMessage();
 				Game.Objects.GameDoor door = doors[i];
@@ -497,10 +501,12 @@ namespace MSCMP.Network {
 
 			// Write light switches.
 
+
 			List<Game.Objects.LightSwitch> lights = Game.LightSwitchManager.Instance.lightSwitches;
 			int lightCount = lights.Count;
 			msg.lights = new Messages.LightSwitchMessage[lightCount];
 
+			Logger.Debug($"Writing light switches state of {lightCount}");
 			for (int i = 0; i < lightCount; i++) {
 				var lightMsg = new Messages.LightSwitchMessage();
 				Game.Objects.LightSwitch light = lights[i];
@@ -518,6 +524,7 @@ namespace MSCMP.Network {
 			int vehiclesCount = vehicles.Count;
 			msg.vehicles = new Messages.VehicleInitMessage[vehiclesCount];
 
+			Logger.Debug($"Writing state of {vehiclesCount} vehicles");
 			for (int i = 0; i < vehiclesCount; ++i) {
 				var vehicleMsg = new Messages.VehicleInitMessage();
 				NetVehicle vehicle = vehicles[i];
@@ -530,24 +537,32 @@ namespace MSCMP.Network {
 			// Write pickupables.
 
 			var pickupableMessages = new List<Messages.PickupableSpawnMessage>();
+			Logger.Debug($"Writing state of {netPickupables.Count} pickupables");
 			foreach (var kv in netPickupables) {
 				NetPickupable pickupable = kv.Value;
 				if (pickupable.gameObject == null) {
-					Logger.Log($"Null ptr of the pickupable game object {pickupable.NetId}");
+					Logger.Debug($"Null ptr of the pickupable game object {pickupable.NetId}");
 					continue;
 				}
+
 				var pickupableMsg = new Messages.PickupableSpawnMessage();
 				pickupableMsg.id = pickupable.NetId;
+
 				var metaData = pickupable.gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
+				Client.Assert(metaData != null && metaData.PrefabDescriptor != null, $"Pickupable with broken meta data -- {pickupable.gameObject.name}.");
+
 				pickupableMsg.prefabId = metaData.prefabId;
+
 				Transform transform = pickupable.gameObject.transform;
 				pickupableMsg.transform.position = Utils.GameVec3ToNet(transform.position);
 				pickupableMsg.transform.rotation = Utils.GameQuatToNet(transform.rotation);
+
 				pickupableMsg.active = pickupable.gameObject.activeSelf;
+
 				List<float> data = new List<float>();
 
-				//Beercases
-				if (metaData.PrefabDescriptor.type == Game.GamePickupableDatabase.PrefabType.BeerCase && pickupable.gameObject.name != "beer case") {
+				// Beercases
+				if (metaData.PrefabDescriptor.type == Game.GamePickupableDatabase.PrefabType.BeerCase) {
 					Game.Objects.BeerCase beer = Game.BeerCaseManager.Instance.FindBeerCase(pickupable.gameObject);
 					data.Add(Game.BeerCaseManager.Instance.FullCaseBottles - beer.UsedBottles);
 				}
@@ -561,6 +576,8 @@ namespace MSCMP.Network {
 			msg.pickupables = pickupableMessages.ToArray();
 
 			netManager.GetLocalPlayer().WriteSpawnState(msg);
+
+			Logger.Debug("World state has been written.");
 		}
 
 
@@ -709,12 +726,12 @@ namespace MSCMP.Network {
 				msg.id = netPickupable.NetId;
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 
-				Logger.Log($"Handle pickupable destroy {pickupable.name}");
+				Logger.Debug($"Handle pickupable destroy {pickupable.name}");
 				netPickupables.Remove(netPickupable.NetId);
 			}
 			else {
-				Logger.Log($"Unhandled pickupable has been destroyed {pickupable.name}");
-				Logger.Log(Environment.StackTrace);
+				Logger.Debug($"Unhandled pickupable has been destroyed {pickupable.name}");
+				Logger.Debug(Environment.StackTrace);
 			}
 		}
 
@@ -751,7 +768,7 @@ namespace MSCMP.Network {
 				Game.GamePickupableDatabase.PrefabDesc desc = Game.GamePickupableDatabase.Instance.GetPickupablePrefab(msg.prefabId);
 				HandlePickupablesSpawnData(pickupable, desc.type, msg.Data);
 			}
-			RegisterPickupable(msg.id, pickupable);
+			RegisterPickupable(msg.id, pickupable, true);
 		}
 
 		/// <summary>
@@ -774,18 +791,18 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="netId">The network id of the pickupable.</param>
 		/// <param name="pickupable">The game object representing pickupable.</param>
-		public void RegisterPickupable(ushort netId, GameObject pickupable) {
+		/// <param name="remote">Is this remote pickupable?</param>
+		public void RegisterPickupable(ushort netId, GameObject pickupable, bool remote = false) {
 			Client.Assert(!netPickupables.ContainsKey(netId), $"Duplicate net id {netId}");
 			var metaData = pickupable.GetComponent<Game.Components.PickupableMetaDataComponent>();
 			Client.Assert(metaData != null, $"Failed to register pickupable. No meta data found. {pickupable.name} ({pickupable.GetInstanceID()})");
 
-			Logger.Log($"Registering pickupable {pickupable.name} (net id: {netId}, instance id: {pickupable.GetInstanceID()})");
+			Logger.Debug($"Registering pickupable {pickupable.name} (net id: {netId}, instance id: {pickupable.GetInstanceID()})");
 
 			netPickupables.Add(netId, new NetPickupable(netId, pickupable));
 
-			if (metaData.PrefabDescriptor.type == Game.GamePickupableDatabase.PrefabType.BeerCase) {
-				// "beer case" will not be added to the BeerCaseManager correctly, unsure of a better solution.
-				if (pickupable.name != "beer case") {
+			if (remote) {
+				if (metaData.PrefabDescriptor.type == Game.GamePickupableDatabase.PrefabType.BeerCase) {
 					Game.BeerCaseManager.Instance.AddBeerCase(pickupable);
 				}
 			}

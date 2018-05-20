@@ -1,9 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using System.Collections.Generic;
 using System;
 using MSCMP.Network;
 using MSCMP.Game;
+using MSCMP.Utilities;
 
 namespace MSCMP {
 	/// <summary>
@@ -12,13 +13,6 @@ namespace MSCMP {
 	class MPController : MonoBehaviour {
 
 		public static MPController Instance = null;
-
-#if !PUBLIC_RELEASE
-		/// <summary>
-		/// Various utilities used for development.
-		/// </summary>
-		DevTools devTools = new DevTools();
-#endif
 
 		/// <summary>
 		/// Object managing whole networking.
@@ -29,13 +23,6 @@ namespace MSCMP {
 		/// Name of the currently loaded level.
 		/// </summary>
 		string currentLevelName = "";
-
-#if !PUBLIC_RELEASE
-		/// <summary>
-		/// Game object representing local player.
-		/// </summary>
-		GameObject localPlayer = null;
-#endif
 
 		/// <summary>
 		/// Current scroll value of the invite panel.
@@ -52,7 +39,10 @@ namespace MSCMP {
 		/// </summary>
 		GameWorld gameWorld = new GameWorld();
 
-		Texture2D fillText = new Texture2D(1, 1);
+		/// <summary>
+		/// Console object.
+		/// </summary>
+		UI.Console console = new UI.Console();
 
 		MPController() {
 			Instance = this;
@@ -71,9 +61,12 @@ namespace MSCMP {
 
 			modLogo = Client.LoadAsset<Texture2D>("Assets/Textures/MSCMPLogo.png");
 
-			fillText.SetPixel(0, 0, Color.white);
-			fillText.wrapMode = TextureWrapMode.Repeat;
-			fillText.Apply();
+			IMGUIUtils.Setup();
+
+#if !PUBLIC_RELEASE
+			// Skip splash screen in development builds.
+			Application.LoadLevel("MainMenu");
+#endif
 		}
 
 		/// <summary>
@@ -104,6 +97,10 @@ namespace MSCMP {
 		/// Updates IMGUI of the multiplayer.
 		/// </summary>
 		void OnGUI() {
+			if (netManager.IsOnline) {
+				netManager.DrawNameTags();
+			}
+
 			GUI.color = Color.white;
 			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + Client.GetMODDisplayVersion());
 
@@ -121,6 +118,8 @@ namespace MSCMP {
 				GUI.Label(new Rect(2, 2, 500, 20), "OFFLINE");
 			}
 
+			MessagesList.Draw();
+
 			// Friends widget.
 
 			if (ShouldSeeInvitePanel()) {
@@ -128,12 +127,16 @@ namespace MSCMP {
 			}
 
 #if !PUBLIC_RELEASE
-			devTools.OnGUI(localPlayer);
+			DevTools.OnGUI();
 
-			netManager.DrawDebugGUI();
+			if (DevTools.netStats) {
+				netManager.DrawDebugGUI();
+			}
 
 			gameWorld.UpdateIMGUI();
 #endif
+
+			console.Draw();
 		}
 
 		/// <summary>
@@ -254,7 +257,7 @@ namespace MSCMP {
 			// Draw header
 
 			GUI.color = new Color(1.0f, 0.5f, 0.0f, 0.8f);
-			GUI.DrawTexture(invitePanelRect, fillText);
+			IMGUIUtils.DrawPlainColorRect(invitePanelRect);
 
 			GUI.color = Color.white;
 			invitePanelRect.x += 2.0f;
@@ -267,7 +270,7 @@ namespace MSCMP {
 			invitePanelRect.height = invitePanelHeight;
 
 			GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.8f);
-			GUI.DrawTexture(invitePanelRect, fillText);
+			IMGUIUtils.DrawPlainColorRect(invitePanelRect);
 
 			GUI.color = new Color(1.0f, 0.5f, 0.0f, 0.8f);
 			int onlineFriendsCount = onlineFriends.Count;
@@ -340,7 +343,7 @@ namespace MSCMP {
 		/// <summary>
 		/// Update multiplayer state.
 		/// </summary>
-		void Update() {
+		void LateUpdate() {
 			Utils.CallSafe("Update", () => {
 				Steamworks.SteamAPI.RunCallbacks();
 
@@ -354,27 +357,11 @@ namespace MSCMP {
 
 				// Development stuff.
 #if !PUBLIC_RELEASE
-				devTools.Update();
-
-				if (localPlayer == null) {
-					localPlayer = GameObject.Find("PLAYER");
-				}
-				else {
-					devTools.UpdatePlayer(localPlayer);
-				}
+				DevTools.Update();
 #endif
 			});
 		}
 
-		/// <summary>
-		/// Update after animations have been played.
-		/// </summary>
-		void LateUpdate() {
-			Utils.CallSafe("LateUpdate", () => {
-				netManager.LateUpdate();
-				if (localPlayer != null) devTools.LateUpdate(localPlayer);
-			});
-		}
 		/// <summary>
 		/// Wrapper around unitys load level method to call OnLevelSwitch even if level is the same.
 		/// </summary>

@@ -1,4 +1,4 @@
-﻿using MSCMP.Game;
+using MSCMP.Game;
 using MSCMP.Game.Objects;
 using UnityEngine;
 
@@ -71,25 +71,6 @@ namespace MSCMP.Network {
 			if (animManager == null) animManager = new PlayerAnimManager();
 		}
 
-#if !PUBLIC_RELEASE
-		/// <summary>
-		/// Update debug IMGUI for the player.
-		/// </summary>
-		public override void DrawDebugGUI() {
-			int debugWidth = 300;
-			int debugX = Screen.width - debugWidth;
-			Rect debugRect = new Rect(debugX, 100, debugWidth, 200);
-			GUI.Label(debugRect, "Local player\ntime to update: " + timeToUpdate +
-				"\nstate: " + state +
-				"\nWorld time: " + GameWorld.Instance.WorldTime +
-				"\nWorld day: " + GameWorld.Instance.WorldDay +
-				"\nRunning: " + Utils.GetPlaymakerScriptByName(GameWorld.Instance.Player.Object, "Running").Fsm.ActiveStateName);
-
-			if (currentVehicle != null) {
-				currentVehicle.UpdateIMGUI();
-			}
-		}
-#endif
 		/// <summary>
 		/// Update state of the local player.
 		/// </summary>

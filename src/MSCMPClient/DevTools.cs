@@ -1,24 +1,95 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Text;
 using System.IO;
 using System;
+using System.Diagnostics;
 
 namespace MSCMP {
 #if !PUBLIC_RELEASE
 	/// <summary>
 	/// Development tools.
 	/// </summary>
-	class DevTools {
+	static class DevTools {
 
-		bool devView = false;
+		static bool devView = false;
 
-		public void OnGUI(GameObject localPlayer) {
+		static bool displayClosestObjectNames = false;
+		static bool airBreak = false;
+
+		public static bool netStats = false;
+		public static bool displayPlayerDebug = false;
+
+		/// <summary>
+		/// Game object representing local player.
+		/// </summary>
+		static GameObject localPlayer = null;
+
+		const float DEV_MENU_BUTTON_WIDTH = 150.0f;
+		const float TITLE_SECTION_WIDTH = 50.0f;
+		static Rect devMenuButtonsRect = new Rect(5, 0.0f, DEV_MENU_BUTTON_WIDTH, 25.0f);
+
+		//Debug Model variables
+		static GameObject ourDebugPlayer;
+		static Animation characterAnimationComponent;
+		static bool controlDebugPlayer = false;
+
+		public static void OnGUI() {
+			if (displayClosestObjectNames) {
+				DrawClosestObjectNames();
+			}
+
 			if (!devView) {
 				return;
 			}
 
-			foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>()) {
 
+			devMenuButtonsRect.x = 5.0f;
+			devMenuButtonsRect.y = 0.0f;
+
+			NewSection("Toggles:");
+			Checkbox("Net stats", ref netStats);
+			Checkbox("Net stats - players dbg", ref displayPlayerDebug);
+			Checkbox("Display object names", ref displayClosestObjectNames);
+			Checkbox("AirBreak", ref airBreak);
+			Checkbox("Control Debug Model", ref controlDebugPlayer);
+
+			NewSection("Actions:");
+
+			if (Action("Dump world")) {
+				DumpWorld(Application.loadedLevelName);
+			}
+
+			if (Action("Dump local player")) {
+				DumpLocalPlayer();
+			}
+		}
+
+		static void NewSection(string title) {
+			devMenuButtonsRect.x = 5.0f;
+			devMenuButtonsRect.y += 25.0f;
+
+			GUI.color = Color.white;
+			GUI.Label(devMenuButtonsRect, title);
+			devMenuButtonsRect.x += TITLE_SECTION_WIDTH;
+		}
+
+		static void Checkbox(string name, ref bool state) {
+			GUI.color = state ? Color.green : Color.white;
+			if (GUI.Button(devMenuButtonsRect, name)) {
+				state = !state;
+			}
+			devMenuButtonsRect.x += DEV_MENU_BUTTON_WIDTH;
+		}
+
+		static bool Action(string name) {
+			GUI.color = Color.white;
+			bool execute = GUI.Button(devMenuButtonsRect, name);
+			devMenuButtonsRect.x += DEV_MENU_BUTTON_WIDTH;
+			return execute;
+		}
+
+		static void DrawClosestObjectNames() {
+			foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>()) {
 				if (localPlayer) {
 					if ((go.transform.position - localPlayer.transform.position).sqrMagnitude > 10) {
 						continue;
@@ -35,65 +106,98 @@ namespace MSCMP {
 			}
 		}
 
-		public void LateUpdate(GameObject localPlayer) {
-			if (ourDebugPlayer == null || localPlayer == null) return;
-			CheckBlendedAnimationStates();
+		public static void Update() {
+			if (localPlayer == null) {
+				localPlayer = GameObject.Find("PLAYER");
+			}
+			else {
+				UpdatePlayer();
+			}
 
-			float aimLook = localPlayer.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
-			Transform spine = ourDebugPlayer.transform.FindChild("pelvis/spine_mid/shoulders/head");
-			spine.rotation *= Quaternion.Euler(0, 0, -aimLook);
-		}
-
-		public void Update() {
 			if (Input.GetKeyDown(KeyCode.F3)) {
 				devView = !devView;
 			}
 
-			if (Input.GetKeyDown(KeyCode.F5)) {
-				DumpWorld(Application.loadedLevelName);
-			}
+			if (ourDebugPlayer != null && localPlayer != null) {
+				CheckBlendedAnimationStates();
 
-			if (!devView && ((ourDebugPlayer != null) && characterAnimationComponent != null)) {
-				if (Input.GetKeyDown(KeyCode.Keypad7)) {
-					characterAnimationComponent.CrossFade("Idle");
-				}
+				float aimLook = localPlayer.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
+				Transform spine = ourDebugPlayer.transform.FindChild("pelvis/spine_mid/shoulders/head");
+				spine.rotation *= Quaternion.Euler(0, 0, -aimLook);
 
-				if (Input.GetKeyDown(KeyCode.Keypad8)) {
-					characterAnimationComponent.CrossFade("Walk");
-				}
+				if (controlDebugPlayer) {
+					if (Input.GetKeyDown(KeyCode.Keypad7)) characterAnimationComponent.CrossFade("Idle");
+					if (Input.GetKeyDown(KeyCode.Keypad8)) characterAnimationComponent.CrossFade("Walk");
 
-				if (Input.GetKeyDown(KeyCode.Keypad5)) {
-					if (!IsPlayingAnim("Jump")) characterAnimationComponent.CrossFade("Jump");
-					else characterAnimationComponent.Blend("Jump", 0);
-				}
+					if (Input.GetKeyDown(KeyCode.Keypad4)) {
+						if (!IsPlayingAnim("Drunk")) characterAnimationComponent.CrossFade("Drunk");
+						else characterAnimationComponent.Blend("Drunk", 0);
+					}
 
-				if (Input.GetKeyDown(KeyCode.Keypad4)) {
-					if (!IsPlayingAnim("Drunk")) characterAnimationComponent.CrossFade("Drunk");
-					else characterAnimationComponent.Blend("Drunk", 0);
-				}
+					if (Input.GetKeyDown(KeyCode.Keypad5)) {
+						if (!IsPlayingAnim("Jump")) characterAnimationComponent.CrossFade("Jump");
+						else characterAnimationComponent.Blend("Jump", 0);
+					}
 
-				if (Input.GetKeyDown(KeyCode.Keypad1)) {
-					if (IsPlayingAnim("Lean")) PlayActionAnim("Lean", false);
-					else PlayActionAnim("Lean", true);
-				}
+					if (Input.GetKeyDown(KeyCode.Keypad1)) {
+						if (IsPlayingAnim("Lean")) PlayActionAnim("Lean", false);
+						else PlayActionAnim("Lean", true);
+					}
 
-				if (Input.GetKeyDown(KeyCode.Keypad3)) {
-					if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
+					if (Input.GetKeyDown(KeyCode.Keypad2)) {
+						if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
 
-					if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
-					else PlayActionAnim("Finger", true);
-				}
+						if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
+						else PlayActionAnim("Hitchhike", true);
+					}
 
-				if (Input.GetKeyDown(KeyCode.Keypad2)) {
-					if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
+					if (Input.GetKeyDown(KeyCode.Keypad3)) {
+						if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
 
-					if (IsPlayingAnim("Hitchhike")) PlayActionAnim("Hitchhike", false);
-					else PlayActionAnim("Hitchhike", true);
+						if (IsPlayingAnim("Finger")) PlayActionAnim("Finger", false);
+						else PlayActionAnim("Finger", true);
+					}
 				}
 			}
 		}
 
-		public void PlayActionAnim(string animName, bool play) {
+		public static void UpdatePlayer() {
+			// Testing New Model
+			if (Input.GetKeyDown(KeyCode.KeypadMultiply)) {
+				bool useNewClothes = ourDebugPlayer == null;
+
+				ourDebugPlayer = LoadCustomCharacter(localPlayer);
+				if (useNewClothes) {
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Face, "MPchar_face02.dds");
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Shirt, "MPchar_shirt05.dds");
+					ApplyCustomTexture(ourDebugPlayer, MaterialId.Pants, "MPchar_pants02.dds");
+				}
+			}
+
+			if (airBreak) {
+				// Pseudo AirBrk
+				if (Input.GetKey(KeyCode.KeypadPlus)) {
+					localPlayer.transform.position = localPlayer.transform.position + Vector3.up * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.KeypadMinus)) {
+					localPlayer.transform.position = localPlayer.transform.position - Vector3.up * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad8)) {
+					localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad2)) {
+					localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.forward * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad4)) {
+					localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.right * 5.0f;
+				}
+				if (Input.GetKey(KeyCode.Keypad6)) {
+					localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.right * 5.0f;
+				}
+			}
+		}
+
+		static void PlayActionAnim(string animName, bool play) {
 			if (play) {
 				characterAnimationComponent[animName].wrapMode = WrapMode.ClampForever;
 				characterAnimationComponent[animName].speed = 1;
@@ -110,14 +214,14 @@ namespace MSCMP {
 			}
 		}
 
-		public bool IsPlayingAnim(string animName) {
+		static bool IsPlayingAnim(string animName) {
 			if (characterAnimationComponent == null) return false;
 			if (characterAnimationComponent[animName].enabled == true) return true;
 
 			return false;
 		}
 
-		public void CheckBlendedAnimationStates() {
+		static void CheckBlendedAnimationStates() {
 			if (characterAnimationComponent["Jump"].time != 0.0f && characterAnimationComponent["Jump"].weight == 0.0f) {
 				characterAnimationComponent["Jump"].enabled = false;
 				characterAnimationComponent["Jump"].time = 0;
@@ -130,9 +234,7 @@ namespace MSCMP {
 			}
 		}
 
-		GameObject ourDebugPlayer = null;
-		Animation characterAnimationComponent = null;
-		public GameObject LoadCustomCharacter(GameObject localPlayer) {
+		static GameObject LoadCustomCharacter(GameObject localPlayer) {
 			GameObject loadedModel = Client.LoadAsset<GameObject>("Assets/MPPlayerModel/MPPlayerModel.fbx");
 			GameObject ourCustomPlayer = (GameObject)GameObject.Instantiate((GameObject)loadedModel);
 
@@ -153,7 +255,7 @@ namespace MSCMP {
 			return ourCustomPlayer;
 		}
 
-		public bool ApplyCustomColorTextures(GameObject gameObject) {
+		static bool ApplyCustomColorTextures(GameObject gameObject) {
 			Renderer objectRenderer = ourDebugPlayer.GetComponentInChildren<Renderer>();
 			if (objectRenderer == null) return false;
 			//Logger.Log("Total Materials: " + testRenderer.materials.Length);
@@ -176,12 +278,12 @@ namespace MSCMP {
 			return true;
 		}
 
-		public enum MaterialId {
+		enum MaterialId {
 			Face,
 			Shirt,
 			Pants
 		}
-		private string[] MaterialNames = new string[] {
+		static string[] MaterialNames = new string[] {
 			"MPchar_face03",
 			"MPchar_shirt06",
 			"MPchar_pants03"
@@ -192,17 +294,15 @@ namespace MSCMP {
 		/// </summary>
 		/// <param name="material">The id of the material.</param>
 		/// <returns>Name of the material.</returns>
-		public string GetCharacterMaterialName(MaterialId material) {
+		static string GetCharacterMaterialName(MaterialId material) {
 			return MaterialNames[(int)material];
 		}
 
-		public bool ApplyCustomTexture(GameObject gameObject, MaterialId material, string newTexture)
-		{
+		static bool ApplyCustomTexture(GameObject gameObject, MaterialId material, string newTexture) {
 			Renderer objectRenderer = ourDebugPlayer.GetComponentInChildren<Renderer>();
 			if (objectRenderer == null) return false;
 
-			for (int i = 0; i < objectRenderer.materials.Length; i++)
-			{
+			for (int i = 0; i < objectRenderer.materials.Length; i++) {
 				string addon = " (Instance)";
 				string materialName = GetCharacterMaterialName(material) + addon;
 				if (materialName != objectRenderer.materials[i].name) continue;
@@ -214,101 +314,30 @@ namespace MSCMP {
 			return true;
 		}
 
-		public void UpdatePlayer(GameObject localPlayer) {
-
-			if (!devView) {
-				return;
-			}
-
-			// Testing New Model
-			if (Input.GetKey(KeyCode.KeypadMultiply) && localPlayer) {
-				bool useNewClothes = ourDebugPlayer == null;
-
-				ourDebugPlayer = LoadCustomCharacter(localPlayer);
-				if (useNewClothes) {
-					ApplyCustomTexture(ourDebugPlayer, MaterialId.Face, "MPchar_face02.dds");
-					ApplyCustomTexture(ourDebugPlayer, MaterialId.Shirt, "MPchar_shirt05.dds");
-					ApplyCustomTexture(ourDebugPlayer, MaterialId.Pants, "MPchar_pants02.dds");
-				}
-			}
-
-			// Pseudo AirBrk
-			if (Input.GetKey(KeyCode.KeypadPlus) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + Vector3.up * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.KeypadMinus) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - Vector3.up * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad8) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad2) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.forward * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad4) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.right * 5.0f;
-			}
-			if (Input.GetKey(KeyCode.Keypad6) && localPlayer) {
-				localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.right * 5.0f;
-			}
-
-			if (Input.GetKeyDown(KeyCode.G) && localPlayer) {
-				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(localPlayer, "PlayerFunctions");
-				if (fsm != null) {
-					fsm.SendEvent("MIDDLEFINGER");
-				}
-				else {
-					GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-					go.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				}
-			}
-
-			if (Input.GetKeyDown(KeyCode.I) && localPlayer) {
-
-				StringBuilder builder = new StringBuilder();
-				Utils.PrintTransformTree(localPlayer.transform, 0, (int level, string text) => {
-
-					for (int i = 0; i < level; ++i) builder.Append("    ");
-					builder.Append(text + "\n");
-				});
-				System.IO.File.WriteAllText(Client.GetPath("localPlayer.txt"), builder.ToString());
-			}
-
-
-			if (Input.GetKeyDown(KeyCode.F6) && localPlayer) {
-				GameObject hayosiko = GameObject.Find("HAYOSIKO(1500kg, 250)");
-				Utils.GetPlaymakerScriptByName(hayosiko, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = "";
-
-				Vector3 newPos = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				GameObject newHayosiko = (GameObject)GameObject.Instantiate(hayosiko, newPos, localPlayer.transform.rotation);
-
-				//NetWorld.RegisterVehicle("HAYOSIKO(1500kg, 250)(Clone)");
-				/*
-				GameObject prefab = GameObject.Find("JONNEZ ES(Clone)");
-				GameObject spawnedGo = GameObject.Instantiate(prefab);
-
-				// Remove component that overrides spawn position of JONNEZ.
-				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(spawnedGo, "LOD");
-				GameObject.Destroy(fsm);
-
-				Vector3 direction = localPlayer.transform.rotation * Vector3.forward * 2.0f;
-				spawnedGo.transform.position = localPlayer.transform.position + direction;*/
-
-
-				/*StringBuilder builder = new StringBuilder();
-				PrintTrans(go.transform, 0, (int level, string text) => {
-
-					for (int i = 0; i < level; ++i)	builder.Append("    ");
-					builder.Append(text + "\n");
-				});
-				System.IO.File.WriteAllText("J:\\projects\\MSCMP\\MSCMP\\Debug\\charTree.txt", builder.ToString());*/
-
-
-			}
+		static void DumpLocalPlayer() {
+			StringBuilder builder = new StringBuilder();
+			Utils.PrintTransformTree(localPlayer.transform, 0, (int level, string text) => {
+				for (int i = 0; i < level; ++i) builder.Append("    ");
+				builder.Append(text + "\n");
+			});
+			System.IO.File.WriteAllText(Client.GetPath("localPlayer.txt"), builder.ToString());
 		}
 
 		public static void DumpWorld(string levelName) {
-			GameObject []gos = gos = GameObject.FindObjectsOfType<GameObject>();
+			Utils.CallSafe("DUmpWorld", ()=> {
+				Development.WorldDumper worldDumper = new Development.WorldDumper();
+				string dumpFolder = Client.GetPath($"HTMLWorldDump\\{levelName}");
+				Directory.Delete(dumpFolder, true);
+				Directory.CreateDirectory(dumpFolder);
+
+				var watch = Stopwatch.StartNew();
+
+				worldDumper.Dump(dumpFolder);
+
+				Logger.Log($"World dump finished - took {watch.ElapsedMilliseconds} ms");
+			});
+
+			/*GameObject[] gos = gos = GameObject.FindObjectsOfType<GameObject>();
 
 			string path = Client.GetPath($"WorldDump\\{levelName}");
 			Directory.CreateDirectory(path);
@@ -324,7 +353,8 @@ namespace MSCMP {
 				string dumpFilePath = path + "\\" + SanitizedName + ".txt";
 				try {
 					DumpObject(trans, dumpFilePath);
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					Logger.Log("Unable to dump objects: " + SanitizedName + "\n");
 					Logger.Log(e.Message + "\n");
 				}
@@ -333,7 +363,7 @@ namespace MSCMP {
 				++index;
 			}
 
-			System.IO.File.WriteAllText(path + "\\dumpLog.txt", builder.ToString());
+			System.IO.File.WriteAllText(path + "\\dumpLog.txt", builder.ToString());*/
 		}
 
 		public static void DumpObject(Transform obj, string file) {
