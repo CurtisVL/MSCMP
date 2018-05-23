@@ -178,6 +178,7 @@ namespace MSCMP.Game {
 			gameObjectUsers.Add(beerCaseManager);
 			gameObjectUsers.Add(lightSwitchManager);
 			gameObjectUsers.Add(gameWeatherManager);
+			gameObjectUsers.Add(gameVehicleDatabase);
 		}
 
 		~GameWorld() {

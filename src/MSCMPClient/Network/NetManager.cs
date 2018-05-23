@@ -90,11 +90,6 @@ namespace MSCMP.Network {
 		NetWorld netWorld = null;
 
 		/// <summary>
-		/// Local player's Steam ID.
-		/// </summary>
-		Steamworks.CSteamID steamID;
-
-		/// <summary>
 		/// The network message handler.
 		/// </summary>
 		NetMessageHandler netMessageHandler = null;
@@ -269,7 +264,7 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
+			//Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
 			return true;
 		}
 
@@ -479,7 +474,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				Logger.Debug($"Trying to read p2p packet of size {size}.");
+				//Logger.Debug($"Trying to read p2p packet of size {size}.");
 
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
 
@@ -497,7 +492,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				Logger.Debug($"Received p2p packet from user {senderSteamId}.");
+				//Logger.Debug($"Received p2p packet from user {senderSteamId}.");
 
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
@@ -509,7 +504,7 @@ namespace MSCMP.Network {
 				}
 
 				byte messageId = reader.ReadByte();
-				Logger.Debug($"Received message {messageId}.");
+				//Logger.Debug($"Received message {messageId}.");
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}

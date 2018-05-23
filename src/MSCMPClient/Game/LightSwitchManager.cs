@@ -76,13 +76,6 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Destroy all collected objects references.
-		/// </summary>
-		public void DestroyObjects() {
-			lightSwitches.Clear();
-		}
-
-		/// <summary>
 		/// Adds light switches by GameObject
 		/// </summary>
 		/// <param name="lightGO">LightSwitch GameObject.</param>

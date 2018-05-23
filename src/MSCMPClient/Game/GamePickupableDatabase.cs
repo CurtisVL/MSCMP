@@ -152,6 +152,8 @@ namespace MSCMP.Game {
 
 			prefabs.Add(desc);
 
+			gameObject.AddComponent<ObjectSyncComponent>().ObjectType = ObjectSyncManager.ObjectTypes.Pickupable;
+
 			Logger.Debug($"Registered new prefab {gameObject.name} ({gameObject.GetInstanceID()}) into pickupable database. (Prefab ID: {prefabId})");
 		}
 

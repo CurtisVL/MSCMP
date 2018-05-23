@@ -80,14 +80,6 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Destroy all references to collected objects.
-		/// </summary>
-		public void DestroyObjects() {
-			beercases.Clear();
-		}
-
-
-		/// <summary>
 		/// Adds beercase by GameObject
 		/// </summary>
 		/// <param name="beerGO">BeerCase GameObject.</param>

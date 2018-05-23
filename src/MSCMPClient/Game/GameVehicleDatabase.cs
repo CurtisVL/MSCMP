@@ -28,7 +28,15 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Handle collected objects destroy.
+		/// Handle destroy of game object.
+		/// </summary>
+		/// <param name="gameObject">The destroyed game object.</param>
+		public void DestroyObject(GameObject gameObject) {
+			vehiclesAI.Clear();
+		}
+
+		/// <summary>
+		/// Destroy all references to collected objects.
 		/// </summary>
 		public void DestroyObjects() {
 			vehiclesAI.Clear();

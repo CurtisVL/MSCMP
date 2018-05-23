@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using MSCMP.Game.Components;
+using MSCMP.Game.Objects;
+using MSCMP.Game;
 
 namespace MSCMP.Network {
 	class NetWorld {
@@ -343,6 +345,112 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.LightSwitchMessage msg) => {
 				Game.Objects.LightSwitch light = Game.LightSwitchManager.Instance.FindLightSwitch(Utils.NetVec3ToGame(msg.pos));
 				light.TurnOn(msg.toggle);
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleStateMessage msg) => {
+				float startTime = -1;
+
+				NetVehicle vehicle = GetVehicle(msg.vehicleId);
+				if (vehicle == null) {
+					Logger.Log("Remote player tried to set state of vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
+					return;
+				}
+
+				if (msg.HasStartTime) {
+					startTime = msg.StartTime;
+				}
+
+				vehicle.SetEngineState(msg.state, msg.dashstate, startTime);
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleSwitchMessage msg) => {
+				float newValueFloat = -1;
+
+				NetVehicle vehicle = GetVehicle(msg.vehicleId);
+				if (vehicle == null) {
+					Logger.Log("Remote player tried to change a switch in vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
+					return;
+				}
+
+				if (msg.HasSwitchValueFloat) {
+					newValueFloat = msg.SwitchValueFloat;
+				}
+
+				vehicle.SetVehicleSwitch(msg.switchID, msg.switchValue, newValueFloat);
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncMessage msg) => {
+				ObjectSyncComponent osc;
+				try {
+					osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				}
+				catch {
+					Logger.Log($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
+					return;
+				}
+				if (osc != null) {
+					// Set owner, or set owner if not set correctly.
+					if (msg.Owner == 1 || osc.Owner == 0 && msg.Owner == -1) {
+						if (osc.Owner == 0) {
+							osc.Owner = sender.m_SteamID;
+							Logger.Log($"Owner set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+							// Activate GameObject if object is an AI Vehicle.
+							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+								osc.gameObject.SetActive(true);
+							}
+							netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
+						}
+						else {
+							Logger.Log($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner})");
+						}
+					}
+					// Remove owner.
+					else if (msg.Owner == 2) {
+						if (osc.Owner == sender.m_SteamID) {
+							osc.Owner = 0;
+							// Activate GameObject if object is an AI Vehicle.
+							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+								osc.gameObject.SetActive(false);
+							}
+							Logger.Log($"Owner removed for object: {osc.transform.name}");
+						}
+					}
+					// Force set owner.
+					else if (msg.Owner == 3) {
+						osc.Owner = sender.m_SteamID;
+						Logger.Log($"Owner force set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+						netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
+						if (osc.PickedUp == true) {
+							Logger.Log("Dropped object because other player has taken control of it!");
+							GamePlayer.Instance.DropStolenObject();
+						}
+					}
+
+					// Set object's position.
+					if (osc.Owner == sender.m_SteamID) {
+						if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+							osc.transform.parent.position = Utils.NetVec3ToGame(msg.position);
+							osc.transform.parent.rotation = Utils.NetQuatToGame(msg.rotation);
+						}
+						else {
+							osc.transform.position = Utils.NetVec3ToGame(msg.position);
+							osc.transform.rotation = Utils.NetQuatToGame(msg.rotation);
+						}
+					}
+				}
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncResponseMessage msg) => {
+				ObjectSyncComponent osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				if (msg.accepted) {
+					osc.SyncEnabled = true;
+					osc.Owner = Steamworks.SteamUser.GetSteamID().m_SteamID;
+					//Logger.Debug($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
+				}
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.EventHookSyncMessage msg) => {
+				EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID);
 			});
 		}
 

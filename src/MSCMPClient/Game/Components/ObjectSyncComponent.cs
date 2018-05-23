@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using MSCMP.Network;
-using System.Threading.Tasks;
 
 namespace MSCMP.Game.Components {
 	/// <summary>
@@ -15,11 +14,15 @@ namespace MSCMP.Game.Components {
 		public ulong Owner = 0;
 		// Object ID.
 		public int ObjectID = -1;
+		// Is object being picked up.
+		public bool PickedUp = false;
+
 		// Object type. (Yes, I know this could be an Enum)
 		public ObjectSyncManager.ObjectTypes ObjectType;
 
-		// Rigidbody of object.
+
 		Rigidbody rigidbody;
+		int frame = 0;
 
 		/// <summary>
 		/// Ran on script enable.
@@ -42,19 +45,39 @@ namespace MSCMP.Game.Components {
 		/// <summary>
 		/// Called once per frame.
 		/// </summary>
-		void Update() {
+		void LateUpdate() {
 			if (SyncEnabled) {
-				if (rigidbody.velocity.sqrMagnitude >= 0.01f) {
+				frame++;
+				// Updates the object's position when it moves.
+				if (rigidbody.velocity.sqrMagnitude >= 0.01f && PickedUp == false) {
 					//Logger.Log($"Object moved and is being synced: {this.transform.name} Velocity magnitude: {rigidbody.velocity.sqrMagnitude}");
-					if (ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-						NetLocalPlayer.Instance.SendObjectSync(ObjectID, gameObject.transform.parent.position, gameObject.transform.parent.rotation, 0);
-					}
-					else {
-						NetLocalPlayer.Instance.SendObjectSync(ObjectID, gameObject.transform.position, gameObject.transform.rotation, 0);
-					}
+					SendObjectSync();
+				}
+				
+				// Updates object's position when picked up.
+				else if (PickedUp == true) {
+					SendObjectSync();
+				}
+				
+				// Periodically updates the object's position.
+				else if (frame == 100) {
+					SendObjectSync();
+					frame = 0;
 				}
 			}
 		} 
+
+		/// <summary>
+		/// Sends a sync update of the object.
+		/// </summary>
+		void SendObjectSync() {
+			if (ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+				NetLocalPlayer.Instance.SendObjectSync(ObjectID, gameObject.transform.parent.position, gameObject.transform.parent.rotation, 0);
+			}
+			else {
+				NetLocalPlayer.Instance.SendObjectSync(ObjectID, gameObject.transform.position, gameObject.transform.rotation, 0);
+			}
+		}
 
 		/// <summary>
 		/// Send single sync packet of object's position and attempt to set owner.

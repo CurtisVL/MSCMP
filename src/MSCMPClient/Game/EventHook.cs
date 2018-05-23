@@ -84,6 +84,7 @@ namespace MSCMP.Game {
 			public CustomAction(Action a, string eName, bool dCheck) {
 				action = a;
 				eventName = eName;
+				duplicateCheck = dCheck;
 			}
 
 			public override void OnEnter() {
