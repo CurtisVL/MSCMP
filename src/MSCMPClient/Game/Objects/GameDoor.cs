@@ -52,12 +52,6 @@ namespace MSCMP.Game.Objects {
 			}
 		}
 
-		private const string OPEN_EVENT_NAME = "OPEN";
-		private const string CLOSE_EVENT_NAME = "CLOSE";
-
-		private const string MP_OPEN_EVENT_NAME = "MPOPEN";
-		private const string MP_CLOSE_EVENT_NAME = "MPCLOSE";
-
 		/// <summary>
 		/// Constructor.
 		/// </summary>
@@ -68,70 +62,13 @@ namespace MSCMP.Game.Objects {
 			this.gameObject = gameObject;
 
 			fsm = Utils.GetPlaymakerScriptByName(gameObject, "Use");
-			if (fsm.Fsm.HasEvent(MP_OPEN_EVENT_NAME)) {
+			if (fsm.Fsm.HasEvent("MP_Open door")) {
 				Logger.Log("Failed to hook game door " + gameObject.name + ". It is already hooked.");
 				return;
 			}
 
-			FsmEvent mpOpenEvent = fsm.Fsm.GetEvent(MP_OPEN_EVENT_NAME);
-			FsmEvent mpCloseEvent = fsm.Fsm.GetEvent(MP_CLOSE_EVENT_NAME);
-
-			PlayMakerUtils.AddNewGlobalTransition(fsm, mpOpenEvent, "Open door");
-			PlayMakerUtils.AddNewGlobalTransition(fsm, mpCloseEvent, "Close door");
-
-			PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Open door"), new OnOpenDoorsAction(this));
-			PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Close door"), new OnCloseDoorsAction(this));
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when doors are opened.
-		/// </summary>
-		private class OnOpenDoorsAction : FsmStateAction {
-			private GameDoor gameDoor;
-
-			public OnOpenDoorsAction(GameDoor door) {
-				gameDoor = door;
-			}
-
-			public override void OnEnter() {
-				Finish();
-
-				// If open was not triggered by local player do not send call the callback.
-
-				if (State.Fsm.LastTransition.EventName != OPEN_EVENT_NAME) {
-					return;
-				}
-
-				// Notify manager about the action.
-
-				gameDoor.manager.HandleDoorsAction(gameDoor, true);
-			}
-		}
-
-		/// <summary>
-		/// PlayMaker state action executed when doors are closed.
-		/// </summary>
-		private class OnCloseDoorsAction : FsmStateAction {
-			private GameDoor gameDoor;
-
-			public OnCloseDoorsAction(GameDoor door) {
-				gameDoor = door;
-			}
-
-			public override void OnEnter() {
-				Finish();
-
-				// If close was not triggered by local player do not send call the callback.
-
-				if (State.Fsm.LastTransition.EventName != CLOSE_EVENT_NAME) {
-					return;
-				}
-
-				// Notify manager about the action.
-
-				gameDoor.manager.HandleDoorsAction(gameDoor, false);
-
-			}
+			EventHook.AddWithSync(fsm, "Open door");
+			EventHook.AddWithSync(fsm, "Close door");
 		}
 
 		/// <summary>
@@ -140,10 +77,10 @@ namespace MSCMP.Game.Objects {
 		/// <param name="open">Open or close?</param>
 		public void Open(bool open) {
 			if (open) {
-				fsm.SendEvent(MP_OPEN_EVENT_NAME);
+				fsm.SendEvent("MP_Open door");
 			}
 			else {
-				fsm.SendEvent(MP_CLOSE_EVENT_NAME);
+				fsm.SendEvent("MP_Close door");
 			}
 		}
 	}

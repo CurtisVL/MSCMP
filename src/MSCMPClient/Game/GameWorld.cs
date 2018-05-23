@@ -14,6 +14,11 @@ namespace MSCMP.Game {
 		public static GameWorld Instance = null;
 
 		/// <summary>
+		/// Dictionary of all GameObjects.
+		/// </summary>
+		public Dictionary<int, GameObject> GameObjectLibrary = new Dictionary<int, GameObject>();
+
+		/// <summary>
 		/// Doors manager.
 		/// </summary>
 		private GameDoorsManager doorsManager = new GameDoorsManager();
@@ -47,6 +52,21 @@ namespace MSCMP.Game {
 		/// Weather manager.
 		/// </summary>
 		GameWeatherManager gameWeatherManager = new GameWeatherManager();
+
+		/// <summary>
+		/// Game vehicle database.
+		/// </summary>
+		GameVehicleDatabase gameVehicleDatabase = new GameVehicleDatabase();
+
+		/// <summary>
+		/// Object sync manager.
+		/// </summary>
+		ObjectSyncManager objectSyncManager = new ObjectSyncManager();
+
+		/// <summary>
+		/// Event hook.
+		/// </summary>
+		EventHook eventHook = new EventHook();
 
 		private GamePlayer player = null;
 
@@ -144,13 +164,12 @@ namespace MSCMP.Game {
 			gameObjectUsers.Add(beerCaseManager);
 			gameObjectUsers.Add(lightSwitchManager);
 			gameObjectUsers.Add(gameWeatherManager);
+			gameObjectUsers.Add(gameVehicleDatabase);
 		}
 
 		~GameWorld() {
 			Instance = null;
 		}
-
-		Dictionary<int, GameObject> gameObjectLibrary = new Dictionary<int, GameObject>();
 
 
 
@@ -169,7 +188,15 @@ namespace MSCMP.Game {
 		/// </summary>
 		/// <param name="gameObject">The game object to collect.</param>
 		public void CollectGameObject(GameObject gameObject) {
+			// Add all objects to GameObjectLibrary.
+			GameObjectLibrary.Add(GameObjectLibrary.Count + 1, gameObject);
+
 			if (gameObject.name == "SUN") {
+				// Check if we found *the right sun*
+				if (gameObject.transform.FindChild("Pivot/SUN") == null) {
+					return;
+				}
+
 				// Yep it's called "Color" :>
 				worldTimeFsm = Utils.GetPlaymakerScriptByName(gameObject, "Color");
 
@@ -226,7 +253,7 @@ namespace MSCMP.Game {
 
 			// Check mandatory objects.
 
-			Client.Assert(worldTimeFsm != null, "Now world time FSM found :(");
+			Client.Assert(worldTimeFsm != null, "No world time FSM found :(");
 			Client.Assert(lastnameFSM != null, "Mailbox FSM couldn't be found!");
 			Client.Assert(lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 

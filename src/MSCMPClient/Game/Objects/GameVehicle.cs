@@ -437,7 +437,7 @@ namespace MSCMP.Game.Objects {
 				}
 
 				// Truck specific FSMs
-					if (isTruck == true) {
+				if (isTruck == true) {
 
 					// Hydraulic pump
 					if (fsm.gameObject.name == "Hydraulics" && fsm.FsmName == "Use") {
@@ -569,107 +569,114 @@ namespace MSCMP.Game.Objects {
 			}
 
 			//Engine states
+
+			string[] eventNames = { "Wait for start" };
+
+			foreach (string eventName in eventNames) {
+
+			}
+
 			if (starterFsm.Fsm.GetState("Wait for start") != null) {
 				EventHook.Add(starterFsm, "Wait for start", new Action(() => {
 					if (starterFsm.Fsm.LastTransition != null) {
-						if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait for start" || this.isDriver == false) {
+						if (this.isDriver == false) {
 							return;
 						}
 					}
 
 					this.onEngineStateChanged(EngineStates.WaitForStart, DashboardStates.MotorOff, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("ACC") != null) {
 				EventHook.Add(starterFsm, "ACC", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 					this.onEngineStateChanged(EngineStates.ACC, DashboardStates.Test, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Turn key") != null) {
 				EventHook.Add(starterFsm, "Turn key", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Turn key" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.TurnKey, DashboardStates.ACCon2, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Check clutch") != null) {
 				EventHook.Add(starterFsm, "Check clutch", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Check clutch" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.CheckClutch, DashboardStates.Null, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Starting engine") != null) {
 				EventHook.Add(starterFsm, "Starting engine", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Starting engine" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					float startTime = this.starterFsm.Fsm.GetFsmFloat("StartTime").Value;
 
 					this.onEngineStateChanged(EngineStates.StartingEngine, DashboardStates.MotorStarting, startTime);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Start engine") != null) {
 				EventHook.Add(starterFsm, "Start engine", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start engine" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.StartEngine, DashboardStates.Null, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Wait") != null) {
 				EventHook.Add(starterFsm, "Wait", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.Wait, DashboardStates.Null, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Start or not") != null) {
 				EventHook.Add(starterFsm, "Start or not", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start or not" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.StartOrNot, DashboardStates.Null, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("Motor running") != null) {
 				EventHook.Add(starterFsm, "Motor running", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_Motor running" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.MotorRunning, DashboardStates.WaitPlayer, -1);
-				}));
+				}), true);
 			}
 
 			if (starterFsm.Fsm.GetState("ACC / Glowplug") != null) {
 				EventHook.Add(starterFsm, "ACC / Glowplug", new Action(() => {
-					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC / Glowplug" || this.isDriver == false) {
+					if (this.isDriver == false) {
 						return;
 					}
 
 					this.onEngineStateChanged(EngineStates.Glowplug, DashboardStates.Null, -1);
-				}));
+				}), true);
 			}
 
 			// Dashboard
@@ -716,33 +723,21 @@ namespace MSCMP.Game.Objects {
 			// Parking brake
 			if (pBrakeDecreaseState != null) {
 				EventHook.Add(handbrakeFsm, "DECREASE", new Action(() => {
-					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_DECREASE") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				}));
+				}), true);
 			}
 
 			if (pBrakeIncreaseState != null) {
 				EventHook.Add(handbrakeFsm, "INCREASE", new Action(() => {
-					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_INCREASE") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				}));
+				}), true);
 			}
 
 			// Truck parking brake
 			if (truckPBrakeFlipState != null) {
 				EventHook.Add(handbrakeFsm, "Flip", new Action(() => {
-					if (handbrakeFsm.Fsm.LastTransition.EventName == "MP_Flip") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, !this.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
-				}));
+				}), true);
 			}
 
 			// Range selector
@@ -759,21 +754,13 @@ namespace MSCMP.Game.Objects {
 			// Fuel tap
 			if (fuelTapState != null) {
 				EventHook.Add(fuelTapFsm, "Test", new Action(() => {
-					if (fuelTapFsm.Fsm.LastTransition.EventName == "MP_Test") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.FuelTap, !this.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
-				}));
+				}), true);
 			}
 
 			// Lights
 			if (lightsState != null) {
 				EventHook.Add(lightsFsm, "Test", new Action(() => {
-					if (lightsFsm.Fsm.LastTransition.EventName == "MP_Test") {
-						return;
-					}
-
 					if (lightsFsm.Fsm.LastTransition.EventName == "FINISHED") {
 						if (this.isDriver == false) {
 							return;
@@ -781,19 +768,12 @@ namespace MSCMP.Game.Objects {
 					}
 
 					this.onVehicleSwitchChanges(SwitchIDs.Lights, false, this.lightsFsm.Fsm.GetFsmInt("Selection").Value);
-				}));
-				// Keeping in case this brakes with new method of hooking events.
-				//FsmEvent mpLightsSwitchState = lightsFsm.Fsm.GetEvent(MP_LIGHTS_SWITCH_EVENT_NAME);
-				//PlayMakerUtils.AddNewGlobalTransition(lightsFsm, mpLightsSwitchState, "Test");
+				}), true);
 			}
 
 			// Wipers
 			if (wipersState != null) {
 				EventHook.Add(wipersFsm, "Test 2", new Action(() => {
-					if (wipersFsm.Fsm.LastTransition.EventName == "MP_Test 2") {
-						return;
-					}
-
 					int selection = this.wipersFsm.Fsm.GetFsmInt("Selection").Value;
 					if (selection == 2) {
 						selection = 0;
@@ -803,89 +783,65 @@ namespace MSCMP.Game.Objects {
 					}
 
 					this.onVehicleSwitchChanges(SwitchIDs.Wipers, false, selection);
-				}));
+				}), true);
 			}
 
 			// Interior light
 			if (interiorLightState != null) {
 				EventHook.Add(interiorLightFsm, "Switch", new Action(() => {
-					if (interiorLightFsm.Fsm.LastTransition.EventName == "MP_Switch") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
-				}));
+				}), true);
 			}
 
 			// Hydraulic pump
 			if (hydraulicPumpState != null) {
 				EventHook.Add(hydraulicPumpFsm, "Test", new Action(() => {
 					if (this.hydraulicPumpFirstRun == false) {
-						if (hydraulicPumpFsm.Fsm.LastTransition.EventName == "MP_Test") {
-							return;
-						}
-
 						this.onVehicleSwitchChanges(SwitchIDs.HydraulicPump, !this.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
 					}
 					else {
 						this.hydraulicPumpFirstRun = false;
 					}
-				}));
+				}), true);
 			}
 
 			// Spill valve
 			if (spillValveState != null) {
 				EventHook.Add(spillValveFsm, "Switch", new Action(() => {
-					if (spillValveFsm.Fsm.LastTransition.EventName == "MP_Switch") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.SpillValve, !this.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
-				}));
+				}), true);
 			}
 
 			// Axle lift
 			if (axleLiftState != null) {
 				EventHook.Add(axleLiftFsm, "Test", new Action(() => {
 					if (this.axleLiftFirstRun == false) {
-						if (axleLiftFsm.Fsm.LastTransition.EventName == "MP_Test") {
-							return;
-						}
-
 						this.onVehicleSwitchChanges(SwitchIDs.AxleLift, !this.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
 					}
 					else {
 						this.axleLiftFirstRun = false;
 					}
-				}));
+				}), true);
 			}
 
 			// Diff lock
 			if (diffLockState != null) {
 				EventHook.Add(diffLockFsm, "Test", new Action(() => {
 					if (this.diffLockFirstRun == false) {
-						if (diffLockFsm.Fsm.LastTransition.EventName == "MP_Test") {
-							return;
-						}
-
 						this.onVehicleSwitchChanges(SwitchIDs.DiffLock, !this.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
 					}
 					else {
 						this.diffLockFirstRun = false;
 					}
-				}));
+				}), true);
 			}
 
 			// Wasp nest
 			if (waspNestDestroyState != null) {
 				EventHook.Add(waspNestFsm, "State 2", new Action(() => {
-					if (waspNestFsm.Fsm.LastTransition.EventName == "MP_State 2") {
-						return;
-					}
-
 					this.onVehicleSwitchChanges(SwitchIDs.DestroyWaspNest, false, -1);
 					Logger.Debug("Wasp nest destroyed!");
-				}));
+				}), true);
 			}
 		}
 

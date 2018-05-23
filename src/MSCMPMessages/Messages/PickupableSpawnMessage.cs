@@ -12,11 +12,6 @@
 		int					prefabId;
 
 		/// <summary>
-		/// The Object ID given to the object.
-		/// </summary>
-		int                 objectId;
-
-		/// <summary>
 		/// The spawn transformation of the pickupable.
 		/// </summary>
 		TransformMessage	transform;

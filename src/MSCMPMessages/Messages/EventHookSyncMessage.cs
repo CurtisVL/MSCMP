@@ -5,13 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MSCMPMessages.Messages {
-	[NetMessageDesc(MessageIds.ObjectSyncAdd)]
-	class ObjectSyncAddMessage {
+	[NetMessageDesc(MessageIds.EventHookSync)]
+	class EventHookSyncMessage {
 
-		int objectID;
-		string objectName;
-
-		Vector3Message pos;
-		QuaternionMessage rot;
+		int fsmID;
+		int fsmEventID;
 	}
 }

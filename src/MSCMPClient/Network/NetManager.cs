@@ -213,7 +213,7 @@ namespace MSCMP.Network {
 					osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
 				}
 				catch {
-					Logger.Log("Specified object is not yet added to the ObjectID's Dictionary!");
+					Logger.Log($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
 					return;
 				}
 				if (osc != null) {
@@ -222,6 +222,10 @@ namespace MSCMP.Network {
 						if (osc.Owner == 0) {
 							osc.Owner = sender.m_SteamID;
 							Logger.Log($"Owner set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+							// Activate GameObject if object is an AI Vehicle.
+							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+								osc.gameObject.SetActive(true);
+							}
 							GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
 						}
 						else {
@@ -232,6 +236,10 @@ namespace MSCMP.Network {
 					else if (msg.Owner == 2) {
 						if (osc.Owner == sender.m_SteamID) {
 							osc.Owner = 0;
+							// Activate GameObject if object is an AI Vehicle.
+							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
+								osc.gameObject.SetActive(false);
+							}
 							Logger.Log($"Owner removed for object: {osc.transform.name}");
 						}
 					}
@@ -242,7 +250,7 @@ namespace MSCMP.Network {
 						GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
 					}
 					if (osc.Owner == sender.m_SteamID) {
-						if (osc.transform.name == "CarColliderAI") {
+						if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
 							osc.transform.parent.position = Utils.NetVec3ToGame(msg.position);
 							osc.transform.parent.rotation = Utils.NetQuatToGame(msg.rotation);
 						}
@@ -259,26 +267,12 @@ namespace MSCMP.Network {
 				if (msg.accepted) {
 					osc.SyncEnabled = true;
 					osc.Owner = steamID.m_SteamID;
-					Logger.Log($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
+					//Logger.Debug($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
 				}
 			});
 
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncAddMessage msg) => {
-				GameObject prefab = GameObject.Find(msg.objectName);
-				if (prefab != null) {
-					if (prefab.transform.FindChild("CarColliderAI") != null) {
-						//GameObject spawnedGo = GameObject.Instantiate(prefab, Utils.NetVec3ToGame(msg.pos), Utils.NetQuatToGame(msg.rot)) as GameObject;
-						GameObject carCollider = prefab.transform.FindChild("CarColliderAI").gameObject;
-						carCollider.AddComponent<ObjectSyncComponent>().ObjectID = msg.objectID;
-						// Need to find a way to find prefabs for AI vehicles.
-					}
-					else {
-						Logger.Log($"Found object '{msg.objectName}' but object has no add actions listed!");
-					}
-				}
-				else {
-					Logger.Log($"Attempted to spawn object from remote client with name '{msg.objectName}' but the prefab wasn't found!");
-				}
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.EventHookSyncMessage msg) => {
+				EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID);
 			});
 
 			RegisterProtocolMessagesHandlers();
@@ -357,7 +351,7 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
+			//Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
 			return true;
 		}
 
@@ -566,7 +560,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				Logger.Debug($"Trying to read p2p packet of size {size}.");
+				//Logger.Debug($"Trying to read p2p packet of size {size}.");
 
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
 
@@ -584,7 +578,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				Logger.Debug($"Received p2p packet from user {senderSteamId}.");
+				//Logger.Debug($"Received p2p packet from user {senderSteamId}.");
 
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
@@ -596,7 +590,7 @@ namespace MSCMP.Network {
 				}
 
 				byte messageId = reader.ReadByte();
-				Logger.Debug($"Received message {messageId}.");
+				//Logger.Debug($"Received message {messageId}.");
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}

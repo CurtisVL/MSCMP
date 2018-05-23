@@ -18,10 +18,6 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		/// <param name="other"></param>
 		void OnTriggerEnter(Collider other) {
-			if (other.transform.name == "CarColliderAI" && other.gameObject.GetComponent<ObjectSyncComponent>() == null) { // Temporary way to get NPC vehicles.
-				Logger.Log($"Found a new AI vehicle! Object name: {other.transform.parent.name}");
-				other.gameObject.AddComponent<ObjectSyncComponent>().SendToRemote();
-			}
 			ObjectSyncComponent syncComponent = other.GetComponent<ObjectSyncComponent>();
 			if (syncComponent != null) {
 				Task t = new Task(syncComponent.SendEnterSync);

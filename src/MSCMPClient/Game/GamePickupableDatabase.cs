@@ -2,6 +2,7 @@ using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using System.Collections.Generic;
 using UnityEngine;
+using MSCMP.Game.Components;
 
 namespace MSCMP.Game {
 	/// <summary>
@@ -142,6 +143,12 @@ namespace MSCMP.Game {
 			}
 
 			SetupPrefabDescriptorType(desc);
+
+			// Add ObjectSyncComponent to pickupable.
+
+			if (desc.gameObject.GetComponent<ObjectSyncComponent>() == null) {
+				desc.gameObject.AddComponent<ObjectSyncComponent>().ObjectType = ObjectSyncManager.ObjectTypes.Pickupable;
+			}
 
 			// Deactivate game object back if needed.
 

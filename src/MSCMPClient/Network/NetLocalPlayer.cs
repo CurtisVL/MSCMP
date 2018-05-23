@@ -281,20 +281,6 @@ namespace MSCMP.Network {
 		}
 
 		/// <summary>
-		/// Setup new object on remote client.
-		/// </summary>
-		/// <param name="objectID">The Object ID of the object.</param>
-		/// <param name="objectPath">If request to take sync ownership was accepted.</param>
-		public void SendNewObject(int objectID, string objectName, Vector3 pos, Quaternion rot) {
-			Messages.ObjectSyncAddMessage msg = new Messages.ObjectSyncAddMessage();
-			msg.objectID = objectID;
-			msg.objectName = objectName;
-			msg.pos = Utils.GameVec3ToNet(pos);
-			msg.rot = Utils.GameQuatToNet(rot);
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
 		/// Send object sync.
 		/// </summary>
 		/// <param name="objectID">The Object ID of the object.</param>
@@ -303,6 +289,18 @@ namespace MSCMP.Network {
 			Messages.ObjectSyncResponseMessage msg = new Messages.ObjectSyncResponseMessage();
 			msg.objectID = objectID;
 			msg.accepted = accepted;
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Send EventHook sync message.
+		/// </summary>
+		/// <param name="fsmID">FSM ID</param>
+		/// <param name="fsmEventID">FSM Event ID</param>
+		public void SendEventHookSync(int fsmID, int fsmEventID) {
+			Messages.EventHookSyncMessage msg = new Messages.EventHookSyncMessage();
+			msg.fsmID = fsmID;
+			msg.fsmEventID = fsmEventID;
 			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 

@@ -111,11 +111,13 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		private void PickupObject() {
 			pickedUpGameObject = pickupFsm.Fsm.GetFsmGameObject("PickedObject").Value;
+			pickedUpGameObject.GetComponent<ObjectSyncComponent>().TakeSyncControl();
+
 			Logger.Log("PickupObject " + pickedUpGameObject);
 
-			if (GameCallbacks.onObjectPickup != null) {
-				GameCallbacks.onObjectPickup(pickedUpGameObject);
-			}
+			//if (GameCallbacks.onObjectPickup != null) {
+			//	GameCallbacks.onObjectPickup(pickedUpGameObject);
+			//}
 		}
 
 		/// <summary>
@@ -125,9 +127,9 @@ namespace MSCMP.Game.Objects {
 			Logger.Log("Throwed object " + pickedUpGameObject);
 			pickedUpGameObject = null;
 
-			if (GameCallbacks.onObjectRelease != null) {
-				GameCallbacks.onObjectRelease(false);
-			}
+			//if (GameCallbacks.onObjectRelease != null) {
+			//	GameCallbacks.onObjectRelease(false);
+			//}
 		}
 
 		/// <summary>

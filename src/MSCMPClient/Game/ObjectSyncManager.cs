@@ -17,6 +17,15 @@ namespace MSCMP.Game {
 		public ConcurrentDictionary<int, ObjectSyncComponent> ObjectIDs = new ConcurrentDictionary<int, ObjectSyncComponent>();
 
 		/// <summary>
+		/// Type of objects.
+		/// </summary>
+		public enum ObjectTypes {
+			Pickupable,
+			PlayerVehicle,
+			AIVehicle,
+		}
+
+		/// <summary>
 		/// Local player's Steam ID.
 		/// </summary>
 		public Steamworks.CSteamID steamID;
@@ -24,9 +33,8 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		public ObjectSyncManager (Steamworks.CSteamID SteamID) {
+		public ObjectSyncManager() {
 			Instance = this;
-			steamID = SteamID;
 		}
 
 		/// <summary>
@@ -35,7 +43,10 @@ namespace MSCMP.Game {
 		/// <param name="osc">Object to add.</param>
 		/// <returns>ObjectID of object.</returns>
 		public int AddNewObject(ObjectSyncComponent osc) {
-			Logger.Log($"Added new ObjectID at: {ObjectIDs.Count + 1}");
+			if (steamID.m_SteamID == 0) {
+				steamID = Steamworks.SteamUser.GetSteamID();
+			}
+			Logger.Debug($"Added new ObjectID at: {ObjectIDs.Count + 1}");
 			ObjectIDs.GetOrAdd(ObjectIDs.Count + 1, osc);
 			return ObjectIDs.Count;
 		}
@@ -46,7 +57,7 @@ namespace MSCMP.Game {
 		/// <param name="osc"></param>
 		/// <param name="objectID"></param>
 		public void ForceAddNewObject(ObjectSyncComponent osc, int objectID) {
-			Logger.Log($"Force adding new ObjectID at: {objectID}");
+			Logger.Debug($"Force adding new ObjectID at: {objectID}");
 			if (ObjectIDs.ContainsKey(objectID)) {
 				ObjectIDs[objectID] = osc;
 			}

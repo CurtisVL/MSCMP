@@ -31,6 +31,6 @@ namespace MSCMPMessages.Messages {
 		WeatherSync,
 		ObjectSync,
 		ObjectSyncResponse,
-		ObjectSyncAdd,
+		EventHookSync,
 	}
 }

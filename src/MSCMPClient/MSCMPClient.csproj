@@ -82,6 +82,7 @@
     <Compile Include="DevTools.cs" />
     <Compile Include="Game\BeerCaseManager.cs" />
     <Compile Include="Game\EventHook.cs" />
+    <Compile Include="Game\GameVehicleDatabase.cs" />
     <Compile Include="Game\ObjectSyncManager.cs" />
     <Compile Include="Game\Components\ObjectSyncPlayerComponent.cs" />
     <Compile Include="Game\Components\ObjectSyncComponent.cs" />

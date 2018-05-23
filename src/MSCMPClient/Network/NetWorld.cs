@@ -84,7 +84,6 @@ namespace MSCMP.Network {
 				Messages.PickupableSpawnMessage msg = new Messages.PickupableSpawnMessage();
 				msg.id = freeId;
 				msg.prefabId = metaData.prefabId;
-				msg.objectId = pickupable.GetComponent<ObjectSyncComponent>().ObjectID;
 				msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
 				msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
 				msg.active = instance.activeSelf;
@@ -112,17 +111,7 @@ namespace MSCMP.Network {
 					Messages.PickupableSpawnMessage msg = new Messages.PickupableSpawnMessage();
 					msg.id = pickupable.NetId;
 					msg.prefabId = metaData.prefabId;
-					if (instance.GetComponent<ObjectSyncComponent>() != null) {
-						msg.objectId = instance.GetComponent<ObjectSyncComponent>().ObjectID;
-					}
-					else {
-						ObjectSyncComponent osc = instance.AddComponent<ObjectSyncComponent>();
-						while (osc.ObjectID == -1) {
 
-						}
-						msg.objectId = osc.ObjectID;
-
-					}
 					msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
 					msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
 					netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
@@ -544,7 +533,6 @@ namespace MSCMP.Network {
 				pickupableMsg.id = pickupable.NetId;
 				var metaData = pickupable.gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
 				pickupableMsg.prefabId = metaData.prefabId;
-				pickupableMsg.objectId = pickupable.gameObject.GetComponent<ObjectSyncComponent>().ObjectID;
 				Transform transform = pickupable.gameObject.transform;
 				pickupableMsg.transform.position = Utils.GameVec3ToNet(transform.position);
 				pickupableMsg.transform.rotation = Utils.GameQuatToNet(transform.rotation);
@@ -782,10 +770,6 @@ namespace MSCMP.Network {
 				if (pickupable.name != "beer case") {
 					Game.BeerCaseManager.Instance.AddBeerCase(pickupable);
 				}
-			}
-
-			if (pickupable.GetComponent<ObjectSyncComponent>() == null) {
-				pickupable.AddComponent<ObjectSyncComponent>();
 			}
 		}
 
