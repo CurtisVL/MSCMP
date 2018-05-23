@@ -144,12 +144,6 @@ namespace MSCMP.Game {
 
 			SetupPrefabDescriptorType(desc);
 
-			// Add ObjectSyncComponent to pickupable.
-
-			if (desc.gameObject.GetComponent<ObjectSyncComponent>() == null) {
-				desc.gameObject.AddComponent<ObjectSyncComponent>().ObjectType = ObjectSyncManager.ObjectTypes.Pickupable;
-			}
-
 			// Deactivate game object back if needed.
 
 			if (!wasActive) {
@@ -166,6 +160,24 @@ namespace MSCMP.Game {
 		/// </summary>
 		public void DestroyObjects() {
 			prefabs.Clear();
+		}
+
+		/// <summary>
+		/// Handle destroy of game object.
+		/// </summary>
+		/// <param name="gameObject">The destroyed game object.</param>
+		public void DestroyObject(GameObject gameObject) {
+			if (!IsPickupable(gameObject)) {
+				return;
+			}
+
+			var prefab = GetPrefabDesc(gameObject);
+			if (prefab != null) {
+				Logger.Debug($"Deleting prefab descriptor - {gameObject.name}.");
+
+				// Cannot use Remove() because GetPickupablePrefab() depends on indices to stay untouched.
+				prefabs[prefab.id] = null;
+			}
 		}
 
 		/// <summary>
@@ -202,7 +214,7 @@ namespace MSCMP.Game {
 		/// <returns>Prefab descriptor if given prefab is valid.</returns>
 		public PrefabDesc GetPrefabDesc(GameObject prefab) {
 			foreach (var desc in prefabs) {
-				if (desc.gameObject == prefab) {
+				if (desc != null && desc.gameObject == prefab) {
 					return desc;
 				}
 			}
@@ -218,10 +230,6 @@ namespace MSCMP.Game {
 			if (!gameObject.CompareTag("PART") && !gameObject.CompareTag("ITEM")) {
 				return false;
 			}
-			//Transform parent = gameObject.transform.parent;
-			//if (parent && IsPickupable(parent.gameObject)) {
-			//	return false;
-			//}
 
 			if (!gameObject.GetComponent<Rigidbody>()) {
 				return false;

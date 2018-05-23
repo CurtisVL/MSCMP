@@ -39,16 +39,43 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
+		/// Check if the given game object is beer case.
+		/// </summary>
+		/// <param name="gameObject">The game object.</param>
+		/// <returns>true if game object is a beer case, false otherwise</returns>
+		bool IsBeerCase(GameObject gameObject) {
+			var metaData = gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
+			return metaData != null && metaData.PrefabDescriptor.type == GamePickupableDatabase.PrefabType.BeerCase;
+		}
+
+		/// <summary>
 		/// Collect all beer cases.
 		/// </summary>
 		public void CollectGameObject(GameObject gameObject) {
-			var metaData = gameObject.GetComponent<Game.Components.PickupableMetaDataComponent>();
-			if (metaData == null) {
+			if (IsBeerCase(gameObject)) {
+				AddBeerCase(gameObject);
+			}
+		}
+
+		/// <summary>
+		/// Destroy all references to collected objects.
+		/// </summary>
+		public void DestroyObjects() {
+			beercases.Clear();
+		}
+
+		/// <summary>
+		/// Handle destroy of game object.
+		/// </summary>
+		/// <param name="gameObject">The destroyed game object.</param>
+		public void DestroyObject(GameObject gameObject) {
+			if (!IsBeerCase(gameObject)) {
 				return;
 			}
 
-			if (metaData.PrefabDescriptor.type == GamePickupableDatabase.PrefabType.BeerCase) {
-				AddBeerCase(gameObject);
+			var beerCase = FindBeerCase(gameObject);
+			if (beerCase != null) {
+				beercases.Remove(beerCase);
 			}
 		}
 

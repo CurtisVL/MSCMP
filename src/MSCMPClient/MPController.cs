@@ -38,6 +38,11 @@ namespace MSCMP {
 		/// </summary>
 		GameWorld gameWorld = new GameWorld();
 
+		/// <summary>
+		/// Console object.
+		/// </summary>
+		UI.Console console = new UI.Console();
+
 		Texture2D fillText = new Texture2D(1, 1);
 
 		MPController() {
@@ -90,6 +95,10 @@ namespace MSCMP {
 		/// Updates IMGUI of the multiplayer.
 		/// </summary>
 		void OnGUI() {
+			if (netManager.IsOnline) {
+				netManager.DrawNameTags();
+			}
+
 			GUI.color = Color.white;
 			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + Client.GetMODDisplayVersion());
 
@@ -124,6 +133,8 @@ namespace MSCMP {
 
 			gameWorld.UpdateIMGUI();
 #endif
+
+			console.Draw();
 		}
 
 		/// <summary>

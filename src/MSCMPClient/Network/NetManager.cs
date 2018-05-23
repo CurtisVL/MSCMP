@@ -9,11 +9,12 @@ using MSCMP.Game.Components;
 namespace MSCMP.Network {
 	class NetManager {
 		private const int MAX_PLAYERS = 2;
-		private const int PROTOCOL_VERSION = 1;
+		private const int PROTOCOL_VERSION = 2;
 		private const uint PROTOCOL_ID = 0x6d73636d;
 
 		private Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t> gameLobbyJoinRequestedCallback = null;
 		private Steamworks.Callback<Steamworks.P2PSessionRequest_t> p2pSessionRequestCallback = null;
+		private Steamworks.Callback<Steamworks.P2PSessionConnectFail_t> p2pConnectFailCallback = null;
 		private Steamworks.CallResult<Steamworks.LobbyCreated_t> lobbyCreatedCallResult = null;
 		private Steamworks.CallResult<Steamworks.LobbyEnter_t> lobbyEnterCallResult = null;
 		public enum Mode {
@@ -110,172 +111,89 @@ namespace MSCMP.Network {
 			netMessageHandler = new NetMessageHandler(this);
 			netWorld = new NetWorld(this);
 
-			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create((Steamworks.P2PSessionRequest_t result) => {
-				if (!Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
-					Logger.Log("Accepted p2p session with " + result.m_steamIDRemote.ToString());
-				}
-			});
-
+			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create(OnP2PSessionRequest);
+			p2pConnectFailCallback = Steamworks.Callback<Steamworks.P2PSessionConnectFail_t>.Create(OnP2PConnectFail);
 			gameLobbyJoinRequestedCallback = Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
-
-			lobbyCreatedCallResult = new Steamworks.CallResult<Steamworks.LobbyCreated_t>((Steamworks.LobbyCreated_t result, bool ioFailure) => {
-				if (result.m_eResult != Steamworks.EResult.k_EResultOK) {
-					Logger.Log("Oh my fucking god i failed to create a lobby for you. Please forgive me. (result: " + result.m_eResult + ")");
-
-					MPGUI.Instance.ShowMessageBox("Failed to create lobby due to steam error.\n" + result.m_eResult, () => {
-						MPController.Instance.LoadLevel("MainMenu");
-					});
-					return;
-				}
-
-				Logger.Log("Hey you! I have lobby id for you! " + result.m_ulSteamIDLobby);
-
-				MessagesList.AddMessage("Session started.", MessageSeverity.Info);
-
-				// Setup local player.
-				players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
-
-				steamID = Steamworks.SteamUser.GetSteamID();
-				mode = Mode.Host;
-				state = State.Playing;
-				currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
-			});
-
-			lobbyEnterCallResult = new Steamworks.CallResult<Steamworks.LobbyEnter_t>((Steamworks.LobbyEnter_t result, bool ioFailure) => {
-				if (result.m_EChatRoomEnterResponse != (uint)Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess) {
-					Logger.Log("Oh my fucking god i failed to join the lobby for you. Please forgive me. (reponse: " + result.m_EChatRoomEnterResponse + ")");
-
-					players[1] = null;
-					return;
-				}
-
-				// Setup local player.
-				players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
-
-				Logger.Log("Oh hello! " + result.m_ulSteamIDLobby);
-
-				MessagesList.AddMessage("Entered lobby.", MessageSeverity.Info);
-
-				mode = Mode.Player;
-				state = State.LoadingGameWorld;
-				currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
-
-				ShowLoadingScreen(true);
-				SendHandshake(players[1]);
-			});
-
-			// I feel like these should be in NetWorld now. Not sure.
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleStateMessage msg) => {
-				NetPlayer player = players[1];
-				float startTime = -1;
-
-				if (player == null) {
-					return;
-				}
-
-				NetVehicle vehicle = netWorld.GetVehicle(msg.vehicleId);
-				if (vehicle == null) {
-					Logger.Log("Player " + player.SteamId + " tried to set state of vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
-					return;
-				}
-
-				if (msg.HasStartTime) {
-					startTime = msg.StartTime;
-				}
-
-				vehicle.SetEngineState(msg.state, msg.dashstate, startTime);
-			});
-
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleSwitchMessage msg) => {
-				NetPlayer player = players[1];
-				float newValueFloat = -1;
-
-				if (player == null) {
-					return;
-				}
-
-				NetVehicle vehicle = netWorld.GetVehicle(msg.vehicleId);
-				if (vehicle == null) {
-					Logger.Log("Player " + player.SteamId + " tried to change a switch in vehicle " + msg.vehicleId + " but there is no vehicle with such id.");
-					return;
-				}
-
-				if (msg.HasSwitchValueFloat) {
-					newValueFloat = msg.SwitchValueFloat;
-				}
-
-				vehicle.SetVehicleSwitch(msg.switchID, msg.switchValue, newValueFloat);
-			});
-
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncMessage msg) => {
-				ObjectSyncComponent osc;
-				try {
-					osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
-				}
-				catch {
-					Logger.Log($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
-					return;
-				}
-				if (osc != null) {
-					// Set owner, or set owner if not set correctly.
-					if (msg.Owner == 1 || osc.Owner == 0 && msg.Owner == -1) {
-						if (osc.Owner == 0) {
-							osc.Owner = sender.m_SteamID;
-							Logger.Log($"Owner set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
-							// Activate GameObject if object is an AI Vehicle.
-							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-								osc.gameObject.SetActive(true);
-							}
-							GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
-						}
-						else {
-							Logger.Log($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner})");
-						}
-					}
-					// Remove owner.
-					else if (msg.Owner == 2) {
-						if (osc.Owner == sender.m_SteamID) {
-							osc.Owner = 0;
-							// Activate GameObject if object is an AI Vehicle.
-							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-								osc.gameObject.SetActive(false);
-							}
-							Logger.Log($"Owner removed for object: {osc.transform.name}");
-						}
-					}
-					// Force set owner.
-					else if (msg.Owner == 3) {
-						osc.Owner = sender.m_SteamID;
-						Logger.Log($"Owner force set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
-						GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
-					}
-					if (osc.Owner == sender.m_SteamID) {
-						if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-							osc.transform.parent.position = Utils.NetVec3ToGame(msg.position);
-							osc.transform.parent.rotation = Utils.NetQuatToGame(msg.rotation);
-						}
-						else {
-							osc.transform.position = Utils.NetVec3ToGame(msg.position);
-							osc.transform.rotation = Utils.NetQuatToGame(msg.rotation);
-						}
-					}
-				}
-			});
-
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncResponseMessage msg) => {
-				ObjectSyncComponent osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
-				if (msg.accepted) {
-					osc.SyncEnabled = true;
-					osc.Owner = steamID.m_SteamID;
-					//Logger.Debug($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
-				}
-			});
-
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.EventHookSyncMessage msg) => {
-				EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID);
-			});
+			lobbyCreatedCallResult = new Steamworks.CallResult<Steamworks.LobbyCreated_t>(OnLobbyCreated);
+			lobbyEnterCallResult = new Steamworks.CallResult<Steamworks.LobbyEnter_t>(OnLobbyEnter);
 
 			RegisterProtocolMessagesHandlers();
+		}
+
+		/// <summary>
+		/// Handle steam networking P2P connect fail callback.
+		/// </summary>
+		/// <param name="result">The callback result.</param>
+		void OnP2PConnectFail(Steamworks.P2PSessionConnectFail_t result) {
+			Logger.Error($"P2P Connection failed, session error: {result.m_eP2PSessionError}, remote: {result.m_steamIDRemote}");
+		}
+
+		/// <summary>
+		/// Handle steam networking P2P session request callback.
+		/// </summary>
+		/// <param name="result">The callback result.</param>
+		void OnP2PSessionRequest(Steamworks.P2PSessionRequest_t result) {
+			if (Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
+				Logger.Log($"Accepted p2p session with {result.m_steamIDRemote}");
+			}
+			else {
+				Logger.Error($"Failed to accept P2P session with {result.m_steamIDRemote}");
+			}
+		}
+
+		/// <summary>
+		/// Handle result of create lobby operation.
+		/// </summary>
+		/// <param name="result">The operation result.</param>
+		/// <param name="ioFailure">Did IO failure happen?</param>
+		void OnLobbyCreated(Steamworks.LobbyCreated_t result, bool ioFailure) {
+			if (result.m_eResult != Steamworks.EResult.k_EResultOK || ioFailure) {
+				Logger.Log($"Failed to create lobby. (result: {result.m_eResult}, io failure: {ioFailure})");
+
+				MPGUI.Instance.ShowMessageBox($"Failed to create lobby due to steam error.\n{result.m_eResult}/{ioFailure}", () => {
+					MPController.Instance.LoadLevel("MainMenu");
+				});
+				return;
+			}
+
+			Logger.Debug($"Lobby has been created, lobby id: {result.m_ulSteamIDLobby}");
+			MessagesList.AddMessage("Session started.", MessageSeverity.Info);
+
+			// Setup local player.
+			players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
+
+			mode = Mode.Host;
+			state = State.Playing;
+			currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
+		}
+
+		/// <summary>
+		/// Handle result of join lobby operation.
+		/// </summary>
+		/// <param name="result">The operation result.</param>
+		/// <param name="ioFailure">Did IO failure happen?</param>
+		void OnLobbyEnter(Steamworks.LobbyEnter_t result, bool ioFailure) {
+			if (ioFailure || result.m_EChatRoomEnterResponse != (uint)Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess) {
+				Logger.Error("Failed to join lobby. (reponse: {result.m_EChatRoomEnterResponse}, ioFailure: {ioFailure})");
+				MPGUI.Instance.ShowMessageBox($"Failed to join lobby.\n(reponse: {result.m_EChatRoomEnterResponse}, ioFailure: {ioFailure})");
+
+				players[1] = null;
+				return;
+			}
+
+			// Setup local player.
+			players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
+
+			Logger.Debug("Entered lobby: " + result.m_ulSteamIDLobby);
+
+			MessagesList.AddMessage("Entered lobby.", MessageSeverity.Info);
+
+			mode = Mode.Player;
+			state = State.LoadingGameWorld;
+			currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
+
+			ShowLoadingScreen(true);
+			SendHandshake(players[1]);
 		}
 
 		/// <summary>
@@ -351,7 +269,7 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			//Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
+			Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
 			return true;
 		}
 
@@ -412,11 +330,12 @@ namespace MSCMP.Network {
 		private void OnGameLobbyJoinRequested(Steamworks.GameLobbyJoinRequested_t request) {
 			Steamworks.SteamAPICall_t apiCall = Steamworks.SteamMatchmaking.JoinLobby(request.m_steamIDLobby);
 			if (apiCall == Steamworks.SteamAPICall_t.Invalid) {
-				Logger.Log("Unable to join lobby.");
+				Logger.Error($"Unable to join lobby {request.m_steamIDLobby}. JoinLobby call failed.");
+				MPGUI.Instance.ShowMessageBox($"Failed to join lobby.\nPlease try again later.");
 				return;
 			}
 
-			Logger.Log("Setup player.");
+			Logger.Debug("Setup player.");
 
 			// Setup remote player. The HOST.
 			timeSinceLastHeartbeat = 0.0f;
@@ -560,7 +479,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				//Logger.Debug($"Trying to read p2p packet of size {size}.");
+				Logger.Debug($"Trying to read p2p packet of size {size}.");
 
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
 
@@ -578,7 +497,7 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				//Logger.Debug($"Received p2p packet from user {senderSteamId}.");
+				Logger.Debug($"Received p2p packet from user {senderSteamId}.");
 
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
@@ -590,7 +509,7 @@ namespace MSCMP.Network {
 				}
 
 				byte messageId = reader.ReadByte();
-				//Logger.Debug($"Received message {messageId}.");
+				Logger.Debug($"Received message {messageId}.");
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}
@@ -663,23 +582,44 @@ namespace MSCMP.Network {
 #endif
 
 		/// <summary>
+		/// Draw player nametags.
+		/// </summary>
+		public void DrawNameTags() {
+			if (players[1] != null) {
+				players[1].DrawNametag();
+			}
+		}
+
+		/// <summary>
+		/// Reject remote player during connection phase.
+		/// </summary>
+		/// <param name="reason">The rejection reason.</param>
+		void RejectPlayer(string reason) {
+			MessagesList.AddMessage($"Player {players[1].GetName()} connection rejected. {reason}", MessageSeverity.Error);
+
+			Logger.Error($"Player rejected. {reason}");
+			SendHandshake(players[1]);
+			players[1].Dispose();
+			players[1] = null;
+		}
+
+		/// <summary>
+		/// Abort joinign the lobby during connection phase.
+		/// </summary>
+		/// <param name="reason">The abort reason.</param>
+		void AbortJoining(string reason) {
+			string errorMessage = $"Failed to join lobby.\n{reason}";
+			MPGUI.Instance.ShowMessageBox(errorMessage);
+			Logger.Error(errorMessage);
+			MPController.Instance.LoadLevel("MainMenu");
+		}
+
+		/// <summary>
 		/// Process handshake message received from the given steam id.
 		/// </summary>
 		/// <param name="senderSteamId">The steam id of the sender.</param>
 		/// <param name="msg">Hand shake message.</param>
 		private void HandleHandshake(Steamworks.CSteamID senderSteamId, Messages.HandshakeMessage msg) {
-			// Check if protocol version matches.
-
-			if (IsPlayer && (msg.protocolVersion != PROTOCOL_VERSION)) {
-				string errorMessage = $"Failed to join lobby. Protocol version mismatch. (Client: {PROTOCOL_VERSION}, Host: {msg.protocolVersion})";
-				MPGUI.Instance.ShowMessageBox(errorMessage);
-				Logger.Error(errorMessage);
-				MPController.Instance.LoadLevel("MainMenu");
-				return;
-			}
-
-			// All looks fine
-
 			if (IsHost) {
 				if (players[1] != null) {
 					Logger.Log("Received handshake from player but player is already here.");
@@ -695,12 +635,7 @@ namespace MSCMP.Network {
 				// Check if version matches - if not ignore this player.
 
 				if (msg.protocolVersion != PROTOCOL_VERSION) {
-					MessagesList.AddMessage($"Player {players[1].GetName()} connection rejected. Version mismatch.", MessageSeverity.Error);
-
-					Logger.Error($"Player disconnected. Version mismatch. (Client: {PROTOCOL_VERSION}, Player: {msg.protocolVersion}).");
-					SendHandshake(players[1]);
-					players[1].Dispose();
-					players[1] = null;
+					RejectPlayer($"Mod version mismatch.");
 					return;
 				}
 
@@ -717,6 +652,23 @@ namespace MSCMP.Network {
 					LeaveLobby();
 					return;
 				}
+
+				// Check if protocol version matches.
+
+				if (msg.protocolVersion != PROTOCOL_VERSION) {
+					string message;
+					if (msg.protocolVersion > PROTOCOL_VERSION) {
+						message = "Host has newer version of the mod.";
+					}
+					else {
+						message = "Host has older version of the mod.";
+					}
+
+					AbortJoining($"{message}\n(Your mod version: {PROTOCOL_VERSION}, Host mod version: {msg.protocolVersion})");
+					return;
+				}
+
+				// All is fine - load game world.
 
 				MessagesList.AddMessage($"Connection established!", MessageSeverity.Info);
 

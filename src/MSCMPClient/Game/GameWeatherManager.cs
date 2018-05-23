@@ -137,6 +137,16 @@ namespace MSCMP.Game
 		}
 
 		/// <summary>
+		/// Handle destroy of game object.
+		/// </summary>
+		/// <param name="gameObject">The destroyed game object.</param>
+		public void DestroyObject(GameObject gameObject) {
+			if (weatherSystemFSM != null && weatherSystemFSM.gameObject == gameObject) {
+				weatherSystemFSM = null;
+			}
+		}
+
+		/// <summary>
 		/// Set current weather from network message.
 		/// </summary>
 		/// <param name="message">Message to set weather state from.</param>
