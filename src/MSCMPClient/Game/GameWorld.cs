@@ -231,6 +231,8 @@ namespace MSCMP.Game {
 			}
 			else if (IsVehicleGameObject(gameObject)) {
 				vehicles.Add(new GameVehicle(gameObject));
+
+				if (gameObject.name == "HAYOSIKO(1500kg, 250)") vehicles.Add(new GameVehicle(CreateDublicateVehicle(gameObject)));
 			}
 		}
 
@@ -364,7 +366,6 @@ namespace MSCMP.Game {
 			"RCO_RUSCKO12(270)", "KEKMET(350-400psi)", "FLATBED", "FERNDALE(1630kg)", "GIFU(750/450psi)"
 		};
 
-
 		/// <summary>
 		/// Check if given game object is vehicle.
 		/// </summary>
@@ -422,6 +423,17 @@ namespace MSCMP.Game {
 			GamePickupableDatabase.PrefabDesc prefabDescriptor = gamePickupableDatabase.GetPickupablePrefab(prefabId);
 			Client.Assert(prefabDescriptor != null, $"Unable to find pickupable prefab {prefabId}");
 			return prefabDescriptor.Spawn(position, rotation);
+		}
+
+		public GameObject CreateDublicateVehicle(GameObject gameObject) {
+			string UniqueTagPosition = Utils.GetPlaymakerScriptByName(gameObject, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value;
+			Utils.GetPlaymakerScriptByName(gameObject, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = "";
+
+			Vector3 newPos = gameObject.transform.position + Vector3.up * 5.0f + gameObject.transform.rotation * Vector3.forward * 4.0f;
+			GameObject newVehicle = (GameObject)GameObject.Instantiate(gameObject, newPos, gameObject.transform.rotation);
+
+			Utils.GetPlaymakerScriptByName(gameObject, "LOD").Fsm.GetFsmString("UniqueTagPosition").Value = UniqueTagPosition;
+			return newVehicle;
 		}
 	}
 }

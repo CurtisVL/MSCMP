@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Objects;
-using MSCMP.Game;
 
 namespace MSCMP.Game {
 	/// <summary>

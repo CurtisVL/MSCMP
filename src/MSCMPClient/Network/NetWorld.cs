@@ -63,6 +63,8 @@ namespace MSCMP.Network {
 			RegisterVehicle("FERNDALE(1630kg)");
 			RegisterVehicle("GIFU(750/450psi)");
 
+			RegisterVehicle("HAYOSIKO(1500kg, 250)(Clone)");
+
 			Game.GameCallbacks.onWorldUnload += () => {
 				OnGameWorldUnload();
 			};
@@ -233,6 +235,16 @@ namespace MSCMP.Network {
 				player.HandleSynchronize(msg);
 			});
 
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.AnimSyncMessage msg) => {
+				NetPlayer player = netManager.GetPlayer(sender);
+				if (player == null)
+				{
+					Logger.Log($"Received animation synchronization packet from {sender} but there is not player registered using this id.");
+					return;
+				}
+
+				player.HandleAnimSynchronize(msg);
+			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.OpenDoorsMessage msg) => {
 				NetPlayer player = netManager.GetPlayer(sender);
@@ -465,6 +477,8 @@ namespace MSCMP.Network {
 
 			byte netId = (byte) vehicles.Count;
 			vehicles.Add(new NetVehicle(netManager, gameObjectName, netId));
+
+			Logger.Debug($"Registering vehicle {gameObjectName} (Net ID: {netId})");
 		}
 
 		/// <summary>

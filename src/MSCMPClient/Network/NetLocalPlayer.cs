@@ -1,5 +1,4 @@
-﻿using System;
-using MSCMP.Game;
+﻿using MSCMP.Game;
 using MSCMP.Game.Objects;
 using MSCMP.Game.Components;
 using UnityEngine;
@@ -29,17 +28,10 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// SteamID of local player.
 		/// </summary>
-		private Steamworks.CSteamID steamID;
-
-		/// <summary>
-		/// Constructor.
-		/// </summary>
 		/// <param name="netManager">The network manager owning this player.</param>
 		/// <param name="netWorld">Network world owning this player.</param>
 		/// <param name="steamId">The steam id of the player.</param>
 		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId) {
-			Instance = this;
-			steamID = steamId;
 
 			GameDoorsManager.Instance.onDoorsOpen = (GameObject door) => {
 				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
@@ -188,43 +180,6 @@ namespace MSCMP.Network {
 			base.EnterVehicle(vehicle, passenger);
 
 			Messages.VehicleEnterMessage msg = new Messages.VehicleEnterMessage();
-			msg.vehicleId = vehicle.NetId;
-			msg.passenger = passenger;
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Leave vehicle player is currently sitting in.
-		/// </summary>
-		public override void LeaveVehicle() {
-			base.LeaveVehicle();
-
-			netManager.BroadcastMessage(new Messages.VehicleLeaveMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Write vehicle engine state into state message.
-		/// </summary>
-		/// <param name="state">The engine state to write.</param>
-		public void WriteVehicleStateMessage(NetVehicle vehicle, GameVehicle.EngineStates state, GameVehicle.DashboardStates dashstate, float startTime) {
-			Logger.Debug($"Writing state message! State: {state.ToString()}, Dashboard state: {dashstate.ToString()}");
-			Messages.VehicleStateMessage msg = new Messages.VehicleStateMessage();
-			msg.vehicleId = vehicle.NetId;
-			msg.state = (int)state;
-			msg.dashstate = (int)dashstate;
-			if (startTime != -1) {
-				msg.StartTime = startTime;
-			}
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Write vehicle switch changes into vehicle switch message.
-		/// </summary>
-		/// <param name="state">The engine state to write.</param>
-		public void WriteVehicleSwitchMessage(NetVehicle vehicle, GameVehicle.SwitchIDs switchID, bool newValue, float newValueFloat) {
-			Logger.Debug($"Writing vehicle switch message! Switch: {switchID.ToString()}, Value: {newValue}, ValueFloat: {newValueFloat}");
-			Messages.VehicleSwitchMessage msg = new Messages.VehicleSwitchMessage();
 			msg.vehicleId = vehicle.NetId;
 			msg.switchID = (int)switchID;
 			msg.switchValue = newValue;
@@ -380,3 +335,232 @@ namespace MSCMP.Network {
 
 	}
 }
+
+		/// <summary>
+		/// Get steam name of the player.
+		/// </summary>
+		/// <returns>Steam name of the player.</returns>
+		public override string GetName() {
+			return Steamworks.SteamFriends.GetPersonaName();
+		}
+
+
+		/// <summary>
+		/// Teleport player to the given location.
+		/// </summary>
+		/// <param name="pos">The position to teleport to.</param>
+		/// <param name="rot">The rotation to teleport to.</param>
+		public override void Teleport(Vector3 pos, Quaternion rot) {
+			GamePlayer player = GameWorld.Instance.Player;
+			if (player == null) {
+				return;
+			}
+			var playerObject = player.Object;
+			if (playerObject == null) {
+				return;
+			}
+			playerObject.transform.position = pos;
+			playerObject.transform.rotation = rot;
+		}
+
+	}
+}
+
+﻿using System;
+using MSCMP.Game;
+		private Steamworks.CSteamID steamID;
+
+		/// <summary>
+		/// Constructor.
+		/// </summary>
+		/// <param name="netManager">The network manager owning this player.</param>
+		/// <param name="netWorld">Network world owning this player.</param>
+		/// <param name="steamId">The steam id of the player.</param>
+		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId) {
+			Instance = this;
+			steamID = steamId;
+
+			GameDoorsManager.Instance.onDoorsOpen = (GameObject door) => {
+				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
+				msg.position = Utils.GameVec3ToNet(door.transform.position);
+				msg.open = true;
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+
+			GameDoorsManager.Instance.onDoorsClose = (GameObject door) => {
+				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
+				msg.position = Utils.GameVec3ToNet(door.transform.position);
+				msg.open = false;
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+
+			GameCallbacks.onObjectPickup = (GameObject gameObj) => {
+				Messages.PickupObjectMessage msg = new Messages.PickupObjectMessage();
+				msg.netId = netWorld.GetPickupableNetId(gameObj);
+				Client.Assert(msg.netId != NetPickupable.INVALID_ID, "Tried to pickup not network pickupable.");
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+
+			GameCallbacks.onObjectRelease = (bool drop) => {
+				Messages.ReleaseObjectMessage msg = new Messages.ReleaseObjectMessage();
+				msg.drop = drop;
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+
+			BeerCaseManager.Instance.onBottleConsumed = (GameObject bcase) => {
+				Messages.RemoveBottleMessage msg = new Messages.RemoveBottleMessage();
+				msg.netId = netWorld.GetPickupableNetId(bcase);
+				Client.Assert(msg.netId != NetPickupable.INVALID_ID, "Tried to drink from not network beercase.");
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+
+			LightSwitchManager.Instance.onLightSwitchUsed = (GameObject lswitch, bool turnedOn) => {
+				Messages.LightSwitchMessage msg = new Messages.LightSwitchMessage();
+				msg.pos = Utils.GameVec3ToNet(lswitch.transform.position);
+				msg.toggle = turnedOn;
+				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			};
+		}
+
+#if !PUBLIC_RELEASE
+		/// <summary>
+		/// Update debug IMGUI for the player.
+		/// </summary>
+		public override void DrawDebugGUI() {
+			int debugWidth = 300;
+			int debugX = Screen.width - debugWidth;
+			Rect debugRect = new Rect(debugX, 100, debugWidth, 200);
+			GUI.Label(debugRect, "Local player\ntime to update: " + timeToUpdate + "\nstate: " + state + "\nWorld time: " + GameWorld.Instance.WorldTime + "\nWorld day: " + GameWorld.Instance.WorldDay);
+
+			if (currentVehicle != null) {
+				currentVehicle.UpdateIMGUI();
+			}
+		}
+#endif
+
+		/// <summary>
+		/// Update state of the local player.
+		/// </summary>
+		public override void Update() {
+			if (state == State.Passenger) {
+				// Skip update when we don't have anything to do.
+				return;
+			}
+
+			// Synchronization sending.
+
+			timeToUpdate -= Time.deltaTime;
+			if (timeToUpdate <= 0.0f && netManager.IsPlaying) {
+
+				switch (state) {
+					case State.DrivingVehicle:
+						SendInVehicleSync();
+						break;
+
+					case State.OnFoot:
+						SendOnFootSync();
+						break;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Send in vehicle synchronization.
+		/// </summary>
+		/// <returns>true if sync was set, false otherwise</returns>
+		private bool SendInVehicleSync() {
+			Client.Assert(currentVehicle != null, "Tried to send in vehicle sync packet but no current vehicle is set.");
+
+			Messages.VehicleSyncMessage message = new Messages.VehicleSyncMessage();
+			if (!currentVehicle.WriteSyncMessage(message)) {
+				return false;
+			}
+			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
+				return false;
+			}
+
+			timeToUpdate = (float)NetVehicle.SYNC_DELAY / 1000;
+			return true;
+		}
+
+		/// <summary>
+		/// Send on foot sync to the server.
+		/// </summary>
+		/// <returns>true if sync message was sent false otherwise</returns>
+		private bool SendOnFootSync() {
+			GamePlayer player = GameWorld.Instance.Player;
+			if (player == null) {
+				return false;
+			}
+			GameObject playerObject = player.Object;
+			if (playerObject == null) {
+				return false;
+			}
+
+			Messages.PlayerSyncMessage message = new Messages.PlayerSyncMessage();
+			message.position = Utils.GameVec3ToNet(playerObject.transform.position);
+			message.rotation = Utils.GameQuatToNet(playerObject.transform.rotation);
+
+			if (player.PickedUpObject) {
+				Transform objectTrans = player.PickedUpObject.transform;
+				var data = new Messages.PickedUpSync();
+				data.position = Utils.GameVec3ToNet(objectTrans.position);
+				data.rotation = Utils.GameQuatToNet(objectTrans.rotation);
+
+				message.PickedUpData = data;
+			}
+
+			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
+				return false;
+			}
+
+			timeToUpdate = (float)SYNC_INTERVAL / 1000;
+			return true;
+		}
+
+		/// <summary>
+		/// Enter vehicle.
+		/// </summary>
+		/// <param name="vehicle">The vehicle to enter.</param>
+		/// <param name="passenger">Is player entering vehicle as passenger?</param>
+		public override void EnterVehicle(NetVehicle vehicle, bool passenger) {
+			base.EnterVehicle(vehicle, passenger);
+
+			Messages.VehicleEnterMessage msg = new Messages.VehicleEnterMessage();
+			msg.vehicleId = vehicle.NetId;
+			msg.passenger = passenger;
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Leave vehicle player is currently sitting in.
+		/// </summary>
+		public override void LeaveVehicle() {
+			base.LeaveVehicle();
+
+			netManager.BroadcastMessage(new Messages.VehicleLeaveMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Write vehicle engine state into state message.
+		/// </summary>
+		/// <param name="state">The engine state to write.</param>
+		public void WriteVehicleStateMessage(NetVehicle vehicle, GameVehicle.EngineStates state, GameVehicle.DashboardStates dashstate, float startTime) {
+			Logger.Debug($"Writing state message! State: {state.ToString()}, Dashboard state: {dashstate.ToString()}");
+			Messages.VehicleStateMessage msg = new Messages.VehicleStateMessage();
+			msg.vehicleId = vehicle.NetId;
+			msg.state = (int)state;
+			msg.dashstate = (int)dashstate;
+			if (startTime != -1) {
+				msg.StartTime = startTime;
+			}
+			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Write vehicle switch changes into vehicle switch message.
+		/// </summary>
+		/// <param name="state">The engine state to write.</param>
+		public void WriteVehicleSwitchMessage(NetVehicle vehicle, GameVehicle.SwitchIDs switchID, bool newValue, float newValueFloat) {
+			Logger.Debug($"Writing vehicle switch message! Switch: {switchID.ToString()}, Value: {newValue}, ValueFloat: {newValueFloat}");
+			Messages.VehicleSwitchMessage msg = new Messages.VehicleSwitchMessage();

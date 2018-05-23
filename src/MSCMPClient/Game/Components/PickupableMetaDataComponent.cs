@@ -15,7 +15,7 @@ namespace MSCMP.Game.Components {
 		}
 
 		/// <summary>
-		/// Register this pickupable.
+		/// Unregister this pickupable.
 		/// </summary>
 		private void OnDisable() {
 			GamePickupableDatabase.Instance.UnregisterPickupable(gameObject);

@@ -101,8 +101,15 @@ namespace MSCMP.Network {
 			get { return netMessageHandler; }
 		}
 
+
+		/// <summary>
+		/// Network statistics object.
+		/// </summary>
+		NetStatistics statistics;
+
 		public NetManager() {
-			this.netManagerCreationTime = DateTime.UtcNow;
+			statistics = new NetStatistics(this);
+			netManagerCreationTime = DateTime.UtcNow;
 			netMessageHandler = new NetMessageHandler(this);
 			netWorld = new NetWorld(this);
 
@@ -120,7 +127,7 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="result">The callback result.</param>
 		void OnP2PConnectFail(Steamworks.P2PSessionConnectFail_t result) {
-			Logger.Error($"P2P Connection failed, session error: {result.m_eP2PSessionError}, remote: {result.m_steamIDRemote}");
+			Logger.Error($"P2P Connection failed, session error: {Utils.P2PSessionErrorToString((Steamworks.EP2PSessionError)result.m_eP2PSessionError)}, remote: {result.m_steamIDRemote}");
 		}
 
 		/// <summary>
@@ -264,7 +271,7 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			//Logger.Debug($"Sending message {message.MessageId} of size {stream.Length} bytes.");
+			statistics.RecordSendMessage(message.MessageId, stream.Length);
 			return true;
 		}
 
@@ -474,8 +481,6 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				//Logger.Debug($"Trying to read p2p packet of size {size}.");
-
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
 
 				byte[] data = new byte[size];
@@ -492,8 +497,6 @@ namespace MSCMP.Network {
 					continue;
 				}
 
-				//Logger.Debug($"Received p2p packet from user {senderSteamId}.");
-
 				MemoryStream stream = new MemoryStream(data);
 				BinaryReader reader = new BinaryReader(stream);
 
@@ -504,7 +507,7 @@ namespace MSCMP.Network {
 				}
 
 				byte messageId = reader.ReadByte();
-				//Logger.Debug($"Received message {messageId}.");
+				statistics.RecordReceivedMessage(messageId, size);
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
 		}
@@ -520,6 +523,8 @@ namespace MSCMP.Network {
 		/// Update network manager state.
 		/// </summary>
 		public void Update() {
+			statistics.NewFrame();
+
 			if (!IsOnline) {
 				return;
 			}
@@ -540,38 +545,22 @@ namespace MSCMP.Network {
 			}
 		}
 
+		public void LateUpdate() {
+			if (!IsOnline) {
+				return;
+			}
+
+			foreach (NetPlayer player in players) {
+				player?.LateUpdate();
+			}
+		}
+
 #if !PUBLIC_RELEASE
 		/// <summary>
 		/// Update network debug IMGUI.
 		/// </summary>
 		public void DrawDebugGUI() {
-
-			GUI.color = Color.white;
-
-			if (DevTools.displayPlayerDebug) {
-				foreach (NetPlayer player in players) {
-					if (player != null) {
-						player.DrawDebugGUI();
-					}
-				}
-			}
-
-			Rect debugPanel = new Rect(10, 90, 500, 20);
-			GUI.Label(debugPanel, "Protocol version: " + PROTOCOL_VERSION);
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "Time since last heartbeat: " + timeSinceLastHeartbeat);
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "Time to send next heartbeat: " + timeToSendHeartbeat);
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "Ping: " + ping);
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "My clock: " + GetNetworkClock());
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "Remote clock: " + remoteClock);
-			debugPanel.y += 20.0f;
-			GUI.Label(debugPanel, "State: " + state);
-			debugPanel.y += 20.0f;
-
+			statistics.Draw();
 			netWorld.UpdateIMGUI();
 		}
 #endif
@@ -730,6 +719,20 @@ namespace MSCMP.Network {
 		/// </summary>
 		public void OnNetworkWorldLoaded() {
 			state = State.Playing;
+		}
+
+
+		/// <summary>
+		/// Get current p2p session state.
+		/// </summary>
+		/// <param name="sessionState">The session state.</param>
+		/// <returns>true if session state is available, false otherwise</returns>
+		public bool GetP2PSessionState(out Steamworks.P2PSessionState_t sessionState) {
+			if (players[1] == null) {
+				sessionState = new Steamworks.P2PSessionState_t();
+				return false;
+			}
+			return Steamworks.SteamNetworking.GetP2PSessionState(players[1].SteamId, out sessionState);
 		}
 	}
 }

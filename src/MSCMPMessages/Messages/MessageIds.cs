@@ -20,17 +20,5 @@ namespace MSCMPMessages.Messages {
 		PickupObject,
 		ReleaseObject,
 		PickupableSpawn,
-		PickupableDestroy,
-		PickupableActivate,
-		PickupableSetPosition,
-		WorldPeriodicalUpdate,
-		RemoveBottle,
-		LightSwitch,
-		VehicleState,
-		VehicleSwitch,
-		WeatherSync,
-		ObjectSync,
-		ObjectSyncResponse,
-		EventHookSync,
-	}
+		AnimSync
 }
