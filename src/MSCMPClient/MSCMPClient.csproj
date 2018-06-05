@@ -84,6 +84,7 @@
     <Compile Include="Game\BeerCaseManager.cs" />
     <Compile Include="Game\EventHook.cs" />
     <Compile Include="Game\GameVehicleDatabase.cs" />
+    <Compile Include="Game\ISyncedObject.cs" />
     <Compile Include="Game\ObjectSyncManager.cs" />
     <Compile Include="Game\Components\ObjectSyncPlayerComponent.cs" />
     <Compile Include="Game\Components\ObjectSyncComponent.cs" />
@@ -95,6 +96,8 @@
     <Compile Include="Game\GameWeatherManager.cs" />
     <Compile Include="Game\GameWorld.cs" />
     <Compile Include="Game\Hooks\PlayMakerActionHooks.cs" />
+    <Compile Include="Game\Objects\Pickupable.cs" />
+    <Compile Include="Game\Objects\AIVehicle.cs" />
     <Compile Include="Game\Objects\PassengerSeat.cs" />
     <Compile Include="Game\Objects\BeerCase.cs" />
     <Compile Include="Game\LightSwitchManager.cs" />

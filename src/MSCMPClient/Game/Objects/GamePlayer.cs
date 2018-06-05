@@ -101,9 +101,10 @@ namespace MSCMP.Game.Objects {
 
 			PlayMakerUtils.AddNewAction(pickupFsm.Fsm.GetState("Throw part"), new OnThrowAction(this));
 
-			EventHook.Add(pickupFsm, "Drop part", new Action(() => {
+			EventHook.Add(pickupFsm, "Drop part", new Func<bool>(() => {
 				this.DropObject();
-			}), false);
+				return false;
+			}));
 
 			//PlayMakerUtils.AddNewAction(pickupFsm.Fsm.GetState("Drop part"), new OnDropAction(this));
 
@@ -125,13 +126,9 @@ namespace MSCMP.Game.Objects {
 			pickedUpGameObject = pickupFsm.Fsm.GetFsmGameObject("PickedObject").Value;
 			ObjectSyncComponent osc = pickedUpGameObject.GetComponent<ObjectSyncComponent>();
 			osc.TakeSyncControl();
-			osc.PickedUp = true;
+			osc.SendConstantSync(true);
 
 			Logger.Log("PickupObject " + pickedUpGameObject);
-
-			//if (GameCallbacks.onObjectPickup != null) {
-			//	GameCallbacks.onObjectPickup(pickedUpGameObject);
-			//}
 		}
 
 		/// <summary>
@@ -139,12 +136,8 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		private void ThrowObject() {
 			Logger.Log("Throwed object " + pickedUpGameObject);
-			pickedUpGameObject.GetComponent<ObjectSyncComponent>().PickedUp = false;
+			pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
 			pickedUpGameObject = null;
-
-			//if (GameCallbacks.onObjectRelease != null) {
-			//	GameCallbacks.onObjectRelease(false);
-			//}
 		}
 
 		/// <summary>
@@ -152,14 +145,13 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		private void DropObject() {
 			Logger.Log("Drop object " + pickedUpGameObject);
-			pickedUpGameObject.GetComponent<ObjectSyncComponent>().PickedUp = false;
+			pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
 			pickedUpGameObject = null;
-
-			//if (GameCallbacks.onObjectRelease != null) {
-			//	GameCallbacks.onObjectRelease(true);
-			//}
 		}
 
+		/// <summary>
+		/// Drops object when it has been stolen from the player.
+		/// </summary>
 		public void DropStolenObject() {
 			pickupFsm.SendEvent("MP_Drop part");
 		}

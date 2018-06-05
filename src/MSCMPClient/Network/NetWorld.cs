@@ -63,8 +63,6 @@ namespace MSCMP.Network {
 			RegisterVehicle("FERNDALE(1630kg)");
 			RegisterVehicle("GIFU(750/450psi)");
 
-			RegisterVehicle("HAYOSIKO(1500kg, 250)(Clone)");
-
 			Game.GameCallbacks.onWorldUnload += () => {
 				OnGameWorldUnload();
 			};
@@ -406,10 +404,13 @@ namespace MSCMP.Network {
 						if (osc.Owner == 0) {
 							osc.Owner = sender.m_SteamID;
 							Logger.Log($"Owner set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
+							
 							// Activate GameObject if object is an AI Vehicle.
 							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
 								osc.gameObject.SetActive(true);
+								Logger.Log($"Set AI vehicle '{osc.gameObject.name}' to active!");
 							}
+
 							netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
 						}
 						else {
@@ -420,10 +421,6 @@ namespace MSCMP.Network {
 					else if (msg.Owner == 2) {
 						if (osc.Owner == sender.m_SteamID) {
 							osc.Owner = 0;
-							// Activate GameObject if object is an AI Vehicle.
-							if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-								osc.gameObject.SetActive(false);
-							}
 							Logger.Log($"Owner removed for object: {osc.transform.name}");
 						}
 					}
@@ -432,22 +429,16 @@ namespace MSCMP.Network {
 						osc.Owner = sender.m_SteamID;
 						Logger.Log($"Owner force set for object: {osc.transform.name} New owner: {sender.m_SteamID}");
 						netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
-						if (osc.PickedUp == true) {
-							Logger.Log("Dropped object because other player has taken control of it!");
-							GamePlayer.Instance.DropStolenObject();
-						}
+
+						osc.SyncTakenByForce();
 					}
 
-					// Set object's position.
+					// Set object's position and variables
 					if (osc.Owner == sender.m_SteamID) {
-						if (osc.ObjectType == ObjectSyncManager.ObjectTypes.AIVehicle) {
-							osc.transform.parent.position = Utils.NetVec3ToGame(msg.position);
-							osc.transform.parent.rotation = Utils.NetQuatToGame(msg.rotation);
+						if (msg.HasSyncedVariables == true) {
+							osc.HandleSyncedVariables(msg.SyncedVariables);
 						}
-						else {
-							osc.transform.position = Utils.NetVec3ToGame(msg.position);
-							osc.transform.rotation = Utils.NetQuatToGame(msg.rotation);
-						}
+						osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.position), Utils.NetQuatToGame(msg.rotation));
 					}
 				}
 			});
@@ -457,7 +448,6 @@ namespace MSCMP.Network {
 				if (msg.accepted) {
 					osc.SyncEnabled = true;
 					osc.Owner = Steamworks.SteamUser.GetSteamID().m_SteamID;
-					//Logger.Debug($"Object sync accepted and enabled for: {osc.transform.name} New owner: {steamID.m_SteamID}");
 				}
 			});
 

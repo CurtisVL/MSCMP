@@ -15,5 +15,8 @@ namespace MSCMPMessages.Messages {
 
 		[Optional]
 		int owner;
+
+		[Optional]
+		float[] syncedVariables;
 	}
 }

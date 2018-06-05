@@ -82,7 +82,7 @@ namespace MSCMP.Game.Objects {
 			}
 
 			// Destroys the cube mesh render
-			//GameObject.Destroy(trigger.GetComponentInChildren<MeshRenderer>());
+			GameObject.Destroy(trigger.GetComponentInChildren<MeshRenderer>());
 		}
 
 		/// <summary>

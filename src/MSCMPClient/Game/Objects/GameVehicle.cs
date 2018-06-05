@@ -170,6 +170,7 @@ namespace MSCMP.Game.Objects {
 		PlayMakerFSM wipersFsm = null;
 		PlayMakerFSM interiorLightFsm = null;
 		PlayMakerFSM frontHydraulicFsm = null;
+		PlayMakerFSM indicatorsFsm = null;
 
 		// Truck specific
 		PlayMakerFSM hydraulicPumpFsm = null;
@@ -439,6 +440,11 @@ namespace MSCMP.Game.Objects {
 					waspNestFsm = fsm;
 				}
 
+				// Indicators
+				else if (fsm.gameObject.name == "TurnSignals" && fsm.FsmName == "Usage") {
+					indicatorsFsm = fsm;
+				}
+
 				// Truck specific FSMs
 				if (isTruck == true) {
 
@@ -580,106 +586,117 @@ namespace MSCMP.Game.Objects {
 			}
 
 			if (starterFsm.Fsm.GetState("Wait for start") != null) {
-				EventHook.Add(starterFsm, "Wait for start", new Action(() => {
+				EventHook.Add(starterFsm, "Wait for start", new Func<bool>(() => {
 					if (starterFsm.Fsm.LastTransition != null) {
-						if (this.isDriver == false) {
-							return;
+						if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait for start" || this.isDriver == false) {
+							return true;
 						}
 					}
 
 					this.onEngineStateChanged(EngineStates.WaitForStart, DashboardStates.MotorOff, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("ACC") != null) {
-				EventHook.Add(starterFsm, "ACC", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "ACC", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC" || this.isDriver == false) {
+						return true;
 					}
+
 					this.onEngineStateChanged(EngineStates.ACC, DashboardStates.Test, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Turn key") != null) {
-				EventHook.Add(starterFsm, "Turn key", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Turn key", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Turn key" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.TurnKey, DashboardStates.ACCon2, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Check clutch") != null) {
-				EventHook.Add(starterFsm, "Check clutch", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Check clutch", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Check clutch" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.CheckClutch, DashboardStates.Null, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Starting engine") != null) {
-				EventHook.Add(starterFsm, "Starting engine", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Starting engine", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Starting engine" || this.isDriver == false) {
+						return true;
 					}
 
 					float startTime = this.starterFsm.Fsm.GetFsmFloat("StartTime").Value;
 
 					this.onEngineStateChanged(EngineStates.StartingEngine, DashboardStates.MotorStarting, startTime);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Start engine") != null) {
-				EventHook.Add(starterFsm, "Start engine", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Start engine", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start engine" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.StartEngine, DashboardStates.Null, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Wait") != null) {
-				EventHook.Add(starterFsm, "Wait", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Wait", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Wait" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.Wait, DashboardStates.Null, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Start or not") != null) {
-				EventHook.Add(starterFsm, "Start or not", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Start or not", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Start or not" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.StartOrNot, DashboardStates.Null, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("Motor running") != null) {
-				EventHook.Add(starterFsm, "Motor running", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "Motor running", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_Motor running" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.MotorRunning, DashboardStates.WaitPlayer, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			if (starterFsm.Fsm.GetState("ACC / Glowplug") != null) {
-				EventHook.Add(starterFsm, "ACC / Glowplug", new Action(() => {
-					if (this.isDriver == false) {
-						return;
+				EventHook.Add(starterFsm, "ACC / Glowplug", new Func<bool>(() => {
+					if (starterFsm.Fsm.LastTransition.EventName == "MP_ACC / Glowplug" || this.isDriver == false) {
+						return true;
 					}
 
 					this.onEngineStateChanged(EngineStates.Glowplug, DashboardStates.Null, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Dashboard
@@ -725,22 +742,25 @@ namespace MSCMP.Game.Objects {
 
 			// Parking brake
 			if (pBrakeDecreaseState != null) {
-				EventHook.Add(handbrakeFsm, "DECREASE", new Action(() => {
+				EventHook.Add(handbrakeFsm, "DECREASE", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				}), true);
+					return false;
+				}), actionOnExit: true);
 			}
 
 			if (pBrakeIncreaseState != null) {
-				EventHook.Add(handbrakeFsm, "INCREASE", new Action(() => {
+				EventHook.Add(handbrakeFsm, "INCREASE", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
-				}), true);
+					return false;
+				}), actionOnExit: true);
 			}
 
 			// Truck parking brake
 			if (truckPBrakeFlipState != null) {
-				EventHook.Add(handbrakeFsm, "Flip", new Action(() => {
+				EventHook.Add(handbrakeFsm, "Flip", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.HandbrakeLever, !this.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Range selector
@@ -756,27 +776,66 @@ namespace MSCMP.Game.Objects {
 
 			// Fuel tap
 			if (fuelTapState != null) {
-				EventHook.Add(fuelTapFsm, "Test", new Action(() => {
+				EventHook.Add(fuelTapFsm, "Test", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.FuelTap, !this.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Lights
-			if (lightsState != null) {
-				EventHook.Add(lightsFsm, "Test", new Action(() => {
-					if (lightsFsm.Fsm.LastTransition.EventName == "FINISHED") {
-						if (this.isDriver == false) {
-							return;
+			if (lightsFsm != null) {
+				EventHook.AddWithSync(lightsFsm, "Off");
+				EventHook.AddWithSync(lightsFsm, "Shorts");
+				EventHook.AddWithSync(lightsFsm, "Longs");
+			}
+
+			// Indicators
+			if (indicatorsFsm != null) {
+				EventHook.AddWithSync(indicatorsFsm, "Activate dash");
+				EventHook.AddWithSync(indicatorsFsm, "Activate dash 2");
+				EventHook.AddWithSync(indicatorsFsm, "On", action: new Func<bool>(() => {
+					if (this.isDriver == false) {
+						return true;
+					}
+					return false;
+				}));
+				EventHook.AddWithSync(indicatorsFsm, "On 2", action: new Func<bool>(() => {
+					if (this.isDriver == false) {
+						return true;
+					}
+					return false;
+				}));
+				EventHook.AddWithSync(indicatorsFsm, "Off", action: new Func<bool>(() => {
+					if (this.isDriver == false) {
+						return true;
+					}
+					return false;
+				}));
+				EventHook.AddWithSync(indicatorsFsm, "Off 2", action: new Func<bool>(() => {
+					if (this.isDriver == false) {
+						return true;
+					}
+					return false;
+				}));
+
+				EventHook.AddWithSync(indicatorsFsm, "State 3", action: new Func<bool>(() => {
+					if (this.isDriver == false) {
+						Logger.Log("Turning off indicators!");
+						GameObject left = this.gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Left").gameObject;
+						GameObject right = this.gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Right").gameObject;
+						left.SetActive(false);
+						right.SetActive(false);
+						if (left == null) {
+							Logger.Log("Left indicator not found!");
 						}
 					}
-
-					this.onVehicleSwitchChanges(SwitchIDs.Lights, false, this.lightsFsm.Fsm.GetFsmInt("Selection").Value);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Wipers
 			if (wipersState != null) {
-				EventHook.Add(wipersFsm, "Test 2", new Action(() => {
+				EventHook.Add(wipersFsm, "Test 2", new Func<bool>(() => {
 					int selection = this.wipersFsm.Fsm.GetFsmInt("Selection").Value;
 					if (selection == 2) {
 						selection = 0;
@@ -786,65 +845,72 @@ namespace MSCMP.Game.Objects {
 					}
 
 					this.onVehicleSwitchChanges(SwitchIDs.Wipers, false, selection);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Interior light
 			if (interiorLightState != null) {
-				EventHook.Add(interiorLightFsm, "Switch", new Action(() => {
+				EventHook.Add(interiorLightFsm, "Switch", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Hydraulic pump
 			if (hydraulicPumpState != null) {
-				EventHook.Add(hydraulicPumpFsm, "Test", new Action(() => {
+				EventHook.Add(hydraulicPumpFsm, "Test", new Func<bool>(() => {
 					if (this.hydraulicPumpFirstRun == false) {
 						this.onVehicleSwitchChanges(SwitchIDs.HydraulicPump, !this.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
 					}
 					else {
 						this.hydraulicPumpFirstRun = false;
 					}
-				}), true);
+					return false;
+				}));
 			}
 
 			// Spill valve
 			if (spillValveState != null) {
-				EventHook.Add(spillValveFsm, "Switch", new Action(() => {
+				EventHook.Add(spillValveFsm, "Switch", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.SpillValve, !this.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
-				}), true);
+					return false;
+				}));
 			}
 
 			// Axle lift
 			if (axleLiftState != null) {
-				EventHook.Add(axleLiftFsm, "Test", new Action(() => {
+				EventHook.Add(axleLiftFsm, "Test", new Func<bool>(() => {
 					if (this.axleLiftFirstRun == false) {
 						this.onVehicleSwitchChanges(SwitchIDs.AxleLift, !this.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
 					}
 					else {
 						this.axleLiftFirstRun = false;
 					}
-				}), true);
+					return false;
+				}));
 			}
 
 			// Diff lock
 			if (diffLockState != null) {
-				EventHook.Add(diffLockFsm, "Test", new Action(() => {
+				EventHook.Add(diffLockFsm, "Test", new Func<bool>(() => {
 					if (this.diffLockFirstRun == false) {
 						this.onVehicleSwitchChanges(SwitchIDs.DiffLock, !this.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
 					}
 					else {
 						this.diffLockFirstRun = false;
 					}
-				}), true);
+					return false;
+				}));
 			}
 
 			// Wasp nest
 			if (waspNestDestroyState != null) {
-				EventHook.Add(waspNestFsm, "State 2", new Action(() => {
+				EventHook.Add(waspNestFsm, "State 2", new Func<bool>(() => {
 					this.onVehicleSwitchChanges(SwitchIDs.DestroyWaspNest, false, -1);
 					Logger.Debug("Wasp nest destroyed!");
-				}), true);
+					return false;
+				}));
 			}
 		}
 
@@ -946,7 +1012,7 @@ namespace MSCMP.Game.Objects {
 
 			// Lights
 			else if (state == SwitchIDs.Lights) {
-				if (lightsFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
+				while (lightsFsm.Fsm.GetFsmInt("Selection").Value != newValueFloat) {
 					lightsFsm.SendEvent("MP_Test");
 				}
 			}
