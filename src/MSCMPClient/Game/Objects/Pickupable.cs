@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MSCMP.Game.Objects.PickupableTypes;
 using UnityEngine;
@@ -80,6 +80,9 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		/// <returns>True if object should be synced, false if it shouldn't.</returns>
 		public bool CanSync() {
+			if (rigidbody == null) {
+				Client.Assert(true, "Couldn't find Rigidbody on pickupable: " + gameObject.name);
+			}
 			if (rigidbody.velocity.sqrMagnitude >= 0.01f) {
 				return true;
 			}

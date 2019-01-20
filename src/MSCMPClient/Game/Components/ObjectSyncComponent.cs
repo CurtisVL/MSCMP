@@ -273,6 +273,14 @@ namespace MSCMP.Game.Components {
 		}
 
 		/// <summary>
+		/// Return the GameObject of this component.
+		/// </summary>
+		/// <returns>GameObject.</returns>
+		public GameObject GetGameObject() {
+			return thisObject;
+		}
+
+		/// <summary>
 		/// Return the object subtype componennt.
 		/// </summary>
 		/// <returns>Synced object component.</returns>
