@@ -53,6 +53,7 @@ namespace MSCMP {
 				Client.ConsoleMessage($"   gotospot [spotName]");
 				Client.ConsoleMessage($"   gethere [gameObjectName]");
 				Client.ConsoleMessage($"   goto [gameObjectName]");
+				Client.ConsoleMessage($"   gotoobj [ObjectID]");
 				Client.ConsoleMessage($"   gotoxyz [x] [y] [z] [Optional: Rotation]");
 				Client.ConsoleMessage($"   savepos");
 			});
@@ -129,6 +130,29 @@ namespace MSCMP {
 
 				localPlayer.transform.position = ourObject.transform.position + Vector3.up * 2.0f;
 				Client.ConsoleMessage($"Teleported to {ourObjectName} !");
+			});
+
+			// Teleports yourself to a GameObject based on ObjectID
+			UI.Console.RegisterCommand("gotoobj", (string[] args) => {
+				if (args.Length == 1) {
+					Client.ConsoleMessage($"ERROR: Invalid syntax. Use 'gotoobj [ObjectID]'.");
+					return;
+				}
+
+				if (localPlayer == null) {
+					Client.ConsoleMessage("ERROR: Couldn't find local player.");
+					return;
+				}
+
+				int ourID = Convert.ToInt32(String.Join(" ", args.Skip(1).ToArray()));
+				GameObject ourObject = Game.ObjectSyncManager.Instance.ObjectIDs[ourID].gameObject;
+				if (ourObject == null) {
+					Client.ConsoleMessage($"ERROR: Couldn't find GameObject at ID: {ourID}");
+					return;
+				}
+
+				localPlayer.transform.position = ourObject.transform.position + Vector3.up * 2.0f;
+				Client.ConsoleMessage($"Teleported to {ourObject.name}");
 			});
 
 			//Teleports yourself to the specific coordinates
