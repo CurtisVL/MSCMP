@@ -25,11 +25,6 @@ namespace MSCMP.Network {
 		public const ulong SYNC_INTERVAL = 100;
 
 		/// <summary>
-		/// SteamID of local player.
-		/// </summary>
-		private Steamworks.CSteamID steamID;
-
-		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="netManager">The network manager owning this player.</param>
@@ -37,7 +32,6 @@ namespace MSCMP.Network {
 		/// <param name="steamId">The steam id of the player.</param>
 		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId) {
 			Instance = this;
-			steamID = steamId;
 
 			GameDoorsManager.Instance.onDoorsOpen = (GameObject door) => {
 				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
