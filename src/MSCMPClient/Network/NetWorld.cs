@@ -180,15 +180,15 @@ namespace MSCMP.Network {
 		/// <param name="netMessageHandler">The network message handler to register messages to.</param>
 		void RegisterNetworkMessagesHandlers(NetMessageHandler netMessageHandler) {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PickupableSetPositionMessage msg) => {
-				Client.Assert(ObjectSyncManager.Instance.ObjectIDs.ContainsKey(msg.id), $"Tried to move pickupable that is not spawned {msg.id}.");
-				GameObject gameObject = ObjectSyncManager.Instance.ObjectIDs[msg.id].gameObject;
+				Client.Assert(ObjectSyncManager.GetObjectByID(msg.id), $"Tried to move pickupable that is not spawned {msg.id}.");
+				GameObject gameObject = ObjectSyncManager.GetObjectByID(msg.id);
 				gameObject.transform.position = Utils.NetVec3ToGame(msg.position);
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PickupableActivateMessage msg) => {
 				GameObject gameObject = null;
-				if (ObjectSyncManager.Instance.ObjectIDs.ContainsKey(msg.id)) {
-					gameObject = ObjectSyncManager.Instance.ObjectIDs[msg.id].gameObject;
+				if (ObjectSyncManager.GetObjectByID(msg.id)) {
+					gameObject = ObjectSyncManager.GetObjectByID(msg.id);
 				}
 				Client.Assert(gameObject != null, "Tried to activate pickupable but its not spawned!");
 
@@ -207,20 +207,13 @@ namespace MSCMP.Network {
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PickupableDestroyMessage msg) => {
-				if (!ObjectSyncManager.Instance.ObjectIDs.ContainsKey(msg.id)) {
+				if (!ObjectSyncManager.GetSyncComponentByID(msg.id)) {
 					return;
 				}
 
-				GameObject go;
-				try {
-					go = ObjectSyncManager.Instance.ObjectIDs[msg.id].gameObject;
-				}
-				catch {
-					Logger.Error("Failed to remove object: OSC found but can't get GameObject.");
-					return;
-				}
+				ObjectSyncComponent osc = ObjectSyncManager.GetSyncComponentByID(msg.id);
 
-				GameObject.Destroy(ObjectSyncManager.Instance.ObjectIDs[msg.id].gameObject);
+				GameObject.Destroy(ObjectSyncManager.GetObjectByID(msg.id));
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.WorldPeriodicalUpdateMessage msg) => {
@@ -365,14 +358,17 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncMessage msg) => {
 				ObjectSyncComponent osc;
 				ObjectSyncManager.SyncTypes type = (ObjectSyncManager.SyncTypes)msg.SyncType;
-				try {
-					osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				if (ObjectSyncManager.GetObjectByID(msg.objectID)) {
+					osc = ObjectSyncManager.GetSyncComponentByID(msg.objectID);
 				}
-				catch {
+				else {
 					Logger.Log($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
 					return;
 				}
-				if (osc != null) {
+
+				// This *should* never happen, but apparently it's possible.
+				Client.Assert(osc != null, $"Object Sync Component wasn't found for object with ID {msg.objectID}, however, the object had a dictionary entry!");
+
 					// Set owner.
 					if (type == ObjectSyncManager.SyncTypes.SetOwner) {
 						if (osc.Owner == ObjectSyncManager.NO_OWNER || osc.Owner == sender.m_SteamID) {
@@ -408,21 +404,18 @@ namespace MSCMP.Network {
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncResponseMessage msg) => {
-				ObjectSyncComponent osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
+				ObjectSyncComponent osc = ObjectSyncManager.GetSyncComponentByID(msg.objectID);
 				if (msg.accepted) {
 					osc.SyncEnabled = true;
-					osc.Owner = Steamworks.SteamUser.GetSteamID().m_SteamID;
+					osc.Owner = NetManager.Instance.GetLocalPlayer();
 				}
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ObjectSyncRequestMessage msg) => {
-				try {
-					ObjectSyncComponent osc = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
-					osc.SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, true);
-				}
-				catch {
-					Logger.Error($"Remote client tried to request object sync of an unknown object, Object ID: {msg.objectID}");
-				}
+				Client.Assert(ObjectSyncManager.GetObjectByID(msg.objectID), $"Remote client tried to request object sync of an unknown object, remote ObjectID was: {msg.objectID}");
+
+				ObjectSyncComponent osc = ObjectSyncManager.GetSyncComponentByID(msg.objectID);
+				osc.SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, true);
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.EventHookSyncMessage msg) => {
@@ -691,13 +684,13 @@ namespace MSCMP.Network {
 		/// <returns>The object id of pickupable or invalid id of the pickupable if no object ID is found for given game object.</returns>
 		public ObjectSyncComponent GetPickupableByGameObject(GameObject go) {
 			foreach (var osc in ObjectSyncManager.Instance.ObjectIDs) {
-				try {
-					if (osc.Value.gameObject == go) {
-						return osc.Value;
-					}
+				if (osc.Value.GetGameObject() == null) {
+					Logger.Log($"Found a broken ObjectID entry (Couldn't return GameObject) whilst trying to get pickupable by GameObject, ID: {osc.Value.ObjectID}");
+					continue;
 				}
-				catch {
 
+				if (osc.Value.GetGameObject() == go) {
+						return osc.Value;
 				}
 			}
 			Logger.Error("GetPickupableByGameObject: Couldn't find GameObject!");

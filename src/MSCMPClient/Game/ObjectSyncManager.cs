@@ -102,5 +102,33 @@ namespace MSCMP.Game {
 			}
 			return false;
 		}
+
+		/// <summary>
+		/// Returns the GameObject assigned the specified ID or null if object couldn't be found.
+		/// </summary>
+		/// <param name="ObjectID">Object ID.</param>
+		/// <returns>GameObject at specified ID.</returns>
+		public static GameObject GetObjectByID(int ObjectID) {
+			if (ObjectSyncManager.Instance.ObjectIDs.ContainsKey(ObjectID)) {
+				return ObjectSyncManager.Instance.ObjectIDs[ObjectID].GetGameObject();
+			}
+			else {
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// Returns tghe ObjectSyncComponent assigned the specified ID or null if the component couldn't be found.
+		/// </summary>
+		/// <param name="ObjectID">Object ID.</param>
+		/// <returns>ObjectSyncComponent at specified ID.</returns>
+		public static ObjectSyncComponent GetSyncComponentByID(int ObjectID) {
+			if (ObjectSyncManager.Instance.ObjectIDs.ContainsKey(ObjectID)) {
+				return ObjectSyncManager.Instance.ObjectIDs[ObjectID];
+			}
+			else {
+				return null;
+			}
+		}
 	}
 }
