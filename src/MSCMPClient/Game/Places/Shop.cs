@@ -18,9 +18,9 @@ namespace MSCMP.Game.Places {
 		private PlayMakerFSM switchDoor;
 
 		/// <summary>
-		/// Constructor.
+		/// Setup shop event sync.
 		/// </summary>
-		public Shop(GameObject shop) {
+		public void Setup(GameObject shop) {
 			shopGO = shop;
 			foreach (Transform transform in shopGO.GetComponentsInChildren<Transform>()) {
 				switch (transform.name) {

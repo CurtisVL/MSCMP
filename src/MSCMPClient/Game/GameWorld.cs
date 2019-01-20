@@ -15,6 +15,11 @@ namespace MSCMP.Game {
 		public static GameWorld Instance = null;
 
 		/// <summary>
+		/// Event hook.
+		/// </summary>
+		EventHook eventHook = new EventHook();
+
+		/// <summary>
 		/// Doors manager.
 		/// </summary>
 		private GameDoorsManager doorsManager = new GameDoorsManager();
@@ -50,9 +55,14 @@ namespace MSCMP.Game {
 		ObjectSyncManager objectSyncManager = new ObjectSyncManager();
 
 		/// <summary>
-		/// Event hook.
+		/// Traffic manager.
 		/// </summary>
-		EventHook eventHook = new EventHook();
+		TrafficManager trafficManager = new TrafficManager();
+
+		/// <summary>
+		/// Shop manager.
+		/// </summary>
+		Shop shopManager = new Shop();
 
 		private GamePlayer player = null;
 
@@ -213,10 +223,10 @@ namespace MSCMP.Game {
 				SetupMailbox(gameObject);
 			}
 			else if (gameObject.name == "TRAFFIC") {
-				new TrafficManager(gameObject);
+				trafficManager.Setup(gameObject);
 			}
 			else if (gameObject.name == "STORE") {
-				new Shop(gameObject);
+				shopManager.Setup(gameObject);
 			}
 			else if (gameObject.name == "BOAT") {
 				ObjectSyncComponent osc = gameObject.transform.FindChild("GFX").FindChild("Colliders").FindChild("Collider").gameObject.AddComponent<ObjectSyncComponent>();
