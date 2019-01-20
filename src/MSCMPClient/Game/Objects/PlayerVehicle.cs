@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using MSCMP.Game.Components;
+using MSCMP.Network;
 using HutongGames.PlayMaker;
 
 namespace MSCMP.Game.Objects {
@@ -502,11 +503,11 @@ namespace MSCMP.Game.Objects {
 			// Push parking brake
 			if (hasPushParkingBrake) {
 				EventHook.Add(handbrakeFsm, "DECREASE", new Func<bool>(() => {
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
 					return false;
 				}), actionOnExit: true);
 				EventHook.Add(handbrakeFsm, "INCREASE", new Func<bool>(() => {
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakePull, false, this.handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
 					return false;
 				}), actionOnExit: true);
 			}
@@ -514,7 +515,7 @@ namespace MSCMP.Game.Objects {
 			// Truck parking brake
 			if (hasLeverParkingBrake) {
 				EventHook.Add(handbrakeFsm, "Flip", new Func<bool>(() => {
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakeLever, !this.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HandbrakeLever, !this.handbrakeFsm.Fsm.GetFsmBool("Brake").Value, -1);
 					return false;
 				}));
 			}
@@ -522,7 +523,7 @@ namespace MSCMP.Game.Objects {
 			// Fuel tap
 			if (fuelTapFsm != null) {
 				EventHook.Add(fuelTapFsm, "Test", new Func<bool>(() => {
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.FuelTap, !this.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.FuelTap, !this.fuelTapFsm.Fsm.GetFsmBool("FuelOn").Value, -1);
 					return false;
 				}));
 			}
@@ -596,7 +597,7 @@ namespace MSCMP.Game.Objects {
 						selection++;
 					}
 
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.Wipers, false, selection);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.Wipers, false, selection);
 					return false;
 				}));
 			}
@@ -605,13 +606,13 @@ namespace MSCMP.Game.Objects {
 			if (lightsFsm != null) {
 				if (isTruck) {
 					EventHook.Add(interiorLightFsm, "Switch", new Func<bool>(() => {
-						Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
+						WriteVehicleSwitchMessage(syncComponent, SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("On").Value, -1);
 						return false;
 					}));
 				}
 				else {
 					EventHook.Add(interiorLightFsm, "Flip 2", new Func<bool>(() => {
-						Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("LightON").Value, -1);
+						WriteVehicleSwitchMessage(syncComponent, SwitchIDs.InteriorLight, !this.interiorLightFsm.Fsm.GetFsmBool("LightON").Value, -1);
 						return false;
 					}));
 				}
@@ -622,7 +623,7 @@ namespace MSCMP.Game.Objects {
 				// Hydraulic pump
 				EventHook.Add(hydraulicPumpFsm, "Test", new Func<bool>(() => {
 					if (this.hydraulicPumpFirstRun == false) {
-						Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HydraulicPump, !this.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
+						WriteVehicleSwitchMessage(syncComponent, SwitchIDs.HydraulicPump, !this.hydraulicPumpFsm.Fsm.GetFsmBool("On").Value, -1);
 					}
 					else {
 						this.hydraulicPumpFirstRun = false;
@@ -632,14 +633,14 @@ namespace MSCMP.Game.Objects {
 
 				// Spill valve
 				EventHook.Add(spillValveFsm, "Switch", new Func<bool>(() => {
-					Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.SpillValve, !this.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
+					WriteVehicleSwitchMessage(syncComponent, SwitchIDs.SpillValve, !this.spillValveFsm.Fsm.GetFsmBool("Open").Value, -1);
 					return false;
 				}));
 
 				// Axle lift
 				EventHook.Add(axleLiftFsm, "Test", new Func<bool>(() => {
 					if (this.axleLiftFirstRun == false) {
-						Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.AxleLift, !this.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
+						WriteVehicleSwitchMessage(syncComponent, SwitchIDs.AxleLift, !this.axleLiftFsm.Fsm.GetFsmBool("Up").Value, -1);
 					}
 					else {
 						this.axleLiftFirstRun = false;
@@ -650,7 +651,7 @@ namespace MSCMP.Game.Objects {
 				// Diff lock
 				EventHook.Add(diffLockFsm, "Test", new Func<bool>(() => {
 					if (this.diffLockFirstRun == false) {
-						Network.NetLocalPlayer.Instance.WriteVehicleSwitchMessage(syncComponent, SwitchIDs.DiffLock, !this.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
+						WriteVehicleSwitchMessage(syncComponent, SwitchIDs.DiffLock, !this.diffLockFsm.Fsm.GetFsmBool("Lock").Value, -1);
 					}
 					else {
 						this.diffLockFirstRun = false;
@@ -857,6 +858,36 @@ namespace MSCMP.Game.Objects {
 					diffLockFsm.SendEvent("MP_Test");
 				}
 			}
+		}
+
+		/// <summary>
+		/// Write vehicle engine state into state message.
+		/// </summary>
+		/// <param name="state">The engine state to write.</param>
+		public void WriteVehicleStateMessage(Game.Components.ObjectSyncComponent vehicle, PlayerVehicle.EngineStates state, PlayerVehicle.DashboardStates dashstate, float startTime) {
+			Network.Messages.VehicleStateMessage msg = new Network.Messages.VehicleStateMessage();
+			msg.objectID = vehicle.ObjectID;
+			msg.state = (int)state;
+			msg.dashstate = (int)dashstate;
+			if (startTime != -1) {
+				msg.StartTime = startTime;
+			}
+			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Write vehicle switch changes into vehicle switch message.
+		/// </summary>
+		/// <param name="state">The engine state to write.</param>
+		public void WriteVehicleSwitchMessage(ObjectSyncComponent vehicle, PlayerVehicle.SwitchIDs switchID, bool newValue, float newValueFloat) {
+			Network.Messages.VehicleSwitchMessage msg = new Network.Messages.VehicleSwitchMessage();
+			msg.objectID = vehicle.ObjectID;
+			msg.switchID = (int)switchID;
+			msg.switchValue = newValue;
+			if (newValueFloat != -1) {
+				msg.SwitchValueFloat = newValueFloat;
+			}
+			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 	}
 }

@@ -199,36 +199,6 @@ namespace MSCMP.Network {
 		}
 
 		/// <summary>
-		/// Write vehicle engine state into state message.
-		/// </summary>
-		/// <param name="state">The engine state to write.</param>
-		public void WriteVehicleStateMessage(Game.Components.ObjectSyncComponent vehicle, PlayerVehicle.EngineStates state, PlayerVehicle.DashboardStates dashstate, float startTime) {
-			Messages.VehicleStateMessage msg = new Messages.VehicleStateMessage();
-			msg.objectID = vehicle.ObjectID;
-			msg.state = (int)state;
-			msg.dashstate = (int)dashstate;
-			if (startTime != -1) {
-				msg.StartTime = startTime;
-			}
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Write vehicle switch changes into vehicle switch message.
-		/// </summary>
-		/// <param name="state">The engine state to write.</param>
-		public void WriteVehicleSwitchMessage(Game.Components.ObjectSyncComponent vehicle, PlayerVehicle.SwitchIDs switchID, bool newValue, float newValueFloat) {
-			Messages.VehicleSwitchMessage msg = new Messages.VehicleSwitchMessage();
-			msg.objectID = vehicle.ObjectID;
-			msg.switchID = (int)switchID;
-			msg.switchValue = newValue;
-			if (newValueFloat != -1) {
-				msg.SwitchValueFloat = newValueFloat;
-			}
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
 		/// Write player state into the network message.
 		/// </summary>
 		/// <param name="msg">Message to write to.</param>
@@ -237,45 +207,6 @@ namespace MSCMP.Network {
 			msg.spawnRotation = Utils.GameQuatToNet(GetRotation());
 
 			msg.pickedUpObject = NetPickupable.INVALID_ID;
-		}
-
-		/// <summary>
-		/// Send object sync.
-		/// </summary>
-		/// <param name="objectID">The Object ID of the object.</param>
-		/// <param name="setOwner">Set owner of the object.</param>
-		public void SendObjectSync(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables) {
-			Messages.ObjectSyncMessage msg = new Messages.ObjectSyncMessage();
-			msg.objectID = objectID;
-			msg.position = Utils.GameVec3ToNet(pos);
-			msg.rotation = Utils.GameQuatToNet(rot);
-			msg.SyncType = (int)syncType;
-			if (syncedVariables != null) {
-				msg.SyncedVariables = syncedVariables;
-			}
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Request object sync from the host.
-		/// </summary>
-		/// <param name="objectID">The Object ID of the object.</param>
-		public void RequestObjectSync(int objectID) {
-			Messages.ObjectSyncRequestMessage msg = new Messages.ObjectSyncRequestMessage();
-			msg.objectID = objectID;
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Send object sync.
-		/// </summary>
-		/// <param name="objectID">The Object ID of the object.</param>
-		/// <param name="accepted">If request to take sync ownership was accepted.</param>
-		public void SendObjectSyncResponse(int objectID, bool accepted) {
-			Messages.ObjectSyncResponseMessage msg = new Messages.ObjectSyncResponseMessage();
-			msg.objectID = objectID;
-			msg.accepted = accepted;
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 		
 		/// <summary>

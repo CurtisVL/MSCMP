@@ -149,10 +149,10 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		public void SendObjectSync(ObjectSyncManager.SyncTypes type, bool sendVariables, bool syncWasRequested) {
 			if (sendVariables) {
-				NetLocalPlayer.Instance.SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, syncedObject.ReturnSyncedVariables(true));
+				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, syncedObject.ReturnSyncedVariables(true));
 			}
 			else {
-				NetLocalPlayer.Instance.SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, null);
+				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, null);
 			}
 		}
 
@@ -160,7 +160,7 @@ namespace MSCMP.Game.Components {
 		/// Request a sync update from the host.
 		/// </summary>
 		public void RequestObjectSync() {
-			NetLocalPlayer.Instance.RequestObjectSync(ObjectID);
+			RequestObjectSync(ObjectID);
 		}
 
 		/// <summary>
@@ -286,6 +286,45 @@ namespace MSCMP.Game.Components {
 		/// <returns>Synced object component.</returns>
 		public ISyncedObject GetObjectSubtype() {
 			return syncedObject;
+		}
+
+		/// <summary>
+		/// Send object sync.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		/// <param name="setOwner">Set owner of the object.</param>
+		public void SendObjectSync(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables) {
+			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
+			msg.objectID = objectID;
+			msg.position = Utils.GameVec3ToNet(pos);
+			msg.rotation = Utils.GameQuatToNet(rot);
+			msg.SyncType = (int)syncType;
+			if (syncedVariables != null) {
+				msg.SyncedVariables = syncedVariables;
+			}
+			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Request object sync from the host.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		public void RequestObjectSync(int objectID) {
+			Network.Messages.ObjectSyncRequestMessage msg = new Network.Messages.ObjectSyncRequestMessage();
+			msg.objectID = objectID;
+			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Send object sync.
+		/// </summary>
+		/// <param name="objectID">The Object ID of the object.</param>
+		/// <param name="accepted">If request to take sync ownership was accepted.</param>
+		public void SendObjectSyncResponse(int objectID, bool accepted) {
+			Network.Messages.ObjectSyncResponseMessage msg = new Network.Messages.ObjectSyncResponseMessage();
+			msg.objectID = objectID;
+			msg.accepted = accepted;
+			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 	}
 }
