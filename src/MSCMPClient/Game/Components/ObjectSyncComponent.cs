@@ -59,15 +59,20 @@ namespace MSCMP.Game.Components {
 		/// <summary>
 		/// Setup object.
 		/// </summary>
-		public void Setup(ObjectSyncManager.ObjectTypes type, int objectID) {
+		/// <param name="type">Object type.</param>
+		/// <param name="objectID">Object ID to assign.</param>
+		/// <returns>Assigned Object ID</returns>
+		public int Setup(ObjectSyncManager.ObjectTypes type, int objectID) {
 			if (!NetWorld.Instance.playerIsLoading) {
 				if (!NetManager.Instance.IsHost && objectID == ObjectSyncManager.AUTOMATIC_ID) {
 					Logger.Debug("Ignoring spawned object as client is not host!");
 					GameObject.Destroy(gameObject);
-					return;
+					return -1;
 				}
 			}
-			Logger.Debug($"Sync component added to: {this.transform.name}");
+			IsSetup = false;
+			SyncEnabled = false;
+			Owner = null;
 			ObjectType = type;
 			ObjectID = objectID;
 
@@ -77,6 +82,8 @@ namespace MSCMP.Game.Components {
 			if (!NetWorld.Instance.playerIsLoading && !IsSetup) {
 				CreateObjectSubtype();
 			}
+
+			return ObjectID;
 		}
 
 		/// <summary>
@@ -115,7 +122,7 @@ namespace MSCMP.Game.Components {
 					syncedObject = new PlayerVehicle(this.gameObject, this);
 					break;
 			}
-			isSetup = true;
+			IsSetup = true;
 		}
 
 		/// <summary>

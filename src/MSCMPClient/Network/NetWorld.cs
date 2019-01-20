@@ -74,21 +74,10 @@ namespace MSCMP.Network {
 				msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
 				msg.active = instance.activeSelf;
 
-				// Check for multiple sync components from prefab
-				ObjectSyncComponent oscOld = prefab.GetComponent<ObjectSyncComponent>();
-				if (instance.GetComponents<ObjectSyncComponent>().Length > 1) {
-					foreach (ObjectSyncComponent osc in instance.GetComponents<ObjectSyncComponent>()) {
-						if (osc.ObjectID == oscOld.ObjectID) {
-							GameObject.Destroy(osc);
-						}
-						else {
-							msg.id = osc.ObjectID;
-						}
-					}
-				}
-				else {
-					msg.id = instance.GetComponent<ObjectSyncComponent>().ObjectID;
-				}
+				// Setup sync component on object.
+				Client.Assert(instance.GetComponent<ObjectSyncComponent>(), $"Object created but no ObjectSyncComponent could be found! Object name: {instance.name}");
+				ObjectSyncComponent osc = instance.GetComponent<ObjectSyncComponent>();
+				msg.id = osc.Setup(osc.ObjectType, ObjectSyncManager.AUTOMATIC_ID);
 
 				// Determine if object should be spawned on remote client.
 				// (Helps to avoid duplicate objects spawning)
@@ -786,9 +775,11 @@ namespace MSCMP.Network {
 					gameObject.transform.rotation = rotation;
 
 					if (gameObject.GetComponent<ObjectSyncComponent>() != null) {
-						GameObject.Destroy(gameObject.GetComponent<ObjectSyncComponent>());
+						gameObject.GetComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.Pickupable, msg.id);
 					}
-					gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.Pickupable, msg.id);
+					else {
+						gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.Pickupable, msg.id);
+					}
 					return;
 				}
 
@@ -796,7 +787,6 @@ namespace MSCMP.Network {
 			}
 
 			GameObject pickupable = GameWorld.Instance.SpawnPickupable(msg.prefabId, position, rotation, msg.id);
-			RegisterPickupable(pickupable, true);
 			if (pickupable.GetComponent<ObjectSyncComponent>() != null) {
 				GameObject.Destroy(pickupable.GetComponent<ObjectSyncComponent>());
 			}
