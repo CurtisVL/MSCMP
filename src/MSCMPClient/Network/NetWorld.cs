@@ -421,14 +421,14 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.EventHookSyncMessage msg) => {
 				if (msg.request) {
 					EventHook.SendSync(msg.fsmID);
+					return;
+				}
+
+				if (msg.HasFsmEventName) {
+					EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID, msg.FsmEventName);
 				}
 				else {
-					if (msg.HasFsmEventName) {
-						EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID, msg.FsmEventName);
-					}
-					else {
-						EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID);
-					}
+					EventHook.HandleEventSync(msg.fsmID, msg.fsmEventID);
 				}
 			});
 		}
