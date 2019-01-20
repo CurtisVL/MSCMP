@@ -147,8 +147,6 @@ namespace MSCMP.Game.Objects {
 
 		float remoteTargetSpeed;
 
-		float steamID = Steamworks.SteamUser.GetSteamID().m_SteamID;
-
 
 		/// <summary>
 		/// Constructor.
@@ -312,7 +310,7 @@ namespace MSCMP.Game.Objects {
 			// Generic vehicle FSMs.
 			throttleFsm = Utils.GetPlaymakerScriptByName(parentGameObject, "Throttle");
 			EventHook.SyncAllEvents(throttleFsm, new Func<bool>(() => {
-				if (syncComponent.Owner != steamID && syncComponent.Owner != 0 || syncComponent.Owner == 0 && !Network.NetManager.Instance.IsHost) {
+				if (syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && syncComponent.Owner != null || syncComponent.Owner == null && !Network.NetManager.Instance.IsHost) {
 					return true;
 				}
 				return false;
@@ -334,14 +332,14 @@ namespace MSCMP.Game.Objects {
 				PlayMakerFSM startFsm = Utils.GetPlaymakerScriptByName(parentGameObject.transform.FindChild("Route").gameObject, "Start");
 
 				EventHook.SyncAllEvents(doorFsm, new Func<bool>(() => {
-					if (syncComponent.Owner != steamID && syncComponent.Owner != 0 || syncComponent.Owner == 0 && !Network.NetManager.Instance.IsHost) {
+					if (syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && syncComponent.Owner != null || syncComponent.Owner == null && !Network.NetManager.Instance.IsHost) {
 						return true;
 					}
 					return false;
 				}));
 
 				EventHook.SyncAllEvents(startFsm, new Func<bool>(() => {
-					if (syncComponent.Owner != steamID && syncComponent.Owner != 0 || syncComponent.Owner == 0 && !Network.NetManager.Instance.IsHost) {
+					if (syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && syncComponent.Owner != null || syncComponent.Owner == null && !Network.NetManager.Instance.IsHost) {
 						return true;
 					}
 					return false;
@@ -353,7 +351,7 @@ namespace MSCMP.Game.Objects {
 				PlayMakerFSM crashFsm = Utils.GetPlaymakerScriptByName(parentGameObject.transform.FindChild("CrashEvent").gameObject, "Crash");
 
 				EventHook.SyncAllEvents(crashFsm, new Func<bool>(() => {
-					if (syncComponent.Owner != steamID && syncComponent.Owner != 0 || syncComponent.Owner == 0 && !Network.NetManager.Instance.IsHost) {
+					if (syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && syncComponent.Owner != null || syncComponent.Owner == null && !Network.NetManager.Instance.IsHost) {
 						return true;
 					}
 					return false;

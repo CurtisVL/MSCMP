@@ -45,11 +45,6 @@ namespace MSCMP.Game {
 		public static int AUTOMATIC_ID = -1;
 
 		/// <summary>
-		/// Used when checking ownership of a ObjectSyncComponent snyced object.
-		/// </summary>
-		public static ulong NO_OWNER = 0;
-
-		/// <summary>
 		/// Local player's Steam ID.
 		/// </summary>
 		public Steamworks.CSteamID steamID;
@@ -94,9 +89,12 @@ namespace MSCMP.Game {
 		/// Check if a periodic object sync should be performed.
 		/// </summary>
 		/// <returns>True if object periodic sync should be sent.</returns>
-		public bool ShouldPeriodicSync(ulong owner, bool syncEnabled) {
+		public bool ShouldPeriodicSync(Network.NetPlayer owner, bool syncEnabled) {
+			if (!Network.NetManager.Instance.IsNetworkPlayerConnected()) {
+				return false;
+			}
 			if (Network.NetManager.Instance.TicksSinceConnectionStarted % 500 == 0) {
-				if (syncEnabled || owner == NO_OWNER && Network.NetManager.Instance.IsHost) {
+				if (syncEnabled || owner == null && Network.NetManager.Instance.IsHost) {
 					return true;
 				}
 			}

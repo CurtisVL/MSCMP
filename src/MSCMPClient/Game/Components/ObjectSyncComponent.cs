@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using MSCMP.Network;
 using MSCMP.Game.Objects;
 
@@ -167,7 +167,7 @@ namespace MSCMP.Game.Components {
 		/// Called when object sync request is accepted by the remote client.
 		/// </summary>
 		public void SyncRequestAccepted() {
-			Owner = Steamworks.SteamUser.GetSteamID().m_SteamID;
+			Owner = NetManager.Instance.GetLocalPlayer();
 			Logger.Log("Sync request accepted, object: " + gameObject.name);
 			SyncEnabled = true;
 		}
@@ -176,7 +176,7 @@ namespace MSCMP.Game.Components {
 		/// Called when the player enter sync range of the object.
 		/// </summary>
 		public void SendEnterSync() {
-			if (Owner == ObjectSyncManager.NO_OWNER && syncedObject.ShouldTakeOwnership()) {
+			if (Owner == null && syncedObject.ShouldTakeOwnership()) {
 				SendObjectSync(ObjectSyncManager.SyncTypes.SetOwner, true, false);
 			}
 		}
@@ -185,8 +185,8 @@ namespace MSCMP.Game.Components {
 		/// Called when the player exits sync range of the object.
 		/// </summary>
 		public void SendExitSync() {
-			if (Owner == ObjectSyncManager.Instance.steamID.m_SteamID) {
-				Owner = ObjectSyncManager.NO_OWNER;
+			if (Owner == NetManager.Instance.GetLocalPlayer()) {
+				Owner = null;
 				SyncEnabled = false;
 				SendObjectSync(ObjectSyncManager.SyncTypes.RemoveOwner, false, false);
 			}
@@ -196,7 +196,7 @@ namespace MSCMP.Game.Components {
 		/// Take sync control of the object by force.
 		/// </summary>
 		public void TakeSyncControl() {
-			if (Owner != Steamworks.SteamUser.GetSteamID().m_SteamID) {
+			if (Owner != NetManager.Instance.GetLocalPlayer()) {
 				SendObjectSync(ObjectSyncManager.SyncTypes.ForceSetOwner, true, false);
 			}
 		}
@@ -204,7 +204,7 @@ namespace MSCMP.Game.Components {
 		/// <summary>
 		/// Called when sync owner is set to the remote client.
 		/// </summary>
-		public void OwnerSetToRemote(ulong newOwner) {
+		public void OwnerSetToRemote(NetPlayer newOwner) {
 			Owner = newOwner;
 			syncedObject?.OwnerSetToRemote();
 		}
@@ -244,14 +244,9 @@ namespace MSCMP.Game.Components {
 		/// <summary>
 		/// Check if object owner is local client.
 		/// </summary>
-		/// <returns>True is object owner is self.</returns>
-		public bool IsOwnerSelf() {
-			if (Owner != Steamworks.SteamUser.GetSteamID().m_SteamID) {
-				return false;
-			}
-			else {
-				return true;
-			}
+		/// <returns>True is object owner is local client.</returns>
+		public bool IsLocallyOwned() {
+			return (Owner == NetManager.Instance.GetLocalPlayer());
 		}
 
 		/// <summary>

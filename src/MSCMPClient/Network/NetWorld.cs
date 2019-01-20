@@ -369,37 +369,36 @@ namespace MSCMP.Network {
 				// This *should* never happen, but apparently it's possible.
 				Client.Assert(osc != null, $"Object Sync Component wasn't found for object with ID {msg.objectID}, however, the object had a dictionary entry!");
 
-					// Set owner.
-					if (type == ObjectSyncManager.SyncTypes.SetOwner) {
-						if (osc.Owner == ObjectSyncManager.NO_OWNER || osc.Owner == sender.m_SteamID) {
-							osc.OwnerSetToRemote(sender.m_SteamID);
-							netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
-						}
-						else {
-							Logger.Debug($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner} Sender: {sender.m_SteamID})");
-						}
+				// Set owner.
+				if (type == ObjectSyncManager.SyncTypes.SetOwner) {
+					if (osc.Owner == null || osc.Owner == netManager.GetPlayer(sender)) {
+						osc.OwnerSetToRemote(netManager.GetPlayer(sender));
+						osc.SendObjectSyncResponse(osc.ObjectID, true);
 					}
-					// Remove owner.
-					else if (type == ObjectSyncManager.SyncTypes.RemoveOwner) {
-						if (osc.Owner == sender.m_SteamID) {
-							osc.OwnerRemoved();
-						}
+					else {
+						Logger.Debug($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner} Sender: {sender.m_SteamID})");
 					}
-					// Force set owner.
-					else if (type == ObjectSyncManager.SyncTypes.ForceSetOwner) {
-						osc.Owner = sender.m_SteamID;
-						netManager.GetLocalPlayer().SendObjectSyncResponse(osc.ObjectID, true);
-						osc.SyncTakenByForce();
-						osc.SyncEnabled = false;
+				}
+				// Remove owner.
+				else if (type == ObjectSyncManager.SyncTypes.RemoveOwner) {
+					if (osc.Owner == netManager.GetPlayer(sender)) {
+						osc.OwnerRemoved();
 					}
+				}
+				// Force set owner.
+				else if (type == ObjectSyncManager.SyncTypes.ForceSetOwner) {
+					osc.Owner = netManager.GetPlayer(sender);
+					osc.SendObjectSyncResponse(osc.ObjectID, true);
+					osc.SyncTakenByForce();
+					osc.SyncEnabled = false;
+				}
 
-					// Set object's position and variables
-					if (osc.Owner == sender.m_SteamID || type == ObjectSyncManager.SyncTypes.PeriodicSync) {
-						if (msg.HasSyncedVariables == true) {
-							osc.HandleSyncedVariables(msg.SyncedVariables);
-						}
-						osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.position), Utils.NetQuatToGame(msg.rotation));
+				// Set object's position and variables
+				if ((osc.Owner == netManager.GetPlayer(sender)) || (type == ObjectSyncManager.SyncTypes.PeriodicSync)) {
+					if (msg.HasSyncedVariables) {
+						osc.HandleSyncedVariables(msg.SyncedVariables);
 					}
+					osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.position), Utils.NetQuatToGame(msg.rotation));
 				}
 			});
 
