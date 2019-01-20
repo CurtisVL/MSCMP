@@ -12,9 +12,23 @@ namespace MSCMP.Game {
 		public static GameObject routes;
 
 		/// <summary>
-		/// Constructor.
+		/// Possible routes for AI vehicles to use.
 		/// </summary>
-		public TrafficManager(GameObject trafficGo) {
+		public enum Routes
+		{
+			BusRoute,
+			DirtRoad,
+			Highway,
+			HomeRoad,
+			RoadRace,
+			Trackfield,
+			Village
+		}
+
+		/// <summary>
+		/// Setup the traffic manager.
+		/// </summary>
+		public void Setup(GameObject trafficGo) {
 			traffic = trafficGo;
 			routes = traffic.transform.FindChild("Routes").gameObject;
 
@@ -34,36 +48,7 @@ namespace MSCMP.Game {
 		public static GameObject GetWaypoint(float waypoint, int route) {
 			GameObject waypointGo = null;
 
-			switch (route) {
-				// BusRoute
-				case 0:
-					waypointGo = routes.transform.FindChild("BusRoute").FindChild("" + waypoint).gameObject;
-					break;
-				// DirtRoad
-				case 1:
-					waypointGo = routes.transform.FindChild("DirtRoad").FindChild("" + waypoint).gameObject;
-					break;
-				// Highway
-				case 2:
-					waypointGo = routes.transform.FindChild("Highway").FindChild("" + waypoint).gameObject;
-					break;
-				// HomeRoad
-				case 3:
-					waypointGo = routes.transform.FindChild("HomeRoad").FindChild("" + waypoint).gameObject;
-					break;
-				// RoadRace
-				case 4:
-					waypointGo = routes.transform.FindChild("RoadRace").FindChild("" + waypoint).gameObject;
-					break;
-				// Trackfield
-				case 5:
-					waypointGo = routes.transform.FindChild("Trackfield").FindChild("" + waypoint).gameObject;
-					break;
-				// Village
-				case 6:
-					waypointGo = routes.transform.FindChild("Village").FindChild("" + waypoint).gameObject;
-					break;
-			}
+			waypointGo = routes.transform.FindChild(((Routes)route).ToString()).FindChild("" + waypoint).gameObject;
 
 			if (waypointGo == null) {
 				Logger.Log($"Couldn't find waypoint, waypoint: {waypoint}, route: {route}");

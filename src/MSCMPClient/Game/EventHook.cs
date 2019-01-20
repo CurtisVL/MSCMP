@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using HutongGames.PlayMaker;
 
@@ -129,9 +129,8 @@ namespace MSCMP.Game {
 			}
 			FsmState[] states = fsm.FsmStates;
 
-			int i = 0;
-			while (i < states.Length) {
-				EventHook.AddWithSync(fsm, states[i].Name, new Func<bool>(() => {
+			foreach (FsmState state in states) {
+				EventHook.AddWithSync(fsm, state.Name, new Func<bool>(() => {
 					if (action != null) {
 						return action();
 					}
@@ -139,7 +138,6 @@ namespace MSCMP.Game {
 						return false;
 					}
 				}));
-				i++;
 			}
 		}
 
@@ -151,9 +149,9 @@ namespace MSCMP.Game {
 			private string eventName;
 			private bool actionOnExit;
 
-			public CustomAction(Func<bool> a, string eName, bool onExit) {
-				action = a;
-				eventName = eName;
+			public CustomAction(Func<bool> theAction, string theEventName, bool onExit) {
+				action = theAction;
+				eventName = theEventName;
 				actionOnExit = onExit;
 			}
 
@@ -190,10 +188,10 @@ namespace MSCMP.Game {
 			private int fsmEventID;
 			private Func<bool> action;
 
-			public CustomActionSync(int id, int eventID, Func<bool> a) {
-				fsmID = id;
-				fsmEventID = eventID;
-				action = a;
+			public CustomActionSync(int theFsmID, int theEventID, Func<bool> theAction) {
+				fsmID = theFsmID;
+				fsmEventID = theEventID;
+				action = theAction;
 			}
 			
 			public bool RunAction(Func<bool> action) {

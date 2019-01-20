@@ -108,23 +108,20 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// The time the connection was started in UTC.
 		/// </summary>
-		DateTime connectionStartedTime;
+		DateTime? connectionStartedTime;
 
 		/// <summary>
 		/// Get ticks since connection started.
 		/// </summary>
 		public ulong TicksSinceConnectionStarted {
 			get {
-				if (connectionStartedTime != null) {
-					return (ulong)((DateTime.UtcNow - this.connectionStartedTime).Ticks);
-				}
-				else {
-					return 0;
-				}
+				Client.Assert(connectionStartedTime != null, "Attempting to get ticks since connection started, but connection started time is null! (Not connected?)");
+				return (ulong)((DateTime.UtcNow - this.connectionStartedTime)?.Ticks);
 			}
 		}
 
 		public NetManager() {
+			Instance = this;
 			statistics = new NetStatistics(this);
 			netManagerCreationTime = DateTime.UtcNow;
 			netMessageHandler = new NetMessageHandler(this);
@@ -135,8 +132,6 @@ namespace MSCMP.Network {
 			gameLobbyJoinRequestedCallback = Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
 			lobbyCreatedCallResult = new Steamworks.CallResult<Steamworks.LobbyCreated_t>(OnLobbyCreated);
 			lobbyEnterCallResult = new Steamworks.CallResult<Steamworks.LobbyEnter_t>(OnLobbyEnter);
-
-			Instance = this;
 
 			RegisterProtocolMessagesHandlers();
 		}
@@ -156,7 +151,6 @@ namespace MSCMP.Network {
 		void OnP2PSessionRequest(Steamworks.P2PSessionRequest_t result) {
 			if (Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
 				Logger.Log($"Accepted p2p session with {result.m_steamIDRemote}");
-				connectionStartedTime = DateTime.UtcNow;
 			}
 			else {
 				Logger.Error($"Failed to accept P2P session with {result.m_steamIDRemote}");
@@ -433,6 +427,7 @@ namespace MSCMP.Network {
 		/// </summary>
 		public void Disconnect() {
 			BroadcastMessage(new Messages.DisconnectMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
+			connectionStartedTime = null;
 			LeaveLobby();
 		}
 
@@ -530,13 +525,6 @@ namespace MSCMP.Network {
 				statistics.RecordReceivedMessage(messageId, size);
 				netMessageHandler.ProcessMessage(messageId, senderSteamId, reader);
 			}
-		}
-
-		/// <summary>
-		/// Fixed update of the network.
-		/// </summary>
-		public void FixedUpdate() {
-			netWorld.FixedUpdate();
 		}
 
 		/// <summary>
@@ -673,6 +661,7 @@ namespace MSCMP.Network {
 
 			remoteClock = msg.clock;
 			players[1].hasHandshake = true;
+			connectionStartedTime = DateTime.UtcNow;
 		}
 
 		/// <summary>

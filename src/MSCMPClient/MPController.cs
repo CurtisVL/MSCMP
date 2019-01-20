@@ -348,15 +348,6 @@ namespace MSCMP {
 			GUI.EndScrollView();
 		}
 
-		/// <summary>
-		/// Fixed update multiplayer state.
-		/// </summary>
-		void FixedUpdate() {
-			Utils.CallSafe("FixedUpdate", () => {
-				netManager.FixedUpdate();
-			});
-		}
-
 		void OnLevelWasLoaded(int level) {
 			string loadedLevelName = Application.loadedLevelName;
 			OnLevelSwitch(loadedLevelName);

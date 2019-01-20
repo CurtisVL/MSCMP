@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using MSCMP.Network;
 using MSCMP.Game.Objects;
 
@@ -8,22 +8,53 @@ namespace MSCMP.Game.Components {
 	/// Sync is provided based on distance from the player and paramters inside an ISyncedObject.
 	/// </summary>
 	class ObjectSyncComponent : MonoBehaviour {
-		// If sync is enabled.
+		/// <summary>
+		/// If sync is enabled.
+		/// </summary>
 		public bool SyncEnabled = false;
-		// Sync owner.
-		public ulong Owner = 0;
-		// Object ID.
+
+		/// <summary>
+		/// Sync owner of the object.
+		/// </summary>
+		public NetPlayer Owner = null;
+
+		/// <summary>
+		/// Object ID.
+		/// </summary>
 		public int ObjectID = ObjectSyncManager.AUTOMATIC_ID;
-		// Object type.
+
+		/// <summary>
+		/// Object type.
+		/// </summary>
 		public ObjectSyncManager.ObjectTypes ObjectType;
 
-		// True if sync should be sent continuously, ignore syncedObject.CanSync()
+		/// <summary>
+		/// If sync of an object should be sent constantly.
+		/// </summary>
 		bool sendConstantSync = false;
-		// The synced object.
+
+		/// <summary>
+		/// The object sub-type that is being synced.
+		/// </summary>
 		ISyncedObject syncedObject;
 
-		// Is object setup?
-		bool isSetup = false;
+		/// <summary>
+		/// True if the object is setup and ready to sync.
+		/// </summary>
+		public bool IsSetup = false;
+
+		/// <summary>
+		/// GameObject this component is attached to. Used as a reference for when object is disabled.
+		/// </summary>
+		GameObject thisObject;
+
+
+		/// <summary>
+		/// Constructor.
+		/// </summary>
+		public ObjectSyncComponent() {
+			thisObject = this.gameObject;
+		}
 
 		/// <summary>
 		/// Setup object.
@@ -43,7 +74,7 @@ namespace MSCMP.Game.Components {
 			// Assign object's ID.
 			ObjectID = ObjectSyncManager.Instance.AddNewObject(this, ObjectID);
 
-			if (!NetWorld.Instance.playerIsLoading && !isSetup) {
+			if (!NetWorld.Instance.playerIsLoading && !IsSetup) {
 				CreateObjectSubtype();
 			}
 		}
@@ -52,7 +83,7 @@ namespace MSCMP.Game.Components {
 		/// Called on start.
 		/// </summary>
 		void Start() {
-			if (NetWorld.Instance.playerIsLoading && !isSetup) {
+			if (NetWorld.Instance.playerIsLoading && !IsSetup) {
 				CreateObjectSubtype();
 			}
 		}
@@ -91,24 +122,18 @@ namespace MSCMP.Game.Components {
 		/// Called once per frame.
 		/// </summary>
 		void Update() {
-			if (isSetup) {
-				if (SyncEnabled) {
-					// Updates object's position continuously.
-					// (Typically used when player is holding a pickupable, or driving a vehicle)
-					if (sendConstantSync) {
-						SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, false);
-					}
+			if (!IsSetup && !SyncEnabled) {
+				return;
+			}
 
-					// Check if object should be synced.
-					else if (syncedObject.CanSync()) {
-						SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, false);
-					}
-				}
+			// Updates object's position continuously, or, if the CanSync criteria is met.
+			if (syncedObject.CanSync() || sendConstantSync) {
+				SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, false);
+			}
 
-				// Periodically update the object's position if periodic sync is enabled.
-				if (syncedObject.PeriodicSyncEnabled() && ObjectSyncManager.Instance.ShouldPeriodicSync(Owner, SyncEnabled)) {
-					SendObjectSync(ObjectSyncManager.SyncTypes.PeriodicSync, true, false);
-				}
+			// Periodically update the object's position if periodic sync is enabled.
+			if (syncedObject.PeriodicSyncEnabled() && ObjectSyncManager.Instance.ShouldPeriodicSync(Owner, SyncEnabled)) {
+				SendObjectSync(ObjectSyncManager.SyncTypes.PeriodicSync, true, false);
 			}
 		}
 
@@ -174,28 +199,22 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		public void OwnerSetToRemote(ulong newOwner) {
 			Owner = newOwner;
-			if (syncedObject != null) {
-				syncedObject.OwnerSetToRemote();
-			}
+			syncedObject?.OwnerSetToRemote();
 		}
 
 		/// <summary>
 		/// Called when owner is removed.
 		/// </summary>
 		public void OwnerRemoved() {
-			Owner = ObjectSyncManager.NO_OWNER;
-			if (syncedObject != null) {
-				syncedObject.OwnerRemoved();
-			}
+			Owner = null;
+			syncedObject?.OwnerRemoved();
 		}
 
 		/// <summary>
 		/// Called when sync control of an object has been taken from local player.
 		/// </summary>
 		public void SyncTakenByForce() {
-			if (syncedObject != null) {
-				syncedObject.SyncTakenByForce();
-			}
+			syncedObject?.SyncTakenByForce();
 		}
 
 		/// <summary>
@@ -204,9 +223,7 @@ namespace MSCMP.Game.Components {
 		/// <param name="newValue">If object should be constantly synced.</param>
 		public void SendConstantSync(bool newValue) {
 			sendConstantSync = newValue;
-			if (syncedObject != null) {
-				syncedObject.ConstantSyncChanged(newValue);
-			}
+			syncedObject?.ConstantSyncChanged(newValue);
 		}
 
 		/// <summary>
@@ -214,13 +231,11 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		/// <param name="syncedVariables">Synced variables</param>
 		public void HandleSyncedVariables(float[] syncedVariables) {
-			if (syncedObject != null) {
-				syncedObject.HandleSyncedVariables(syncedVariables);
-			}
+			syncedObject?.HandleSyncedVariables(syncedVariables);
 		}
 
 		/// <summary>
-		/// Check if object owner is self.
+		/// Check if object owner is local client.
 		/// </summary>
 		/// <returns>True is object owner is self.</returns>
 		public bool IsOwnerSelf() {

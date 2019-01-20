@@ -61,13 +61,12 @@ namespace MSCMP.Network {
 			};
 
 			GameCallbacks.onPlayMakerObjectCreate += (GameObject instance, GameObject prefab) => {
-				if (!Game.GamePickupableDatabase.IsPickupable(instance)) {
+				if (!GamePickupableDatabase.IsPickupable(instance)) {
 					return;
 				}
 
-				var metaData = prefab.GetComponent<Game.Components.PickupableMetaDataComponent>();
+				var metaData = prefab.GetComponent<PickupableMetaDataComponent>();
 				Client.Assert(metaData != null, "Tried to spawn pickupable that has no meta data assigned.");
-				RegisterPickupable(instance);
 
 				Messages.PickupableSpawnMessage msg = new Messages.PickupableSpawnMessage();
 				msg.prefabId = metaData.prefabId;
@@ -99,6 +98,8 @@ namespace MSCMP.Network {
 					sendToRemote = true;
 				}
 				else {
+					// This is a hack to workout beer bottles not spawning on the remote client due to items only spawning on the host.
+					// This will be replaced in the future.
 					if (instance.name.StartsWith("BottleBeerFly")) {
 						sendToRemote = true;
 					}
@@ -147,7 +148,7 @@ namespace MSCMP.Network {
 			};
 
 			GameCallbacks.onPlayMakerObjectDestroy += (GameObject instance) => {
-				if (!Game.GamePickupableDatabase.IsPickupable(instance)) {
+				if (!GamePickupableDatabase.IsPickupable(instance)) {
 					return;
 				}
 
@@ -161,7 +162,7 @@ namespace MSCMP.Network {
 			};
 
 			GameCallbacks.onPlayMakerSetPosition += (GameObject gameObject, Vector3 position, Space space) => {
-				if (!Game.GamePickupableDatabase.IsPickupable(gameObject)) {
+				if (!GamePickupableDatabase.IsPickupable(gameObject)) {
 					return;
 				}
 
@@ -368,7 +369,7 @@ namespace MSCMP.Network {
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.LightSwitchMessage msg) => {
-				LightSwitch light = Game.LightSwitchManager.Instance.FindLightSwitch(Utils.NetVec3ToGame(msg.pos));
+				LightSwitch light = LightSwitchManager.Instance.FindLightSwitch(Utils.NetVec3ToGame(msg.pos));
 				light.TurnOn(msg.toggle);
 			});
 
@@ -473,17 +474,6 @@ namespace MSCMP.Network {
 
 		}
 
-
-		/// <summary>
-		/// FixedUpdate net world.
-		/// </summary>
-		public void FixedUpdate() {
-			//foreach (var v in vehicles) {
-			//	v.FixedUpdate();
-			//}
-			// May need this later.
-		}
-
 		/// <summary>
 		/// Called when game world gets loaded.
 		/// </summary>
@@ -572,7 +562,7 @@ namespace MSCMP.Network {
 					wasActive = false;
 					osc.gameObject.SetActive(true);
 				}
-				Logger.Log($"Writing object: {osc.gameObject.name}");
+				Logger.Debug($"Writing object: {osc.gameObject.name}");
 
 				var pickupableMsg = new Messages.PickupableSpawnMessage();
 
@@ -825,18 +815,6 @@ namespace MSCMP.Network {
 			if (gameObject != null) {
 				GameObject.Destroy(gameObject);
 			}
-		}
-
-		/// <summary>
-		/// Register pickupable into the network world. (Deprecated)
-		/// </summary>
-		/// <param name="pickupable">The game object representing pickupable.</param>
-		/// <param name="remote">Is this remote pickupable?</param>
-		public void RegisterPickupable(GameObject pickupable, bool remote = false) {
-			var metaData = pickupable.GetComponent<PickupableMetaDataComponent>();
-			Client.Assert(metaData != null, $"Failed to register pickupable. No meta data found. {pickupable.name} ({pickupable.GetInstanceID()})");
-
-			Logger.Debug($"Registering pickupable {pickupable.name} (instance id: {pickupable.GetInstanceID()})");
 		}
 	}
 }
