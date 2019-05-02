@@ -37,7 +37,7 @@ namespace MSCMP
 		/// <summary>
 		/// List of spots to be used in /gotospot. List contains each spot's name, their XYZ Position, and W as Rotation
 		/// </summary>
-		private static readonly Dictionary<string, Vector4> _spots = new Dictionary<string, Vector4>()
+		private static readonly Dictionary<string, Vector4> Spots = new Dictionary<string, Vector4>()
 		{
 			{ "Home", new Vector4(-10.0f, -0.3f, 7.6f, 180) },
 			{ "Island", new Vector4(-851.5f, -2.9f, 516.6f, 163) },
@@ -69,7 +69,7 @@ namespace MSCMP
 				if (args.Length == 1)
 				{
 					string availableSpots = "";
-					foreach (KeyValuePair<string, Vector4> spot in _spots) availableSpots += spot.Key + " ";
+					foreach (KeyValuePair<string, Vector4> spot in Spots) availableSpots += spot.Key + " ";
 
 					Client.ConsoleMessage($"Valid Spots: {availableSpots}.");
 					return;
@@ -82,7 +82,7 @@ namespace MSCMP
 				}
 
 				string ourSpot = args[1].ToLower();
-				foreach (KeyValuePair<string, Vector4> spot in _spots)
+				foreach (KeyValuePair<string, Vector4> spot in Spots)
 				{
 					if (spot.Key.ToLower() != ourSpot)
 						continue;

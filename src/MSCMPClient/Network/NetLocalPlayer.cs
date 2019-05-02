@@ -36,7 +36,7 @@ namespace MSCMP.Network
 		{
 			Instance = this;
 
-			GameDoorsManager.Instance.onDoorsOpen = door =>
+			GameDoorsManager.Instance.OnDoorsOpen = door =>
 			{
 				OpenDoorsMessage msg = new OpenDoorsMessage
 				{
@@ -46,7 +46,7 @@ namespace MSCMP.Network
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
-			GameDoorsManager.Instance.onDoorsClose = door =>
+			GameDoorsManager.Instance.OnDoorsClose = door =>
 			{
 				OpenDoorsMessage msg = new OpenDoorsMessage
 				{
@@ -56,7 +56,7 @@ namespace MSCMP.Network
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
-			LightSwitchManager.Instance.onLightSwitchUsed = (lswitch, turnedOn) =>
+			LightSwitchManager.Instance.OnLightSwitchUsed = (lswitch, turnedOn) =>
 			{
 				LightSwitchMessage msg = new LightSwitchMessage
 				{

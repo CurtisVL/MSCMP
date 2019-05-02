@@ -61,9 +61,9 @@ namespace MSCMP.Network
 			_netManager = netManager;
 			Instance = this;
 
-			GameCallbacks.onWorldUnload += OnGameWorldUnload;
-			GameCallbacks.onWorldLoad += OnGameWorldLoad;
-			GameCallbacks.onPlayMakerObjectCreate += (instance, prefab) =>
+			GameCallbacks.OnWorldUnload += OnGameWorldUnload;
+			GameCallbacks.OnWorldLoad += OnGameWorldLoad;
+			GameCallbacks.OnPlayMakerObjectCreate += (instance, prefab) =>
 			{
 				if (!GamePickupableDatabase.IsPickupable(instance))
 				{
@@ -114,7 +114,7 @@ namespace MSCMP.Network
 				}
 			};
 
-			GameCallbacks.onPlayMakerObjectActivate += (instance, activate) =>
+			GameCallbacks.OnPlayMakerObjectActivate += (instance, activate) =>
 			{
 				if (PlayerIsLoading)
 				{
@@ -164,7 +164,7 @@ namespace MSCMP.Network
 				}
 			};
 
-			GameCallbacks.onPlayMakerObjectDestroy += instance =>
+			GameCallbacks.OnPlayMakerObjectDestroy += instance =>
 			{
 				if (!GamePickupableDatabase.IsPickupable(instance))
 				{
@@ -181,7 +181,7 @@ namespace MSCMP.Network
 				HandlePickupableDestroy(instance);
 			};
 
-			GameCallbacks.onPlayMakerSetPosition += (gameObject, position, space) =>
+			GameCallbacks.OnPlayMakerSetPosition += (gameObject, position, space) =>
 			{
 				if (!GamePickupableDatabase.IsPickupable(gameObject))
 				{

@@ -28,13 +28,13 @@ namespace MSCMP.Game.Objects
 		private PlayMakerFSM _iconsFsm;
 		private PlayMakerFSM _textFsm;
 
-		public delegate void OnEnter();
-		public delegate void OnLeave();
-		public OnEnter onEnter = () =>
+		public delegate void OnEnterPassengerSeatEvent();
+		public delegate void OnLeavePassengerSeatEvent();
+		public OnEnterPassengerSeatEvent OnEnterPassengerSeat = () =>
 		{
 
 		};
-		public OnLeave onLeave = () =>
+		public OnLeavePassengerSeatEvent OnLeavePassengerSeat = () =>
 		{
 
 		};
@@ -186,7 +186,7 @@ namespace MSCMP.Game.Objects
 						col.enabled = false;
 					}
 
-					onEnter();
+					OnEnterPassengerSeat();
 				}
 				// Leave seat
 				else if (_isSitting)
@@ -208,7 +208,7 @@ namespace MSCMP.Game.Objects
 
 					_showGui = true;
 
-					onLeave();
+					OnLeavePassengerSeat();
 				}
 			}
 

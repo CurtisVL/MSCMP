@@ -22,9 +22,9 @@ namespace MSCMP.Game.Objects
 		/// </summary>
 		public Vector3 Position => _go.transform.position;
 
-		public delegate void OnLightSwitchUse(GameObject lswitch, bool turnOn);
+		public delegate void OnLightSwitchUseEvent(GameObject lswitch, bool turnOn);
 
-		public OnLightSwitchUse onLightSwitchUse;
+		public OnLightSwitchUseEvent OnLightSwitchUse;
 
 		private const string EVENT_NAME = "MPSWITCH";
 
@@ -73,7 +73,7 @@ namespace MSCMP.Game.Objects
 					return;
 				}
 
-				_lightSwitch.onLightSwitchUse(_lightSwitch._go, !_lightSwitch.SwitchStatus);
+				_lightSwitch.OnLightSwitchUse(_lightSwitch._go, !_lightSwitch.SwitchStatus);
 			}
 		}
 

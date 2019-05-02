@@ -21,18 +21,18 @@ namespace MSCMP.Game
 		/// </summary>
 		public readonly List<GameDoor> Doors = new List<GameDoor>();
 
-		public delegate void OnDoorsOpen(GameObject door);
-		public delegate void OnDoorsClose(GameObject door);
+		public delegate void OnDoorsOpenEvent(GameObject door);
+		public delegate void OnDoorsCloseEvent(GameObject door);
 
 		/// <summary>
 		/// Callback called when local player opens any doors.
 		/// </summary>
-		public OnDoorsOpen onDoorsOpen;
+		public OnDoorsOpenEvent OnDoorsOpen;
 
 		/// <summary>
 		/// Callback called when local players closes any doors.
 		/// </summary>
-		public OnDoorsClose onDoorsClose;
+		public OnDoorsCloseEvent OnDoorsClose;
 
 		public GameDoorsManager()
 		{
@@ -61,11 +61,11 @@ namespace MSCMP.Game
 		{
 			if (open)
 			{
-				onDoorsOpen?.Invoke(door.GameObject);
+				OnDoorsOpen?.Invoke(door.GameObject);
 			}
 			else
 			{
-				onDoorsClose?.Invoke(door.GameObject);
+				OnDoorsClose?.Invoke(door.GameObject);
 			}
 		}
 

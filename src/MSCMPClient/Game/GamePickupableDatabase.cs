@@ -29,7 +29,7 @@ namespace MSCMP.Game
 		{
 			_instance = this;
 
-			GameCallbacks.onPlayMakerObjectCreate += (instance, prefab) =>
+			GameCallbacks.OnPlayMakerObjectCreate += (instance, prefab) =>
 			{
 				PrefabDesc descriptor = GetPrefabDesc(prefab);
 				if (descriptor == null) return;

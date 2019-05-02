@@ -93,7 +93,7 @@ namespace MSCMP.UI
 		/// <param name="text">The text to show.</param>
 		/// <param name="onClose">The callback to call when OK button is pressed.</param>
 		/// <returns>true if message box was shown false if there is already some message box and this one could not be showed.</returns>
-		public void ShowMessageBox(string text, MessageBoxHandler.OnClose onClose = null)
+		public void ShowMessageBox(string text, MessageBoxHandler.OnMessageBoxCloseEvent onClose = null)
 		{
 			_messageBoxHandler.Show(text, onClose);
 		}

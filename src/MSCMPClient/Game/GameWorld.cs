@@ -167,11 +167,11 @@ namespace MSCMP.Game
 
 			// Make sure game world will get notified about play maker CreateObject/DestroyObject calls.
 
-			onPlayMakerObjectCreate += (instance, prefab) =>
+			OnPlayMakerObjectCreate += (instance, prefab) =>
 			{
 				HandleNewObject(instance);
 			};
-			onPlayMakerObjectDestroy += HandleObjectDestroy;
+			OnPlayMakerObjectDestroy += HandleObjectDestroy;
 
 			// Register game objects users.
 
@@ -368,7 +368,7 @@ namespace MSCMP.Game
 			Client.Assert(_lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 
 			// Notify different parts of the mod about the world load.
-			onWorldLoad?.Invoke();
+			OnWorldLoad?.Invoke();
 		}
 
 		/// <summary>
@@ -382,7 +382,7 @@ namespace MSCMP.Game
 				_gameObjectUsers[i - 1].DestroyObjects();
 			}
 
-			onWorldUnload?.Invoke();
+			OnWorldUnload?.Invoke();
 
 			_player = null;
 		}
@@ -398,7 +398,7 @@ namespace MSCMP.Game
 			if (playerGo == null) return;
 			_player = new GamePlayer(playerGo);
 
-			onLocalPlayerCreated?.Invoke();
+			OnLocalPlayerCreated?.Invoke();
 		}
 
 		/// <summary>

@@ -19,7 +19,7 @@ namespace MSCMP.Game.Hooks
 			public override void OnEnter()
 			{
 				base.OnEnter();
-				GameCallbacks.onPlayMakerObjectCreate?.Invoke(storeObject.Value, gameObject.Value);
+				GameCallbacks.OnPlayMakerObjectCreate?.Invoke(storeObject.Value, gameObject.Value);
 			}
 		}
 
@@ -32,7 +32,7 @@ namespace MSCMP.Game.Hooks
 			{
 				if (gameObject.Value != null)
 				{
-					GameCallbacks.onPlayMakerObjectDestroy?.Invoke(gameObject.Value);
+					GameCallbacks.OnPlayMakerObjectDestroy?.Invoke(gameObject.Value);
 				}
 				base.OnEnter();
 			}
@@ -45,7 +45,7 @@ namespace MSCMP.Game.Hooks
 		{
 			public override void OnEnter()
 			{
-				GameCallbacks.onPlayMakerObjectDestroy?.Invoke(Owner);
+				GameCallbacks.OnPlayMakerObjectDestroy?.Invoke(Owner);
 				base.OnEnter();
 			}
 		}
@@ -63,7 +63,7 @@ namespace MSCMP.Game.Hooks
 					Finish();
 					return;
 				}
-				GameCallbacks.onPlayMakerObjectActivate?.Invoke(go, activate.Value);
+				GameCallbacks.OnPlayMakerObjectActivate?.Invoke(go, activate.Value);
 				base.OnEnter();
 			}
 		}
@@ -90,7 +90,7 @@ namespace MSCMP.Game.Hooks
 				if (!z.IsNone)
 					newPosition.z = z.Value;
 
-				GameCallbacks.onPlayMakerSetPosition?.Invoke(go, newPosition, space);
+				GameCallbacks.OnPlayMakerSetPosition?.Invoke(go, newPosition, space);
 
 				base.OnEnter();
 			}

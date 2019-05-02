@@ -20,12 +20,12 @@ namespace MSCMP.Game
 		/// </summary>
 		public readonly List<LightSwitch> LightSwitches = new List<LightSwitch>();
 
-		public delegate void OnLightSwitchUsed(GameObject lightSwitch, bool turnedOn);
+		public delegate void OnLightSwitchUsedEvent(GameObject lightSwitch, bool turnedOn);
 
 		/// <summary>
 		/// Callback called when player used a light switch
 		/// </summary>
-		public OnLightSwitchUsed onLightSwitchUsed;
+		public OnLightSwitchUsedEvent OnLightSwitchUsed;
 
 		public LightSwitchManager()
 		{
@@ -99,9 +99,9 @@ namespace MSCMP.Game
 				LightSwitch light = new LightSwitch(lightGo);
 				LightSwitches.Add(light);
 
-				light.onLightSwitchUse = (lightObj, turnedOn) =>
+				light.OnLightSwitchUse = (lightObj, turnedOn) =>
 				{
-					onLightSwitchUsed(lightGo, !light.SwitchStatus);
+					OnLightSwitchUsed(lightGo, !light.SwitchStatus);
 				};
 			}
 		}
