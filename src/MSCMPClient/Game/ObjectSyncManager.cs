@@ -27,6 +27,7 @@ namespace MSCMP.Game {
 			AIVehicle,
 			Boat,
 			GarageDoor,
+			VehicleDoor,
 		}
 
 		/// <summary>

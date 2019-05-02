@@ -216,6 +216,7 @@ namespace MSCMP.Game.Objects {
 			axisCarController = ParentGameObject.GetComponent<AxisCarController>();
 			mpCarController = ParentGameObject.AddComponent<MPCarController>();
 
+			AddVehicleDoorSync();
 			FindFSMs();
 		}
 
@@ -225,6 +226,44 @@ namespace MSCMP.Game.Objects {
 		/// <returns>What should be synced for this object.</returns>
 		public ObjectSyncManager.Flags flags() {
 			return ObjectSyncManager.Flags.Full;
+		}
+
+		/// <summary>
+		/// Add sync for doors on the vehicle.
+		/// </summary>
+		void AddVehicleDoorSync() {
+			Transform[] children = ParentGameObject.GetComponentsInChildren<Transform>();
+			foreach (Transform child in children) {
+				// Rear door of van, trunk of old car and Ferndale.
+				if (child.name == "RearDoor") {
+					child.gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+				}
+				else if (child.name == "Bootlid") {
+					child.gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+				}
+				// Side door of van
+				else if (child.name == "SideDoor") {
+					GameObject fsmGO = child.FindChild("door").FindChild("Collider").gameObject;
+					PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(fsmGO, "Use");
+					if (fsm != null) {
+						EventHook.AddWithSync(fsm, "Open door");
+						EventHook.AddWithSync(fsm, "Close door");
+					}
+				}
+				// Object containing drivers doors
+				else if (child.name == "DriverDoors") {
+					// Van, Truck.
+					if (child.FindChild("doorl")) {
+						child.FindChild("doorl").gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+						child.FindChild("doorr").gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+					}
+					// Ferndale.
+					else if (child.FindChild("door(leftx)")) {
+						child.FindChild("door(leftx)").gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+						child.FindChild("door(right)").gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.VehicleDoor, ObjectSyncManager.AUTOMATIC_ID);
+					}
+				}
+			}
 		}
 
 		/// <summary>

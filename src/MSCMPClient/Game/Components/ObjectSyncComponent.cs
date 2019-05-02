@@ -127,6 +127,10 @@ namespace MSCMP.Game.Components {
 				case ObjectSyncManager.ObjectTypes.PlayerVehicle:
 					syncedObject = new PlayerVehicle(this.gameObject, this);
 					break;
+				// Vehicle door.
+				case ObjectSyncManager.ObjectTypes.VehicleDoor:
+					syncedObject = new VehicleDoor(this.gameObject, this);
+					break;
 			}
 			IsSetup = true;
 		}
