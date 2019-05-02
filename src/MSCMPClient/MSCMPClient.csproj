@@ -99,6 +99,7 @@
     <Compile Include="Game\Objects\AIVehicle.cs" />
     <Compile Include="Game\LightSwitchManager.cs" />
     <Compile Include="Game\Objects\Boat.cs" />
+    <Compile Include="Game\Objects\SewageWell.cs" />
     <Compile Include="Game\Objects\Weather.cs" />
     <Compile Include="Game\Objects\VehicleDoor.cs" />
     <Compile Include="Game\Objects\PlayerVehicle.cs" />

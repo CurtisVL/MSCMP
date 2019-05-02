@@ -29,6 +29,7 @@ namespace MSCMP.Game {
 			GarageDoor,
 			VehicleDoor,
 			Weather,
+			SewageWell
 		}
 
 		/// <summary>

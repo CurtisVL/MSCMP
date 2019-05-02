@@ -135,6 +135,10 @@ namespace MSCMP.Game.Components {
 				case ObjectSyncManager.ObjectTypes.Weather:
 					syncedObject = new Weather(this.gameObject, this);
 					break;
+				// Sewage well.
+				case ObjectSyncManager.ObjectTypes.SewageWell:
+					syncedObject = new SewageWell(this.gameObject, this);
+					break;
 			}
 			IsSetup = true;
 		}
