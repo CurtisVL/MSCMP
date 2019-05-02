@@ -13,7 +13,7 @@ namespace MSCMP.Game.Objects
 
 		private readonly PlayMakerFSM _levelFsm;
 
-		public enum WellStates
+		private enum WellStates
 		{
 			Full,
 			WaitCall,
@@ -113,19 +113,17 @@ namespace MSCMP.Game.Objects
 		public bool CanSync()
 		{
 			// Only sync sewage wells as the host.
-			if (Network.NetManager.Instance.IsHost)
-			{
-				if (_currentFrame >= _syncInterval)
-				{
-					_currentFrame = 0;
-					return true;
-				}
+			if (!Network.NetManager.Instance.IsHost) return false;
 
-				_currentFrame++;
-				return false;
+			if (_currentFrame >= _syncInterval)
+			{
+				_currentFrame = 0;
+				return true;
 			}
 
+			_currentFrame++;
 			return false;
+
 		}
 
 		/// <summary>
@@ -134,12 +132,7 @@ namespace MSCMP.Game.Objects
 		/// <returns>True if the player should try to take ownership of the object.</returns>
 		public bool ShouldTakeOwnership()
 		{
-			if (Network.NetManager.Instance.IsHost)
-			{
-				return true;
-			}
-
-			return false;
+			return Network.NetManager.Instance.IsHost;
 		}
 
 		/// <summary>

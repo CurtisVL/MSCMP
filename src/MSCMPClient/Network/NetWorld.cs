@@ -1,10 +1,10 @@
 using MSCMP.Game;
 using MSCMP.Game.Components;
 using MSCMP.Game.Objects;
+using MSCMP.Network.Messages;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using MSCMP.Network.Messages;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -73,11 +73,16 @@ namespace MSCMP.Network
 				PickupableMetaDataComponent metaData = prefab.GetComponent<PickupableMetaDataComponent>();
 				Client.Assert(metaData != null, "Tried to spawn pickupable that has no meta data assigned.");
 
-				PickupableSpawnMessage msg = new PickupableSpawnMessage();
-				msg.prefabId = metaData.PrefabId;
-				msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
-				msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
-				msg.active = instance.activeSelf;
+				PickupableSpawnMessage msg = new PickupableSpawnMessage
+				{
+					prefabId = metaData.PrefabId,
+					transform =
+					{
+						position = Utils.GameVec3ToNet(instance.transform.position),
+						rotation = Utils.GameQuatToNet(instance.transform.rotation)
+					},
+					active = instance.activeSelf
+				};
 
 				// Setup sync component on object.
 				Client.Assert(instance.GetComponent<ObjectSyncComponent>(), $"Object created but no ObjectSyncComponent could be found! Object name: {instance.name}");
@@ -136,18 +141,25 @@ namespace MSCMP.Network
 				{
 					PickupableMetaDataComponent metaData = pickupable.gameObject.GetComponent<PickupableMetaDataComponent>();
 
-					PickupableSpawnMessage msg = new PickupableSpawnMessage();
-					msg.id = pickupable.ObjectId;
-					msg.prefabId = metaData.PrefabId;
-					msg.transform.position = Utils.GameVec3ToNet(instance.transform.position);
-					msg.transform.rotation = Utils.GameQuatToNet(instance.transform.rotation);
+					PickupableSpawnMessage msg = new PickupableSpawnMessage
+					{
+						id = pickupable.ObjectId,
+						prefabId = metaData.PrefabId,
+						transform =
+						{
+							position = Utils.GameVec3ToNet(instance.transform.position),
+							rotation = Utils.GameQuatToNet(instance.transform.rotation)
+						}
+					};
 					netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 				}
 				else
 				{
-					PickupableActivateMessage msg = new PickupableActivateMessage();
-					msg.id = pickupable.ObjectId;
-					msg.activate = false;
+					PickupableActivateMessage msg = new PickupableActivateMessage
+					{
+						id = pickupable.ObjectId,
+						activate = false
+					};
 					netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 				}
 			};
@@ -188,9 +200,11 @@ namespace MSCMP.Network
 					position += gameObject.transform.position;
 				}
 
-				PickupableSetPositionMessage msg = new PickupableSetPositionMessage();
-				msg.id = pickupable.ObjectId;
-				msg.position = Utils.GameVec3ToNet(position);
+				PickupableSetPositionMessage msg = new PickupableSetPositionMessage
+				{
+					id = pickupable.ObjectId,
+					position = Utils.GameVec3ToNet(position)
+				};
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
@@ -219,17 +233,7 @@ namespace MSCMP.Network
 				}
 				Client.Assert(gameObject != null, "Tried to activate a pickupable but it's not spawned! Does any connected client or you have other mods beside MSC:MP installed? Try uninstalling them!");
 
-				if (msg.activate)
-				{
-					gameObject.SetActive(true);
-				}
-				else
-				{
-					if (gameObject != null)
-					{
-						gameObject.SetActive(false);
-					}
-				}
+				gameObject?.SetActive(msg.activate);
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, PickupableSpawnMessage msg) =>
@@ -244,16 +248,14 @@ namespace MSCMP.Network
 					return;
 				}
 
-				ObjectSyncComponent osc = ObjectSyncManager.GetSyncComponentById(msg.id);
-
 				Object.Destroy(ObjectSyncManager.GetObjectById(msg.id));
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, WorldPeriodicalUpdateMessage msg) =>
 			{
 				// Game reports 'next hour' - we want to have transition so correct it.
-				GameWorld.Instance.WorldTime = (float)msg.sunClock - 2.0f;
-				GameWorld.Instance.WorldDay = (int)msg.worldDay;
+				GameWorld.Instance.WorldTime = msg.sunClock - 2.0f;
+				GameWorld.Instance.WorldDay = msg.worldDay;
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, PlayerSyncMessage msg) =>
@@ -306,24 +308,24 @@ namespace MSCMP.Network
 				Client.Assert(player != null, $"There is no player matching given steam id {sender}.");
 
 				// Handle full world state synchronization.
-
 				HandleFullWorldSync(msg);
 
 				// Spawn host character.
-
-				player.Spawn();
-
-				// Set player state.
-
-				player.Teleport(Utils.NetVec3ToGame(msg.spawnPosition), Utils.NetQuatToGame(msg.spawnRotation));
-
-				if (msg.pickedUpObject != NetPickupable.INVALID_ID)
+				if (player != null)
 				{
-					player.PickupObject(msg.pickedUpObject);
+					player.Spawn();
+
+					// Set player state.
+
+					player.Teleport(Utils.NetVec3ToGame(msg.spawnPosition), Utils.NetQuatToGame(msg.spawnRotation));
+
+					if (msg.pickedUpObject != NetPickupable.INVALID_ID)
+					{
+						player.PickupObject(msg.pickedUpObject);
+					}
 				}
 
 				// World is loaded! Notify network manager about that.
-
 				_netManager.OnNetworkWorldLoaded();
 			});
 
@@ -547,9 +549,11 @@ namespace MSCMP.Network
 
 			if (_timeToSendPeriodicalUpdate <= 0.0f)
 			{
-				WorldPeriodicalUpdateMessage message = new WorldPeriodicalUpdateMessage();
-				message.sunClock = (byte)GameWorld.Instance.WorldTime;
-				message.worldDay = (byte)GameWorld.Instance.WorldDay;
+				WorldPeriodicalUpdateMessage message = new WorldPeriodicalUpdateMessage
+				{
+					sunClock = (byte)GameWorld.Instance.WorldTime,
+					worldDay = (byte)GameWorld.Instance.WorldDay
+				};
 				_netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 
 				_timeToSendPeriodicalUpdate = PERIODICAL_UPDATE_INTERVAL;
@@ -587,17 +591,14 @@ namespace MSCMP.Network
 			PlayerIsLoading = false;
 
 			// Write time
-
 			GameWorld gameWorld = GameWorld.Instance;
 			msg.dayTime = gameWorld.WorldTime;
 			msg.day = gameWorld.WorldDay;
 
 			// Write mailbox name
-
 			msg.mailboxName = gameWorld.PlayerLastName;
 
 			// Write doors
-
 			List<GameDoor> doors = GameDoorsManager.Instance.Doors;
 			int doorsCount = doors.Count;
 			msg.doors = new DoorsInitMessage[doorsCount];
@@ -613,7 +614,6 @@ namespace MSCMP.Network
 			}
 
 			// Write light switches.
-
 			List<LightSwitch> lights = LightSwitchManager.Instance.LightSwitches;
 			int lightCount = lights.Count;
 			msg.lights = new LightSwitchMessage[lightCount];
@@ -629,7 +629,6 @@ namespace MSCMP.Network
 			}
 
 			// Write connected players.
-
 			msg.connectedPlayers = new ConnectedPlayersMessage();
 			int[] playerIDs = new int[_netManager.Players.Count];
 			ulong[] steamIDs = new ulong[_netManager.Players.Count];
@@ -644,9 +643,9 @@ namespace MSCMP.Network
 			msg.connectedPlayers.steamIDs = steamIDs;
 
 			// Write objects. (Pickupables, Player vehicles, AI vehicles)
-
 			List<PickupableSpawnMessage> pickupableMessages = new List<PickupableSpawnMessage>();
 			Logger.Debug($"Writing state of {ObjectSyncManager.Instance.ObjectIDs.Count} objects");
+			List<float> data = new List<float>();
 			foreach (KeyValuePair<int, ObjectSyncComponent> kv in ObjectSyncManager.Instance.ObjectIDs)
 			{
 				ObjectSyncComponent osc = kv.Value;
@@ -685,8 +684,6 @@ namespace MSCMP.Network
 				// ObjectID
 				pickupableMsg.id = osc.gameObject.GetComponent<ObjectSyncComponent>().ObjectId;
 
-				List<float> data = new List<float>();
-
 				if (data.Count != 0)
 				{
 					pickupableMsg.Data = data.ToArray();
@@ -699,7 +696,6 @@ namespace MSCMP.Network
 			}
 
 			// Object owners.
-
 			int objectsCount = ObjectSyncManager.Instance.ObjectIDs.Count;
 			msg.objectOwners = new ObjectOwnerSync[objectsCount];
 
@@ -747,17 +743,14 @@ namespace MSCMP.Network
 			Stopwatch watch = Stopwatch.StartNew();
 
 			// Read time
-
 			GameWorld gameWorld = GameWorld.Instance;
 			gameWorld.WorldTime = msg.dayTime;
 			gameWorld.WorldDay = msg.day;
 
 			// Read mailbox name
-
 			gameWorld.PlayerLastName = msg.mailboxName;
 
 			// Doors.
-
 			foreach (DoorsInitMessage door in msg.doors)
 			{
 				Vector3 position = Utils.NetVec3ToGame(door.position);
@@ -770,7 +763,6 @@ namespace MSCMP.Network
 			}
 
 			// Lights.
-
 			foreach (LightSwitchMessage light in msg.lights)
 			{
 				Vector3 position = Utils.NetVec3ToGame(light.pos);
@@ -783,14 +775,12 @@ namespace MSCMP.Network
 			}
 
 			// Pickupables
-
 			foreach (PickupableSpawnMessage pickupableMsg in msg.pickupables)
 			{
 				SpawnPickupable(pickupableMsg);
 			}
 
 			// Remove spawned (and active) pickupables that we did not get info about.
-
 			foreach (KeyValuePair<int, GameObject> kv in GamePickupableDatabase.Instance.Pickupables)
 			{
 				if (kv.Value.GetComponent<ObjectSyncComponent>() == null)
@@ -800,7 +790,6 @@ namespace MSCMP.Network
 			}
 
 			// Connected players.
-
 			int i = 0;
 			foreach (int newPlayerId in msg.connectedPlayers.playerIDs)
 			{
@@ -817,7 +806,6 @@ namespace MSCMP.Network
 			}
 
 			// Object owners.
-
 			foreach (ObjectOwnerSync syncMsg in msg.objectOwners)
 			{
 				if (syncMsg.ownerPlayerID != -1)
@@ -1002,10 +990,8 @@ namespace MSCMP.Network
 		/// <param name="id">The object ID of the pickupable to destroy.</param>
 		private void DestroyPickupableLocal(int id)
 		{
-			if (!ObjectSyncManager.Instance.ObjectIDs.ContainsKey(id))
-			{
-				return;
-			}
+			if (!ObjectSyncManager.Instance.ObjectIDs.ContainsKey(id)) return;
+			
 			GameObject gameObject = ObjectSyncManager.Instance.ObjectIDs[id].gameObject;
 			if (gameObject != null)
 			{

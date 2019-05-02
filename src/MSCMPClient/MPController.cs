@@ -2,6 +2,7 @@ using MSCMP.Game;
 using MSCMP.Network;
 using MSCMP.Utilities;
 using System.Collections.Generic;
+using Steamworks;
 using UnityEngine;
 
 namespace MSCMP
@@ -56,20 +57,16 @@ namespace MSCMP
 
 		private void Start()
 		{
-			Steamworks.SteamAPI.Init();
-
+			SteamAPI.Init();
 			DontDestroyOnLoad(gameObject);
 
 			_netManager = new NetManager();
-
 			_modLogo = Client.LoadAsset<Texture2D>("Assets/Textures/MSCMPLogo.png");
 
 			ImguiUtils.Setup();
-
 #if !PUBLIC_RELEASE
 			// Skip splash screen in development builds.
 			Application.LoadLevel("MainMenu");
-
 			DevTools.OnInit();
 #endif
 		}
@@ -93,7 +90,6 @@ namespace MSCMP
 			}
 
 			// When leaving game to main menu disconenct from the session.
-
 			if (_currentLevelName == "GAME" && newLevelName == "MainMenu")
 			{
 				if (_netManager.IsOnline)
@@ -120,7 +116,6 @@ namespace MSCMP
 			GUI.DrawTexture(new Rect(2, Screen.height - 80, 76, 66), _modLogo);
 
 			// Draw online state.
-
 			if (_netManager.IsOnline)
 			{
 				GUI.color = Color.green;
@@ -135,7 +130,6 @@ namespace MSCMP
 			MessagesList.Draw();
 
 			// Friends widget.
-
 			if (ShouldSeeInvitePanel())
 			{
 				UpdateInvitePanel();
@@ -143,7 +137,6 @@ namespace MSCMP
 
 #if !PUBLIC_RELEASE
 			DevTools.OnGui();
-
 			if (DevTools.NetStats)
 			{
 				_netManager.DrawDebugGui();
@@ -167,7 +160,7 @@ namespace MSCMP
 
 		private struct FriendEntry
 		{
-			public Steamworks.CSteamID SteamId;
+			public CSteamID SteamId;
 			public string Name;
 			public bool PlayingMsc;
 		}
@@ -187,7 +180,7 @@ namespace MSCMP
 		/// <summary>
 		/// Steam id of the recently invited friend.
 		/// </summary>
-		private Steamworks.CSteamID _invitedFriendSteamId;
+		private CSteamID _invitedFriendSteamId;
 
 		/// <summary>
 		/// Check if invite panel is visible.
@@ -222,24 +215,25 @@ namespace MSCMP
 
 			_onlineFriends.Clear();
 
-			Steamworks.EFriendFlags friendFlags = Steamworks.EFriendFlags.k_EFriendFlagImmediate;
-			int friendsCount = Steamworks.SteamFriends.GetFriendCount(friendFlags);
+			EFriendFlags friendFlags = EFriendFlags.k_EFriendFlagImmediate;
+			int friendsCount = SteamFriends.GetFriendCount(friendFlags);
 
 			for (int i = 0; i < friendsCount; ++i)
 			{
-				Steamworks.CSteamID friendSteamId = Steamworks.SteamFriends.GetFriendByIndex(i, friendFlags);
+				CSteamID friendSteamId = SteamFriends.GetFriendByIndex(i, friendFlags);
 
-				if (Steamworks.SteamFriends.GetFriendPersonaState(friendSteamId) == Steamworks.EPersonaState.k_EPersonaStateOffline)
+				if (SteamFriends.GetFriendPersonaState(friendSteamId) == EPersonaState.k_EPersonaStateOffline)
 				{
 					continue;
 				}
-				
-				FriendEntry friend = new FriendEntry();
-				friend.SteamId = friendSteamId;
-				friend.Name = Steamworks.SteamFriends.GetFriendPersonaName(friendSteamId);
 
-				Steamworks.FriendGameInfo_t gameInfo;
-				Steamworks.SteamFriends.GetFriendGamePlayed(friendSteamId, out gameInfo);
+				FriendEntry friend = new FriendEntry
+				{
+					SteamId = friendSteamId,
+					Name = SteamFriends.GetFriendPersonaName(friendSteamId)
+				};
+
+				SteamFriends.GetFriendGamePlayed(friendSteamId, out FriendGameInfo_t gameInfo);
 				friend.PlayingMsc = gameInfo.m_gameID.AppID() == Client.GameAppId;
 
 				if (friend.PlayingMsc)
@@ -282,7 +276,6 @@ namespace MSCMP
 			Rect invitePanelRect = new Rect(Screen.width - invitePanelWidth - 10.0f, Screen.height / 2 - invitePanelHeight / 2, invitePanelWidth, 20.0f);
 
 			// Draw header
-
 			GUI.color = new Color(1.0f, 0.5f, 0.0f, 0.8f);
 			ImguiUtils.DrawPlainColorRect(invitePanelRect);
 
@@ -292,7 +285,6 @@ namespace MSCMP
 			invitePanelRect.x -= 2.0f;
 
 			// Draw contents
-
 			invitePanelRect.y += 21.0f;
 			invitePanelRect.height = invitePanelHeight;
 
@@ -310,18 +302,12 @@ namespace MSCMP
 
 				TextAnchor previousAlignment = GUI.skin.label.alignment;
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				bool playerIsOffline = Steamworks.SteamFriends.GetPersonaState() == Steamworks.EPersonaState.k_EPersonaStateOffline;
-				if (playerIsOffline)
-				{
-					GUI.Label(invitePanelRect, "You cannot invite friends while in steam offline mode.\n\nSwitch back your steam status to online to be able to invite players.");
-				}
-				else
-				{
-					GUI.Label(invitePanelRect, "You don't have any friends online.");
-				}
+				bool playerIsOffline = SteamFriends.GetPersonaState() == EPersonaState.k_EPersonaStateOffline;
+				GUI.Label(invitePanelRect,
+					playerIsOffline
+						? "You cannot invite friends while in steam offline mode.\n\nSwitch back your steam status to online to be able to invite players."
+						: "You don't have any friends online.");
 				GUI.skin.label.alignment = previousAlignment;
-
-
 				return;
 			}
 
@@ -335,17 +321,13 @@ namespace MSCMP
 			{
 				lastIndex = onlineFriendsCount;
 			}
+
 			for (int i = firstVisibleFriendId; i < lastIndex; ++i)
 			{
 				FriendEntry friend = _onlineFriends[i];
-				if (friend.PlayingMsc)
-				{
-					GUI.color = Color.green;
-				}
-				else
-				{
-					GUI.color = Color.white;
-				}
+				GUI.color = friend.PlayingMsc 
+					? Color.green 
+					: Color.white;
 
 				Rect friendRect = new Rect(2, 1 + rowHeight * i, 200.0f, rowHeight);
 
@@ -354,7 +336,7 @@ namespace MSCMP
 				friendRect.x += 180.0f;
 				friendRect.width = 100.0f;
 
-				Steamworks.CSteamID friendSteamId = friend.SteamId;
+				CSteamID friendSteamId = friend.SteamId;
 
 				if (_invitedFriendSteamId == friendSteamId)
 				{
@@ -399,7 +381,7 @@ namespace MSCMP
 		{
 			Utils.CallSafe("Update", () =>
 			{
-				Steamworks.SteamAPI.RunCallbacks();
+				SteamAPI.RunCallbacks();
 
 				if (IsInvitePanelVisible())
 				{

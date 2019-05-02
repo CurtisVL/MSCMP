@@ -45,11 +45,11 @@ namespace MSCMP
 
 			_assetBundle = AssetBundle.CreateFromFile(assetBundlePath);
 
-			GameObject go = new GameObject("Multiplayer GUI Controller");
-			go.AddComponent<UI.Mpgui>();
+			GameObject gameObject = new GameObject("Multiplayer GUI Controller");
+			gameObject.AddComponent<UI.Mpgui>();
 
-			go = new GameObject("Multiplayer Controller");
-			go.AddComponent<MpController>();
+			gameObject = new GameObject("Multiplayer Controller");
+			gameObject.AddComponent<MpController>();
 
 			UI.Console.RegisterCommand("quit", args =>
 			{

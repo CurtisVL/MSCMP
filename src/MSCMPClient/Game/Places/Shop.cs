@@ -73,6 +73,7 @@ namespace MSCMP.Game.Places
 					EventHook.AddWithSync(fsm, "Remove");
 					EventHook.AddWithSync(fsm, "Reset");
 				}
+
 				// Yes, the fan belt has a different state. :thonking:
 				if (fsm.gameObject.name == "BuyFanbelt")
 				{

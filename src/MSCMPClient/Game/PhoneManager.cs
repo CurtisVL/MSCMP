@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace MSCMP.Game
 {
@@ -8,14 +7,13 @@ namespace MSCMP.Game
 	/// </summary>
 	internal class PhoneManager
 	{
-		private GameObject _gameObject;
-		private PlayMakerFSM _ringFsm;
 		public static PhoneManager Instance;
 
+		private GameObject _gameObject;
+		private PlayMakerFSM _ringFsm;
 		private bool _callWaiting;
 		private int _timer;
 		private int _cooldown;
-
 		private bool _answeredPhone;
 
 		/// <summary>
@@ -103,9 +101,11 @@ namespace MSCMP.Game
 			if (_cooldown == 0)
 			{
 				_cooldown++;
-				Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage();
-				msg.topic = _ringFsm.Fsm.GetFsmString("Topic").Value;
-				msg.timesToRing = _ringFsm.Fsm.GetFsmInt("RandomTimes").Value;
+				Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage
+				{
+					topic = _ringFsm.Fsm.GetFsmString("Topic").Value,
+					timesToRing = _ringFsm.Fsm.GetFsmInt("RandomTimes").Value
+				};
 				Network.NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			}
 			else if (_cooldown != 0)
@@ -124,9 +124,11 @@ namespace MSCMP.Game
 		private void AnsweredPhoneCall()
 		{
 			Logger.Debug("Phone call answered!");
-			Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage();
-			msg.topic = _ringFsm.Fsm.GetFsmString("Topic").Value;
-			msg.timesToRing = -1;
+			Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage
+			{
+				topic = _ringFsm.Fsm.GetFsmString("Topic").Value,
+				timesToRing = -1
+			};
 			Network.NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			MapManager.Instance.SyncDarts();
 		}

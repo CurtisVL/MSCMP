@@ -159,23 +159,22 @@ namespace MSCMP.Game.Objects
 			_weatherFsm.FsmVariables.GetFsmFloat("Offset").Value = variables[0];
 			_weatherFsm.FsmVariables.GetFsmInt("WeatherType").Value = Convert.ToInt32(variables[1]);
 			WeatherStates newState = (WeatherStates)variables[2];
-			if (newState != _currentWeather)
+			if (newState == _currentWeather) return;
+
+			switch (newState)
 			{
-				switch (newState)
-				{
-					case WeatherStates.NoWeather:
-						_weatherFsm.SendEvent("MP_NoWeather");
-						_currentWeather = WeatherStates.NoWeather;
-						break;
-					case WeatherStates.Rain:
-						_weatherFsm.SendEvent("MP_Rain");
-						_currentWeather = WeatherStates.Rain;
-						break;
-					case WeatherStates.Thunder:
-						_weatherFsm.SendEvent("MP_Thunder");
-						_currentWeather = WeatherStates.Thunder;
-						break;
-				}
+				case WeatherStates.NoWeather:
+					_weatherFsm.SendEvent("MP_NoWeather");
+					_currentWeather = WeatherStates.NoWeather;
+					break;
+				case WeatherStates.Rain:
+					_weatherFsm.SendEvent("MP_Rain");
+					_currentWeather = WeatherStates.Rain;
+					break;
+				case WeatherStates.Thunder:
+					_weatherFsm.SendEvent("MP_Thunder");
+					_currentWeather = WeatherStates.Thunder;
+					break;
 			}
 		}
 

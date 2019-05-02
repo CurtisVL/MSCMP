@@ -44,10 +44,8 @@ namespace MSCMP.Development
 				return;
 			}
 
-			if (value is FsmEvent && obj is FsmStateAction)
+			if (value is FsmEvent fsmEvent && obj is FsmStateAction action)
 			{
-				FsmEvent fsmEvent = (FsmEvent)value;
-				FsmStateAction action = (FsmStateAction)obj;
 				FsmState state = action.State;
 				Fsm fsm = action.Fsm;
 
@@ -74,33 +72,30 @@ namespace MSCMP.Development
 				writer.WriteValue(value.ToString());
 			}
 
-			if (value is NamedVariable)
+			if (value is NamedVariable variable)
 			{
-				string variableName = ((NamedVariable)value).Name;
+				string variableName = variable.Name;
 				if (variableName.Length > 0)
 				{
 					writer.WriteValue($" <div class=\"variable_ref\">{variableName}</div>");
 				}
 			}
-			if (value is FsmProperty)
+			if (value is FsmProperty property)
 			{
-				string propertyName = ((FsmProperty)value).PropertyName;
+				string propertyName = property.PropertyName;
 				if (propertyName.Length > 0)
 				{
 					writer.WriteValue($" <div class=\"variable_ref\">{propertyName}</div>");
 				}
 			}
 
-			if (value is FsmOwnerDefault)
+			if (value is FsmOwnerDefault val1)
 			{
-				FsmOwnerDefault val = (FsmOwnerDefault)value;
-				writer.WriteValue(DumpOwnerDefault(val));
+				writer.WriteValue(DumpOwnerDefault(val1));
 			}
 
-			if (value is FsmEventTarget)
+			if (value is FsmEventTarget val)
 			{
-				FsmEventTarget val = (FsmEventTarget)value;
-
 				string eventTargetInfo = val.target + " ";
 
 				if (val.excludeSelf.Value)
@@ -144,11 +139,11 @@ namespace MSCMP.Development
 			Type type = obj.GetType();
 			FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
 
-			foreach (FieldInfo fi in fields)
+			foreach (FieldInfo fieldInfo in fields)
 			{
 				writer.StartTag("tr");
 				{
-					Type fieldType = fi.FieldType;
+					Type fieldType = fieldInfo.FieldType;
 
 					writer.StartTag("td", "width=\"50px\"");
 					{
@@ -160,7 +155,7 @@ namespace MSCMP.Development
 
 					writer.StartTag("td", "width=\"100px\"");
 					{
-						writer.WriteValue(fi.Name);
+						writer.WriteValue(fieldInfo.Name);
 					}
 					writer.EndTag();
 
@@ -168,7 +163,7 @@ namespace MSCMP.Development
 					{
 						writer.StartTag("div", "class=\"field_value\"");
 						{
-							object value = fi.GetValue(obj);
+							object value = fieldInfo.GetValue(obj);
 							PrintValue(obj, value, writer);
 						}
 						writer.EndTag();
@@ -384,8 +379,7 @@ namespace MSCMP.Development
 		{
 			_dumpMethods.Add(typeof(T), dumpDelegate);
 		}
-
-
+		
 		/// <summary>
 		/// Dump world to the given folder.
 		/// </summary>

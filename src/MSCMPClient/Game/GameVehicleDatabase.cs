@@ -19,12 +19,12 @@ namespace MSCMP.Game
 		/// <summary>
 		/// List of AI vehicles and an ID to reference them by.
 		/// </summary>
-		public readonly Dictionary<int, GameObject> VehiclesAi = new Dictionary<int, GameObject>();
+		private readonly Dictionary<int, GameObject> _vehiclesAi = new Dictionary<int, GameObject>();
 
 		/// <summary>
 		/// List of Player vehicles and an ID to reference them by.
 		/// </summary>
-		public readonly Dictionary<int, GameObject> VehiclesPlayer = new Dictionary<int, GameObject>();
+		private readonly Dictionary<int, GameObject> _vehiclesPlayer = new Dictionary<int, GameObject>();
 
 		public GameVehicleDatabase()
 		{
@@ -42,7 +42,7 @@ namespace MSCMP.Game
 		/// <param name="gameObject">The destroyed game object.</param>
 		public void DestroyObject(GameObject gameObject)
 		{
-			VehiclesAi.Clear();
+			_vehiclesAi.Clear();
 		}
 
 		/// <summary>
@@ -50,7 +50,7 @@ namespace MSCMP.Game
 		/// </summary>
 		public void DestroyObjects()
 		{
-			VehiclesAi.Clear();
+			_vehiclesAi.Clear();
 		}
 
 		/// <summary>
@@ -68,14 +68,14 @@ namespace MSCMP.Game
 					return;
 				}
 
-				if (VehiclesPlayer.ContainsValue(gameObject))
+				if (_vehiclesPlayer.ContainsValue(gameObject))
 				{
 					Logger.Debug($"Duplicate Player vehicle prefab '{gameObject.name}' rejected");
 				}
 				else
 				{
-					VehiclesPlayer.Add(VehiclesPlayer.Count + 1, gameObject);
-					Logger.Debug($"Registered Player vehicle prefab '{gameObject.transform.parent.name}' (Player Vehicle ID: {VehiclesPlayer.Count})");
+					_vehiclesPlayer.Add(_vehiclesPlayer.Count + 1, gameObject);
+					Logger.Debug($"Registered Player vehicle prefab '{gameObject.transform.parent.name}' (Player Vehicle ID: {_vehiclesPlayer.Count})");
 
 					GameObject carCollider;
 					if (gameObject.transform.FindChild("CarCollider") == null)
@@ -102,16 +102,16 @@ namespace MSCMP.Game
 
 			if (gameObject.transform.FindChild("CarColliderAI") != null)
 			{
-				if (VehiclesAi.ContainsValue(gameObject))
+				if (_vehiclesAi.ContainsValue(gameObject))
 				{
 					Logger.Debug($"Duplicate AI vehicle prefab '{gameObject.name}' rejected");
 				}
 				else
 				{
-					VehiclesAi.Add(VehiclesAi.Count + 1, gameObject);
+					_vehiclesAi.Add(_vehiclesAi.Count + 1, gameObject);
 					if (Network.NetWorld.DisplayObjectRegisteringDebug)
 					{
-						Logger.Debug($"Registered AI vehicle prefab '{gameObject.name}' (AI Vehicle ID: {VehiclesAi.Count})");
+						Logger.Debug($"Registered AI vehicle prefab '{gameObject.name}' (AI Vehicle ID: {_vehiclesAi.Count})");
 					}
 					GameObject carCollider = gameObject.transform.FindChild("CarColliderAI").gameObject;
 					carCollider.gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.AiVehicle, ObjectSyncManager.AutomaticId);

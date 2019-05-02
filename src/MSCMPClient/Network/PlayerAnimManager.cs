@@ -16,8 +16,8 @@ namespace MSCMP.Network
 		/// <summary>
 		/// Currently played animation id.
 		/// </summary>
-		public AnimationId CurrentAnim = AnimationId.Standing;
-		public AnimationState ActiveAnimationState;
+		private AnimationId _currentAnim = AnimationId.Standing;
+		private AnimationState _activeAnimationState;
 
 		/// <summary>
 		/// The amount of movement packets needed left to send animation sync packet
@@ -99,14 +99,11 @@ namespace MSCMP.Network
 			switch (stance)
 			{
 				case StanceId.Crouching:
-					if (standingAnim) return AnimationId.Crouching;
-					else return AnimationId.CrouchingWalk;
+					return standingAnim ? AnimationId.Crouching : AnimationId.CrouchingWalk;
 				case StanceId.CrouchingLow:
-					if (standingAnim) return AnimationId.CrouchingLow;
-					else return AnimationId.CrouchingLowWalk;
+					return standingAnim ? AnimationId.CrouchingLow : AnimationId.CrouchingLowWalk;
 				default:
-					if (standingAnim) return AnimationId.Standing;
-					else return AnimationId.Walk;
+					return standingAnim ? AnimationId.Standing : AnimationId.Walk;
 			}
 		}
 
@@ -167,7 +164,7 @@ namespace MSCMP.Network
 		#endregion
 		#region Drink States
 
-		private static readonly List<GameObject> _drinks = new List<GameObject>();
+		private static readonly List<GameObject> Drinks = new List<GameObject>();
 		private GameObject _ourDrinkObject;
 
 		/// <summary>
@@ -209,7 +206,7 @@ namespace MSCMP.Network
 			{ 310, 150, 273 }
 		};
 
-		public bool AreDrinksPreloaded() { return _drinks.Count != 0; }
+		public bool AreDrinksPreloaded() { return Drinks.Count != 0; }
 
 		/// <summary>
 		/// Preloads the drink game objects of the game player to use them later while drinking
@@ -223,7 +220,7 @@ namespace MSCMP.Network
 			{
 				GameObject drinkObject = handHandleObject.transform.FindChild(_drinkObjectNames[i]).gameObject;
 				Client.Assert(drinkObject, "Unable to find drink object - " + _drinkObjectNames[i]);
-				_drinks.Add(drinkObject);
+				Drinks.Add(drinkObject);
 			}
 		}
 
@@ -264,10 +261,10 @@ namespace MSCMP.Network
 				return;
 			}
 
-			string drinkObjectName = _drinkObjectNames[(int)drinkingObjectId];
+			string drinkObjectName = _drinkObjectNames[drinkingObjectId];
 
 			GameObject ourDrinkObjectToSpawn = null;
-			foreach (GameObject drink in _drinks)
+			foreach (GameObject drink in Drinks)
 			{
 				if (drink.name == drinkObjectName) ourDrinkObjectToSpawn = drink;
 			}
@@ -338,7 +335,7 @@ namespace MSCMP.Network
 		public void PlayAnimation(AnimationId animation, bool force = false, bool mainLayer = true)
 		{
 			if (_characterAnimationComponent == null) return;
-			if (!force && CurrentAnim == animation && mainLayer) return;
+			if (!force && _currentAnim == animation && mainLayer) return;
 
 			string animName = GetAnimationName(animation);
 
@@ -347,8 +344,8 @@ namespace MSCMP.Network
 
 			if (mainLayer)
 			{
-				CurrentAnim = animation;
-				ActiveAnimationState = _characterAnimationComponent[animName];
+				_currentAnim = animation;
+				_activeAnimationState = _characterAnimationComponent[animName];
 			}
 		}
 

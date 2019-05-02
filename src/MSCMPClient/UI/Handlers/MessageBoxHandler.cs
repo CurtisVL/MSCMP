@@ -49,18 +49,17 @@ namespace MSCMP.UI.Handlers
 		/// <param name="text">The text to show.</param>
 		/// <param name="onClose">The callback that will be closed when OK button is pressed.</param>
 		/// <returns>true if message box was showed false otherwise</returns>
-		public bool Show(string text, OnClose onClose = null)
+		public void Show(string text, OnClose onClose = null)
 		{
 			// Allow only one message box.
 			if (gameObject.activeSelf)
 			{
-				return false;
+				return;
 			}
 			_onClose = onClose;
 			transform.FindChild("Text").gameObject.GetComponent<Text>().text = text;
 			gameObject.SetActive(true);
 			Mpgui.Instance.ShowCursor(true);
-			return true;
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using HutongGames.PlayMaker;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace MSCMP
@@ -9,7 +10,6 @@ namespace MSCMP
 	/// </summary>
 	internal static class PlayMakerUtils
 	{
-
 		/// <summary>
 		/// Add new global transition from the given event to the state name to the given PlayMaker FSM.
 		/// </summary>
@@ -19,20 +19,17 @@ namespace MSCMP
 		public static void AddNewGlobalTransition(PlayMakerFSM fsm, FsmEvent ev, string stateName)
 		{
 			FsmTransition[] oldTransitions = fsm.FsmGlobalTransitions;
-			List<FsmTransition> temp = new List<FsmTransition>();
-			foreach (FsmTransition t in oldTransitions)
+			List<FsmTransition> temp = oldTransitions.ToList();
+
+			FsmTransition transition = new FsmTransition
 			{
-				temp.Add(t);
-			}
-			FsmTransition transition = new FsmTransition();
-			transition.FsmEvent = ev;
-			transition.ToState = stateName;
+				FsmEvent = ev, ToState = stateName
+			};
 			temp.Add(transition);
 
 			fsm.Fsm.GlobalTransitions = temp.ToArray();
 		}
-
-
+		
 		/// <summary>
 		/// Add new action into play maker state.
 		/// </summary>
@@ -41,12 +38,11 @@ namespace MSCMP
 		public static void AddNewAction(FsmState state, FsmStateAction action)
 		{
 			FsmStateAction[] oldActions = state.Actions;
-			List<FsmStateAction> temp = new List<FsmStateAction>();
-			temp.Add(action);
-			foreach (FsmStateAction v in oldActions)
+			List<FsmStateAction> temp = new List<FsmStateAction>
 			{
-				temp.Add(v);
-			}
+				action
+			};
+			temp.AddRange(oldActions);
 			state.Actions = temp.ToArray();
 		}
 
@@ -66,12 +62,7 @@ namespace MSCMP
 			fsm.Fsm.GlobalTransitions = temp.ToArray();
 
 			FsmEvent[] oldEvents = fsm.Fsm.Events;
-			List<FsmEvent> temp2 = new List<FsmEvent>();
-			foreach (FsmEvent t in oldEvents)
-			{
-				if (t.Name != eventName) temp2.Add(t);
-			}
-			fsm.Fsm.Events = temp2.ToArray();
+			fsm.Fsm.Events = oldEvents.Where(t => t.Name != eventName).ToArray();
 		}
 
 		/// <summary>

@@ -14,8 +14,8 @@ namespace MSCMP
 	internal static class MessagesList
 	{
 		private const int MESSAGES_COUNT = 5;
-		private static readonly Color[] _colors = new Color[MESSAGES_COUNT];
-		private static readonly string[] _messages = new string[MESSAGES_COUNT];
+		private static readonly Color[] Colors = new Color[MESSAGES_COUNT];
+		private static readonly string[] Messages = new string[MESSAGES_COUNT];
 
 		/// <summary>
 		/// Add message to the hud.
@@ -27,11 +27,11 @@ namespace MSCMP
 
 			for (int i = 1; i < MESSAGES_COUNT; ++i)
 			{
-				_colors[i - 1] = _colors[i];
-				_messages[i - 1] = _messages[i];
+				Colors[i - 1] = Colors[i];
+				Messages[i - 1] = Messages[i];
 			}
 
-			_messages[MESSAGES_COUNT - 1] = message;
+			Messages[MESSAGES_COUNT - 1] = message;
 			Color color = Color.white;
 			switch (severity)
 			{
@@ -44,7 +44,7 @@ namespace MSCMP
 					break;
 			}
 
-			_colors[MESSAGES_COUNT - 1] = color;
+			Colors[MESSAGES_COUNT - 1] = color;
 		}
 
 		/// <summary>
@@ -54,7 +54,7 @@ namespace MSCMP
 		{
 			for (int i = 0; i < MESSAGES_COUNT; ++i)
 			{
-				_messages[i] = "";
+				Messages[i] = "";
 			}
 		}
 
@@ -71,13 +71,13 @@ namespace MSCMP
 			const float lineHeight = 20;
 			for (int i = 0; i < MESSAGES_COUNT; ++i)
 			{
-				if (_messages[i] != null && _messages[i].Length > 0)
+				if (Messages[i] != null && Messages[i].Length > 0)
 				{
 					GUI.color = Color.black;
-					GUI.Label(new Rect(x + 1, y + 1, lineWidth, lineHeight), _messages[i]);
+					GUI.Label(new Rect(x + 1, y + 1, lineWidth, lineHeight), Messages[i]);
 
-					GUI.color = _colors[i];
-					GUI.Label(new Rect(x, y, lineWidth, lineHeight), _messages[i]);
+					GUI.color = Colors[i];
+					GUI.Label(new Rect(x, y, lineWidth, lineHeight), Messages[i]);
 				}
 				y += lineHeight;
 			}

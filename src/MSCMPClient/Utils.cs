@@ -1,7 +1,8 @@
 using HutongGames.PlayMaker;
-using System;
-using System.Reflection;
 using MSCMP.Network.Messages;
+using System;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace MSCMP
@@ -44,27 +45,27 @@ namespace MSCMP
 			}
 
 			Type type = obj.GetType();
-			FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+			FieldInfo[] fieldInfos = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
 
-			foreach (FieldInfo fi in fields)
+			foreach (FieldInfo fieldInfo in fieldInfos)
 			{
-				object val = fi.GetValue(obj);
-				Type fieldType = fi.FieldType;
+				object val = fieldInfo.GetValue(obj);
+				Type fieldType = fieldInfo.FieldType;
 
 				if (val == null)
 				{
-					print(level, fieldType.FullName + " " + fi.Name + " = null");
+					print(level, fieldType.FullName + " " + fieldInfo.Name + " = null");
 					continue;
 				}
 
 				string additionalString = "";
 
-				if (val is NamedVariable)
+				if (val is NamedVariable variable)
 				{
-					additionalString += $" [Named variable: {((NamedVariable)val).Name}]";
+					additionalString += $" [Named variable: {variable.Name}]";
 				}
 
-				print(level, fieldType.FullName + " " + fi.Name + " = " + val + additionalString);
+				print(level, fieldType.FullName + " " + fieldInfo.Name + " = " + val + additionalString);
 
 				if (fieldType.IsClass && (fieldType.Namespace == null || !fieldType.Namespace.StartsWith("System")))
 				{
@@ -83,25 +84,23 @@ namespace MSCMP
 			if (var == null) return "null";
 
 			object value = null;
-			if (var is FsmBool) { value = ((FsmBool)var).Value; }
-			if (var is FsmColor) { value = ((FsmColor)var).Value; }
-			if (var is FsmFloat) { value = ((FsmFloat)var).Value; }
-			if (var is FsmGameObject) { value = ((FsmGameObject)var).Value; }
-			if (var is FsmInt) { value = ((FsmInt)var).Value; }
-			if (var is FsmMaterial) { value = ((FsmMaterial)var).Value; }
-			if (var is FsmObject) { value = ((FsmObject)var).Value; }
-			if (var is FsmQuaternion) { value = ((FsmQuaternion)var).Value; }
-			if (var is FsmRect) { value = ((FsmRect)var).Value; }
-			if (var is FsmString) { value = ((FsmString)var).Value; }
-			if (var is FsmTexture) { value = ((FsmTexture)var).Value; }
-			if (var is FsmVector2) { value = ((FsmVector2)var).Value; }
-			if (var is FsmVector3) { value = ((FsmVector3)var).Value; }
+			if (var is FsmBool fsmBool) { value = fsmBool.Value; }
+			if (var is FsmColor color) { value = color.Value; }
+			if (var is FsmFloat fsmFloat) { value = fsmFloat.Value; }
+			if (var is FsmGameObject gameObject) { value = gameObject.Value; }
+			if (var is FsmInt fsmInt) { value = fsmInt.Value; }
+			if (var is FsmMaterial material) { value = material.Value; }
+			if (var is FsmObject fsmObject) { value = fsmObject.Value; }
+			if (var is FsmQuaternion quaternion) { value = quaternion.Value; }
+			if (var is FsmRect rect) { value = rect.Value; }
+			if (var is FsmString fsmString) { value = fsmString.Value; }
+			if (var is FsmTexture texture) { value = texture.Value; }
+			if (var is FsmVector2 vector2) { value = vector2.Value; }
+			if (var is FsmVector3 vector3) { value = vector3.Value; }
 
-			if (value == null)
-			{
-				return "null";
-			}
-			return value.ToString();
+			return value == null 
+				? "null" 
+				: value.ToString();
 		}
 
 		/// <summary>
@@ -121,63 +120,67 @@ namespace MSCMP
 
 			Logger.Log("EVENTS");
 			FsmEvent[] events = pmfsm.FsmEvents;
-			foreach (FsmEvent e in events)
+			foreach (FsmEvent fsmEvent in events)
 			{
-				if (e == null)
+				if (fsmEvent == null)
 				{
 					print(level, "Null event!");
 					continue;
 				}
-				print(level, $"Event Name: {e.Name} ({e.Path})");
+				print(level, $"Event Name: {fsmEvent.Name} ({fsmEvent.Path})");
 			}
+
 			Logger.Log("GT");
-			foreach (FsmTransition t in pmfsm.FsmGlobalTransitions)
+			foreach (FsmTransition fsmTransition in pmfsm.FsmGlobalTransitions)
 			{
-				if (t == null)
+				if (fsmTransition == null)
 				{
 					print(level, "Null global transition!");
 					continue;
 				}
-				print(level, "Global transition: " + t.EventName + " > " + t.ToState);
+				print(level, "Global transition: " + fsmTransition.EventName + " > " + fsmTransition.ToState);
 			}
+
 			Logger.Log("STATES");
 			FsmState[] states = pmfsm.FsmStates;
-			foreach (FsmState s in states)
+			foreach (FsmState fsmState in states)
 			{
-				if (s == null)
+				if (fsmState == null)
 				{
 					print(level, "Null state!");
 					continue;
 				}
 				Logger.Log("PRE TRANS");
 
-				print(level, $"State Name: {s.Name} (fsm: {s.Fsm}, go: {s.Fsm.GameObject})");
-				foreach (FsmTransition t in s.Transitions)
+				print(level, $"State Name: {fsmState.Name} (fsm: {fsmState.Fsm}, go: {fsmState.Fsm.GameObject})");
+				foreach (FsmTransition fsmTransition in fsmState.Transitions)
 				{
-					if (t == null)
+					if (fsmTransition == null)
 					{
 						print(level + 1, "Null transition!");
 						continue;
 					}
 
 
-					print(level + 1, "Transition: " + t.EventName + " > " + t.ToState);
+					print(level + 1, "Transition: " + fsmTransition.EventName + " > " + fsmTransition.ToState);
 				}
+
 				Logger.Log("POST TRANS");
 				Logger.Log("PRE ACTIONS");
-				foreach (FsmStateAction a in s.Actions)
+				foreach (FsmStateAction fsmStateAction in fsmState.Actions)
 				{
-					if (a == null)
+					if (fsmStateAction == null)
 					{
 						print(level + 1, "Null action!");
 						continue;
 					}
 
-					print(level + 1, "Action Name: " + a.Name + " (" + a.GetType().FullName + ")");
-					PrintObjectFields(level + 2, a, print);
+					print(level + 1, "Action Name: " + fsmStateAction.Name + " (" + fsmStateAction.GetType().FullName + ")");
+					PrintObjectFields(level + 2, fsmStateAction, print);
 				}
 				Logger.Log("POST ACTIONS");
 			}
+
 			Logger.Log("VARIABLES");
 			print(level, "Variables:");
 			NamedVariable[] variables = pmfsm.FsmVariables.GetAllNamedVariables();
@@ -200,24 +203,30 @@ namespace MSCMP
 			{
 				print(level + 1, "C " + component.GetType().FullName + " [" + component.tag + "]");
 
-				if (component is PlayMakerFSM)
+				switch (component)
 				{
-					try
+					case PlayMakerFSM fsm:
+						try
+						{
+							PrintPlaymakerFsmComponent(fsm, level + 2, print);
+						}
+						catch (Exception e)
+						{
+							Logger.Log("XXX");
+							Logger.Log(e.StackTrace);
+						}
+
+						break;
+
+					case Animation animation:
 					{
-						PrintPlaymakerFsmComponent((PlayMakerFSM)component, level + 2, print);
-					}
-					catch (Exception e)
-					{
-						Logger.Log("XXX");
-						Logger.Log(e.StackTrace);
-					}
-				}
-				else if (component is Animation)
-				{
-					Animation anim = (Animation)component;
-					foreach (AnimationState state in anim)
-					{
-						print(level + 2, "Animation state: " + state.name);
+						Animation anim = animation;
+						foreach (AnimationState state in anim)
+						{
+							print(level + 2, "Animation state: " + state.name);
+						}
+
+						break;
 					}
 				}
 			}
@@ -266,14 +275,7 @@ namespace MSCMP
 		public static PlayMakerFSM GetPlaymakerScriptByName(GameObject go, string name)
 		{
 			PlayMakerFSM[] fsms = go.GetComponentsInChildren<PlayMakerFSM>();
-			foreach (PlayMakerFSM fsm in fsms)
-			{
-				if (fsm.FsmName == name)
-				{
-					return fsm;
-				}
-			}
-			return null;
+			return fsms.FirstOrDefault(fsm => fsm.FsmName == name);
 		}
 
 		/// <summary>
@@ -283,10 +285,12 @@ namespace MSCMP
 		/// <returns>Vector network message.</returns>
 		public static Vector3Message GameVec3ToNet(Vector3 v3)
 		{
-			Vector3Message msg = new Vector3Message();
-			msg.x = v3.x;
-			msg.y = v3.y;
-			msg.z = v3.z;
+			Vector3Message msg = new Vector3Message
+			{
+				x = v3.x,
+				y = v3.y,
+				z = v3.z
+			};
 			return msg;
 		}
 
@@ -297,10 +301,12 @@ namespace MSCMP
 		/// <returns>Converted vector.</returns>
 		public static Vector3 NetVec3ToGame(Vector3Message msg)
 		{
-			Vector3 vec = new Vector3();
-			vec.x = msg.x;
-			vec.y = msg.y;
-			vec.z = msg.z;
+			Vector3 vec = new Vector3
+			{
+				x = msg.x,
+				y = msg.y,
+				z = msg.z
+			};
 			return vec;
 		}
 
@@ -311,11 +317,13 @@ namespace MSCMP
 		/// <returns>Quaternion network message.</returns>
 		public static QuaternionMessage GameQuatToNet(Quaternion q)
 		{
-			QuaternionMessage msg = new QuaternionMessage();
-			msg.w = q.w;
-			msg.x = q.x;
-			msg.y = q.y;
-			msg.z = q.z;
+			QuaternionMessage msg = new QuaternionMessage
+			{
+				w = q.w,
+				x = q.x,
+				y = q.y,
+				z = q.z
+			};
 			return msg;
 		}
 
@@ -326,11 +334,13 @@ namespace MSCMP
 		/// <returns>Converted quaternion.</returns>
 		public static Quaternion NetQuatToGame(QuaternionMessage msg)
 		{
-			Quaternion q = new Quaternion();
-			q.w = msg.w;
-			q.x = msg.x;
-			q.y = msg.y;
-			q.z = msg.z;
+			Quaternion q = new Quaternion
+			{
+				w = msg.w,
+				x = msg.x,
+				y = msg.y,
+				z = msg.z
+			};
 			return q;
 		}
 
@@ -363,7 +373,6 @@ namespace MSCMP
 				Client.FatalError("Safe call " + name + " failed.\n" + e.Message + "\n" + e.StackTrace);
 			}
 		}
-
 
 		/// <summary>
 		/// Calculate jenkins hash of the given string.

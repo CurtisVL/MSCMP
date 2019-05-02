@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace MSCMP.Game.Objects
 {
-	internal class Pickupable 
+	internal class Pickupable
 		: ISyncedObject
 	{
 		private readonly GameObject _gameObject;
@@ -12,7 +12,7 @@ namespace MSCMP.Game.Objects
 
 		private bool _holdingObject;
 
-		public enum SubType
+		private enum SubType
 		{
 			Consumable,
 			ShoppingBag,
@@ -50,14 +50,15 @@ namespace MSCMP.Game.Objects
 					_objectType = SubType.Consumable;
 					break;
 				}
-				// Shopping bag.
 
+				// Shopping bag.
 				if (fsm.Fsm.GetState("Initiate") != null && fsm.Fsm.Name == "Open")
 				{
 					new ShoppingBag(_gameObject);
 					_objectType = SubType.ShoppingBag;
 					break;
 				}
+
 				// Beer case.
 				if (fsm.Fsm.GetState("Remove bottle") != null)
 				{
@@ -128,25 +129,17 @@ namespace MSCMP.Game.Objects
 		/// <returns>Variables to be sent to the remote client.</returns>
 		public float[] ReturnSyncedVariables(bool sendAllVariables)
 		{
-			List<float> variables = new List<float>();
-			if (_holdingObject)
+			List<float> variables = new List<float>
 			{
-				variables.Add(1);
-			}
-			else
-			{
-				variables.Add(0);
-			}
+				_holdingObject ? 1 : 0
+			};
 
 			// Beer case.
-			if (_objectType == SubType.BeerCase)
-			{
-				if (_usedBottlesLast != _beerCaseSubType.UsedBottles || sendAllVariables)
-				{
-					_usedBottlesLast = _beerCaseSubType.UsedBottles;
-					variables.Add(_beerCaseSubType.UsedBottles);
-				}
-			}
+			if (_objectType != SubType.BeerCase) return variables.ToArray();
+			if (_usedBottlesLast == _beerCaseSubType.UsedBottles && !sendAllVariables) return variables.ToArray();
+
+			_usedBottlesLast = _beerCaseSubType.UsedBottles;
+			variables.Add(_beerCaseSubType.UsedBottles);
 
 			return variables.ToArray();
 		}
@@ -156,30 +149,17 @@ namespace MSCMP.Game.Objects
 		/// </summary>
 		public void HandleSyncedVariables(float[] variables)
 		{
-			if (_rigidbody != null)
-			{
-				if (variables[0] == 1)
-				{
-					// Object is being held.
-					_rigidbody.useGravity = false;
-				}
-				else
-				{
-					// Object is not being held.
-					_rigidbody.useGravity = true;
-				}
+			if (_rigidbody == null) return;
+			_rigidbody.useGravity = variables[0] != 1;
 
-				if (variables.Length > 1)
-				{
-					// Beer case
-					if (_objectType == SubType.BeerCase)
-					{
-						if (variables[1] != _beerCaseSubType.UsedBottles)
-						{
-							_beerCaseSubType.RemoveBottles((int)variables[1]);
-						}
-					}
-				}
+			if (variables.Length <= 1) return;
+
+			// Beer case
+			if (_objectType != SubType.BeerCase) return;
+
+			if (variables[1] != _beerCaseSubType.UsedBottles)
+			{
+				_beerCaseSubType.RemoveBottles((int)variables[1]);
 			}
 		}
 
@@ -204,11 +184,10 @@ namespace MSCMP.Game.Objects
 		/// </summary>
 		public void SyncTakenByForce()
 		{
-			if (_holdingObject)
-			{
-				Logger.Log("Dropped object because remote player has taken control of it!");
-				GamePlayer.Instance.DropStolenObject();
-			}
+			if (!_holdingObject) return;
+
+			Logger.Log("Dropped object because remote player has taken control of it!");
+			GamePlayer.Instance.DropStolenObject();
 		}
 
 		/// <summary>

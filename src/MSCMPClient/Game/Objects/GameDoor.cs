@@ -137,14 +137,9 @@ namespace MSCMP.Game.Objects
 		/// <param name="open">Open or close?</param>
 		public void Open(bool open)
 		{
-			if (open)
-			{
-				_fsm.SendEvent(MP_OPEN_EVENT_NAME);
-			}
-			else
-			{
-				_fsm.SendEvent(MP_CLOSE_EVENT_NAME);
-			}
+			_fsm.SendEvent(open 
+				? MP_OPEN_EVENT_NAME 
+				: MP_CLOSE_EVENT_NAME);
 		}
 	}
 }

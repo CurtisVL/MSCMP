@@ -53,8 +53,10 @@ namespace MSCMP.Game
 		/// </summary>
 		public void SyncDarts()
 		{
-			Network.Messages.DartSyncMessage msg = new Network.Messages.DartSyncMessage();
-			msg.darts = ReturnActiveDarts();
+			Network.Messages.DartSyncMessage msg = new Network.Messages.DartSyncMessage
+			{
+				darts = ReturnActiveDarts()
+			};
 			Network.NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 

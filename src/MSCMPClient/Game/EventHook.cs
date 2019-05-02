@@ -9,8 +9,8 @@ namespace MSCMP.Game
 	/// </summary>
 	internal class EventHook
 	{
-		public readonly Dictionary<int, PlayMakerFSM> Fsms = new Dictionary<int, PlayMakerFSM>();
-		public readonly Dictionary<int, string> FsmEvents = new Dictionary<int, string>();
+		private readonly Dictionary<int, PlayMakerFSM> _fsms = new Dictionary<int, PlayMakerFSM>();
+		private readonly Dictionary<int, string> _fsmEvents = new Dictionary<int, string>();
 
 		public static EventHook Instance;
 
@@ -38,12 +38,11 @@ namespace MSCMP.Game
 			else
 			{
 				FsmState state = fsm.Fsm.GetState(eventName);
-				if (state != null)
-				{
-					PlayMakerUtils.AddNewAction(state, new CustomAction(action, eventName, actionOnExit));
-					FsmEvent mpEvent = fsm.Fsm.GetEvent("MP_" + eventName);
-					PlayMakerUtils.AddNewGlobalTransition(fsm, mpEvent, eventName);
-				}
+				if (state == null) return;
+
+				PlayMakerUtils.AddNewAction(state, new CustomAction(action, eventName, actionOnExit));
+				FsmEvent mpEvent = fsm.Fsm.GetEvent("MP_" + eventName);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpEvent, eventName);
 			}
 		}
 
@@ -62,35 +61,34 @@ namespace MSCMP.Game
 			else
 			{
 				FsmState state = fsm.Fsm.GetState(eventName);
-				if (state != null)
+				if (state == null) return;
+
+				bool duplicate = false;
+				int fsmId = Instance._fsmEvents.Count + 1;
+				if (Instance._fsms.ContainsValue(fsm))
 				{
-					bool duplicate = false;
-					int fsmId = Instance.FsmEvents.Count + 1;
-					if (Instance.Fsms.ContainsValue(fsm))
+					duplicate = true;
+					foreach (KeyValuePair<int, PlayMakerFSM> entry in Instance._fsms)
 					{
-						duplicate = true;
-						foreach (KeyValuePair<int, PlayMakerFSM> entry in Instance.Fsms)
+						if (entry.Value == fsm)
 						{
-							if (entry.Value == fsm)
-							{
-								fsmId = entry.Key;
-								break;
-							}
+							fsmId = entry.Key;
+							break;
 						}
 					}
-					int eventId = Instance.FsmEvents.Count + 1;
-					Instance.Fsms.Add(Instance.Fsms.Count + 1, fsm);
-					Instance.FsmEvents.Add(Instance.FsmEvents.Count + 1, eventName);
+				}
 
-					PlayMakerUtils.AddNewAction(state, new CustomActionSync(Instance.Fsms.Count, Instance.FsmEvents.Count, action));
-					FsmEvent mpEvent = fsm.Fsm.GetEvent("MP_" + eventName);
-					PlayMakerUtils.AddNewGlobalTransition(fsm, mpEvent, eventName);
+				Instance._fsms.Add(Instance._fsms.Count + 1, fsm);
+				Instance._fsmEvents.Add(Instance._fsmEvents.Count + 1, eventName);
 
-					// Sync with host
-					if (!Network.NetManager.Instance.IsHost && Network.NetManager.Instance.IsOnline && duplicate == false)
-					{
-						Network.NetLocalPlayer.Instance.RequestEventHookSync(fsmId);
-					}
+				PlayMakerUtils.AddNewAction(state, new CustomActionSync(Instance._fsms.Count, Instance._fsmEvents.Count, action));
+				FsmEvent mpEvent = fsm.Fsm.GetEvent("MP_" + eventName);
+				PlayMakerUtils.AddNewGlobalTransition(fsm, mpEvent, eventName);
+
+				// Sync with host
+				if (!Network.NetManager.Instance.IsHost && Network.NetManager.Instance.IsOnline && duplicate == false)
+				{
+					Network.NetLocalPlayer.Instance.RequestEventHookSync(fsmId);
 				}
 			}
 		}
@@ -106,11 +104,11 @@ namespace MSCMP.Game
 			{
 				if (fsmEventId == -1)
 				{
-					Instance.Fsms[fsmId].SendEvent("MP_" + fsmEventName);
+					Instance._fsms[fsmId].SendEvent("MP_" + fsmEventName);
 				}
 				else
 				{
-					Instance.Fsms[fsmId].SendEvent("MP_" + Instance.FsmEvents[fsmEventId]);
+					Instance._fsms[fsmId].SendEvent("MP_" + Instance._fsmEvents[fsmEventId]);
 				}
 			}
 			catch
@@ -127,12 +125,9 @@ namespace MSCMP.Game
 		{
 			try
 			{
-				PlayMakerFSM fsm = Instance.Fsms[fsmId];
+				PlayMakerFSM fsm = Instance._fsms[fsmId];
 				string currentState = fsm.Fsm.ActiveStateName;
-				if (currentState != "" || currentState != null)
-				{
-					Network.NetLocalPlayer.Instance.SendEventHookSync(fsmId, -1, currentState);
-				}
+				Network.NetLocalPlayer.Instance.SendEventHookSync(fsmId, -1, currentState);
 			}
 			catch
 			{
@@ -156,15 +151,7 @@ namespace MSCMP.Game
 
 			foreach (FsmState state in states)
 			{
-				AddWithSync(fsm, state.Name, () =>
-				{
-					if (action != null)
-					{
-						return action();
-					}
-
-					return false;
-				});
+				AddWithSync(fsm, state.Name, () => action != null && action());
 			}
 		}
 
@@ -247,7 +234,7 @@ namespace MSCMP.Game
 					}
 				}
 
-				if (Instance.Fsms[_fsmId].Fsm.LastTransition.EventName == "MP_" + Instance.FsmEvents[_fsmEventId])
+				if (Instance._fsms[_fsmId].Fsm.LastTransition.EventName == "MP_" + Instance._fsmEvents[_fsmEventId])
 				{
 					return;
 				}

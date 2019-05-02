@@ -1,17 +1,20 @@
 ﻿using UnityEngine;
 
-/// <summary>
-/// Hooks events for food purchased in the pub.
-/// </summary>
-namespace MSCMP.Game.Objects.PickupableTypes {
-	internal class PubFood {
+namespace MSCMP.Game.Objects.PickupableTypes
+{
+	/// <summary>
+	/// Hooks events for food purchased in the pub.
+	/// </summary>
+	internal class PubFood
+	{
 		private readonly GameObject _foodGo;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go"></param>
-		public PubFood(GameObject go) {
+		public PubFood(GameObject go)
+		{
 			_foodGo = go;
 
 			HookEvents();
@@ -20,7 +23,8 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// <summary>
 		/// Hook events for pub food.
 		/// </summary>
-		private void HookEvents() {
+		private void HookEvents()
+		{
 			PlayMakerFSM foodFsm = Utils.GetPlaymakerScriptByName(_foodGo, "Use");
 			EventHook.AddWithSync(foodFsm, "State 2");
 		}

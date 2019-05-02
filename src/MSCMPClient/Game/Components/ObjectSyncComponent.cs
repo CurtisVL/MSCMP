@@ -8,7 +8,7 @@ namespace MSCMP.Game.Components
 	/// Attached to objects that require position/rotation sync.
 	/// Sync is provided based on distance from the player and paramters inside an ISyncedObject.
 	/// </summary>
-	internal class ObjectSyncComponent 
+	internal class ObjectSyncComponent
 		: MonoBehaviour
 	{
 		/// <summary>
@@ -335,7 +335,7 @@ namespace MSCMP.Game.Components
 				if (ObjectType == ObjectSyncManager.ObjectTypes.Weather)
 				{
 					Weather weather = _syncedObject as Weather;
-					weather.SetPosAndRot(pos, rot);
+					weather?.SetPosAndRot(pos, rot);
 				}
 				// All other objects are synced based on what is required.
 				switch (_syncedObject.Flags())
@@ -389,9 +389,11 @@ namespace MSCMP.Game.Components
 				return;
 			}
 
-			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
-			msg.objectID = objectId;
-			msg.SyncType = (int)syncType;
+			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage
+			{
+				objectID = objectId,
+				SyncType = (int)syncType
+			};
 			if (syncedVariables != null)
 			{
 				msg.SyncedVariables = syncedVariables;
@@ -419,10 +421,12 @@ namespace MSCMP.Game.Components
 		/// </summary>
 		public void SendObjectSyncHost(int objectId, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables, ObjectSyncManager.Flags flags)
 		{
-			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
+			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage
+			{
+				objectID = objectId,
+				SyncType = (int)syncType
+			};
 
-			msg.objectID = objectId;
-			msg.SyncType = (int)syncType;
 			if (syncedVariables != null)
 			{
 				msg.SyncedVariables = syncedVariables;
@@ -486,8 +490,10 @@ namespace MSCMP.Game.Components
 		/// <param name="objectId">The Object ID of the object.</param>
 		public void RequestObjectSync(int objectId)
 		{
-			Network.Messages.ObjectSyncRequestMessage msg = new Network.Messages.ObjectSyncRequestMessage();
-			msg.objectID = objectId;
+			Network.Messages.ObjectSyncRequestMessage msg = new Network.Messages.ObjectSyncRequestMessage
+			{
+				objectID = objectId
+			};
 			NetManager.Instance.SendMessage(NetManager.Instance.GetHostPlayer(), msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 	}

@@ -1,4 +1,5 @@
 using MSCMP.Utilities;
+using Steamworks;
 using UnityEngine;
 
 namespace MSCMP.Network
@@ -129,6 +130,7 @@ namespace MSCMP.Network
 		/// Draws statistic label.
 		/// </summary>
 		/// <remarks>GUI color after this call may not be white!</remarks>
+		/// <param name="rct"></param>
 		/// <param name="name">Name of the statistic.</param>
 		/// <param name="value">The statistic value.</param>
 		/// <param name="critical">The critical statistic value to highlight. (if -1 there is no critical value)</param>
@@ -159,6 +161,7 @@ namespace MSCMP.Network
 		/// Draws text label.
 		/// </summary>
 		/// <remarks>GUI color after this call may not be white!</remarks>
+		/// <param name="rct"></param>
 		/// <param name="name">Name of the statistic.</param>
 		/// <param name="text">The text value.</param>
 		private void DrawTextHelper(ref Rect rct, string name, string text)
@@ -212,18 +215,18 @@ namespace MSCMP.Network
 				// draw send
 
 				long previousHistoryValue = i > 0 ? _bytesSentHistory[i - 1] : 0;
-				float previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)previousHistoryValue / Mathf.Max(1, _maxBytesSentInHistory));
+				float previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - previousHistoryValue / Mathf.Max(1, _maxBytesSentInHistory));
 				Vector2 start = new Vector2(drawRect.x + stepWidth * Mathf.Max(i - 1, 0), previousY);
-				float currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)_bytesSentHistory[i] / Mathf.Max(1, _maxBytesSentInHistory));
+				float currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - _bytesSentHistory[i] / Mathf.Max(1, _maxBytesSentInHistory));
 				Vector2 end = new Vector2(drawRect.x + stepWidth * i, currentY);
 				DrawLineHelper(start, end, Color.red);
 
 				// draw receive
 
 				previousHistoryValue = i > 0 ? _bytesReceivedHistory[i - 1] : 0;
-				previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)previousHistoryValue / Mathf.Max(1, _maxBytesReceivedInHistory));
+				previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - previousHistoryValue / Mathf.Max(1, _maxBytesReceivedInHistory));
 				start = new Vector2(drawRect.x + stepWidth * Mathf.Max(i - 1, 0), previousY);
-				currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)_bytesReceivedHistory[i] / Mathf.Max(1, _maxBytesReceivedInHistory));
+				currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - _bytesReceivedHistory[i] / Mathf.Max(1, _maxBytesReceivedInHistory));
 				end = new Vector2(drawRect.x + stepWidth * i, currentY);
 				DrawLineHelper(start, end, Color.green);
 			}
@@ -264,9 +267,7 @@ namespace MSCMP.Network
 			Rect statsWindowRect = new Rect(Screen.width - windowWidth - 10, Screen.height - windowHeight - 10, windowWidth, windowHeight);
 			GUI.Window(666, statsWindowRect, window =>
 			{
-
 				// Draw traffic graph title.
-
 				Rect rct = new Rect(10, 20, 200, 25);
 				GUI.Label(rct, $"Traffic graph (last {HISTORY_SIZE} frames):");
 				rct.y += 25;
@@ -274,12 +275,10 @@ namespace MSCMP.Network
 				Rect graphRect = new Rect(rct.x, rct.y, windowWidth - 20, 100);
 
 				// Draw graph background.
-
 				GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.35f);
 				ImguiUtils.DrawPlainColorRect(graphRect);
 
 				// Draw the graph itself.
-
 				graphRect.x += statsWindowRect.x;
 				graphRect.y += statsWindowRect.y;
 				DrawGraph(graphRect);
@@ -299,18 +298,15 @@ namespace MSCMP.Network
 				rct.height = 20;
 
 				// Draw separator
-
 				GUI.color = Color.black;
 				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, 2));
 				rct.y += 2;
 
 				// Draw stats background
-
 				GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.5f);
 				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, windowHeight - rct.y));
 
 				// Draw statistics
-
 				DrawStatHelper(ref rct, "packetsSendTotal", _packetsSendTotal);
 				DrawStatHelper(ref rct, "packetsReceivedTotal", _packetsReceivedTotal);
 				DrawStatHelper(ref rct, "packetsSendLastFrame", _packetsSendLastFrame, 1000);
@@ -325,18 +321,15 @@ namespace MSCMP.Network
 				DrawStatHelper(ref rct, "bytesReceivedCurrentFrame", _bytesReceivedCurrentFrame, 1000, true);
 
 				// Draw separator
-
 				rct.y += 2;
 				GUI.color = Color.black;
 				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, 2));
 				rct.y += 2;
 
 				// Draw P2P session state.
-
 				DrawTextHelper(ref rct, "Steam session state:", "");
 
-				Steamworks.P2PSessionState_t sessionState = new Steamworks.P2PSessionState_t();
-				if (_netManager.GetP2PSessionState(out sessionState))
+				if (_netManager.GetP2PSessionState(out P2PSessionState_t sessionState))
 				{
 					DrawTextHelper(ref rct, "Is Connecting", sessionState.m_bConnecting.ToString());
 					DrawTextHelper(ref rct, "Is connection active", sessionState.m_bConnectionActive == 0 ? "no" : "yes");

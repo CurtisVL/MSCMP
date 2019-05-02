@@ -117,15 +117,14 @@ namespace MSCMP.Game
 		/// <param name="gameObject">The game object to check and eventually register.</param>
 		public void CollectGameObject(GameObject gameObject)
 		{
-			if (IsDoorGameObject(gameObject) && GetDoorByGameObject(gameObject) == null)
-			{
-				GameDoor door = new GameDoor(this, gameObject);
-				Doors.Add(door);
+			if (!IsDoorGameObject(gameObject) || GetDoorByGameObject(gameObject) != null) return;
 
-				if (Network.NetWorld.DisplayObjectRegisteringDebug)
-				{
-					Logger.Debug("Registered doors " + gameObject.name);
-				}
+			GameDoor door = new GameDoor(this, gameObject);
+			Doors.Add(door);
+
+			if (Network.NetWorld.DisplayObjectRegisteringDebug)
+			{
+				Logger.Debug("Registered doors " + gameObject.name);
 			}
 		}
 

@@ -34,7 +34,8 @@ namespace MSCMP.Network
 		/// </summary>
 		/// <typeparam name="T">The type of message to register handler for.</typeparam>
 		/// <param name="handler">The handler lambda.</param>
-		public void BindMessageHandler<T>(MessageHandler<T> handler) where T : INetMessage, new()
+		public void BindMessageHandler<T>(MessageHandler<T> handler) 
+			where T : INetMessage, new()
 		{
 			T message = new T();
 

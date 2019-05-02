@@ -1,14 +1,17 @@
 ﻿using UnityEngine;
 
-namespace MSCMP.Game.Objects.PickupableTypes {
-	internal class ShoppingBag {
+namespace MSCMP.Game.Objects.PickupableTypes
+{
+	internal class ShoppingBag
+	{
 		private readonly GameObject _shoppingBagGo;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go"></param>
-		public ShoppingBag(GameObject go) {
+		public ShoppingBag(GameObject go)
+		{
 			_shoppingBagGo = go;
 			HookEvents();
 		}
@@ -16,7 +19,8 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// <summary>
 		/// Hook events for shopping bag.
 		/// </summary>
-		private void HookEvents() {
+		private void HookEvents()
+		{
 			// Shopping bag.
 			PlayMakerFSM bagFsm = Utils.GetPlaymakerScriptByName(_shoppingBagGo, "Open");
 			EventHook.AddWithSync(bagFsm, "Play anim");

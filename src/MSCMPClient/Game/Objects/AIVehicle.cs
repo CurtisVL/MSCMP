@@ -26,7 +26,7 @@ namespace MSCMP.Game.Objects
 
 		private float _isClockwise;
 
-		public enum VehicleTypes
+		private enum VehicleTypes
 		{
 			Bus,
 			Amis,
@@ -35,7 +35,7 @@ namespace MSCMP.Game.Objects
 			Fitan,
 		}
 
-		public VehicleTypes Type;
+		private readonly VehicleTypes _type;
 
 		private class MpCarController : AxisCarController
 		{
@@ -153,32 +153,30 @@ namespace MSCMP.Game.Objects
 			string goName = _gameObject.transform.parent.gameObject.name;
 			if (goName == "AMIS2" || goName == "KYLAJANI")
 			{
-				Type = VehicleTypes.Amis;
+				_type = VehicleTypes.Amis;
 			}
 			else if (goName == "BUS")
 			{
-				Type = VehicleTypes.Bus;
+				_type = VehicleTypes.Bus;
 			}
 			else if (goName == "FITTAN" && _parentGameObject.transform.FindChild("Navigation") != null)
 			{
-				Type = VehicleTypes.Fitan;
+				_type = VehicleTypes.Fitan;
 			}
 			else if (_parentGameObject.transform.FindChild("NavigationCW") != null || _parentGameObject.transform.FindChild("NavigationCCW") != null)
 			{
-				Type = VehicleTypes.TrafficDirectional;
+				_type = VehicleTypes.TrafficDirectional;
 			}
 			else
 			{
-				Type = VehicleTypes.Traffic;
+				_type = VehicleTypes.Traffic;
 			}
 
 			_rigidbody = _parentGameObject.GetComponent<Rigidbody>();
-
 			_dynamics = _parentGameObject.GetComponent<CarDynamics>();
-
 			_throttleFsm = Utils.GetPlaymakerScriptByName(_parentGameObject, "Throttle");
 
-			if (Type == VehicleTypes.TrafficDirectional)
+			if (_type == VehicleTypes.TrafficDirectional)
 			{
 				if (_parentGameObject.transform.FindChild("NavigationCW") != null)
 				{
@@ -334,14 +332,9 @@ namespace MSCMP.Game.Objects
 		{
 			// Generic vehicle FSMs.
 			_throttleFsm = Utils.GetPlaymakerScriptByName(_parentGameObject, "Throttle");
-			EventHook.SyncAllEvents(_throttleFsm, () =>
-			{
-				if (_syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && _syncComponent.Owner != null || _syncComponent.Owner == null && !Network.NetManager.Instance.IsHost)
-				{
-					return true;
-				}
-				return false;
-			});
+			EventHook.SyncAllEvents(_throttleFsm, () => _syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() 
+			                                            && _syncComponent.Owner != null || _syncComponent.Owner == null 
+			                                            && !Network.NetManager.Instance.IsHost);
 
 			// Traffic FSMs.
 			EventHook.AddWithSync(_directionFsm, "CW", () =>
@@ -355,44 +348,35 @@ namespace MSCMP.Game.Objects
 				return false;
 			});
 
-			// Bus specific FSMs.
-			if (Type == VehicleTypes.Bus)
+			switch (_type)
 			{
-				PlayMakerFSM doorFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("Route").gameObject, "Door");
-				PlayMakerFSM startFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("Route").gameObject, "Start");
-
-				EventHook.SyncAllEvents(doorFsm, () =>
+				// Bus specific FSMs.
+				case VehicleTypes.Bus:
 				{
-					if (_syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && _syncComponent.Owner != null || _syncComponent.Owner == null && !Network.NetManager.Instance.IsHost)
-					{
-						return true;
-					}
-					return false;
-				});
+					PlayMakerFSM doorFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("Route").gameObject, "Door");
+					PlayMakerFSM startFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("Route").gameObject, "Start");
 
-				EventHook.SyncAllEvents(startFsm, () =>
+					EventHook.SyncAllEvents(doorFsm, () => _syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() 
+					                                       && _syncComponent.Owner != null || _syncComponent.Owner == null 
+					                                       && !Network.NetManager.Instance.IsHost);
+
+					EventHook.SyncAllEvents(startFsm, () => _syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() 
+					                                        && _syncComponent.Owner != null || _syncComponent.Owner == null 
+					                                        && !Network.NetManager.Instance.IsHost);
+					break;
+				}
+
+				// None traffic cars specific FSMs.
+				case VehicleTypes.Amis:
+				case VehicleTypes.Fitan:
 				{
-					if (_syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && _syncComponent.Owner != null || _syncComponent.Owner == null && !Network.NetManager.Instance.IsHost)
-					{
-						return true;
-					}
-					return false;
-				});
-			}
+					PlayMakerFSM crashFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("CrashEvent").gameObject, "Crash");
 
-			// None traffic cars specific FSMs.
-			if (Type == VehicleTypes.Amis || Type == VehicleTypes.Fitan)
-			{
-				PlayMakerFSM crashFsm = Utils.GetPlaymakerScriptByName(_parentGameObject.transform.FindChild("CrashEvent").gameObject, "Crash");
-
-				EventHook.SyncAllEvents(crashFsm, () =>
-				{
-					if (_syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() && _syncComponent.Owner != null || _syncComponent.Owner == null && !Network.NetManager.Instance.IsHost)
-					{
-						return true;
-					}
-					return false;
-				});
+					EventHook.SyncAllEvents(crashFsm, () => _syncComponent.Owner != Network.NetManager.Instance.GetLocalPlayer() 
+					                                        && _syncComponent.Owner != null || _syncComponent.Owner == null 
+					                                        && !Network.NetManager.Instance.IsHost);
+					break;
+				}
 			}
 
 			// Sync vehicle data with the host on spawn.

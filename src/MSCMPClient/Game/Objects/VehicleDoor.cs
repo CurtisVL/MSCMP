@@ -151,17 +151,12 @@ namespace MSCMP.Game.Objects
 		public bool CanSync()
 		{
 			//Logger.Log("Current rotations, X: " + gameObject.transform.localRotation.x + ", Y: " + gameObject.transform.localRotation.y + ", Z: " + gameObject.transform.localRotation.z);
-			if (_lastRotation - _hinge.angle > 0.1 || _lastRotation - _hinge.angle < -0.1)
-			{
-				if (_osc.Owner == Network.NetManager.Instance.GetLocalPlayer())
-				{
-					_lastRotation = _hinge.angle;
-					return true;
-				}
-				return false;
-			}
+			if (!(_lastRotation - _hinge.angle > 0.1) && !(_lastRotation - _hinge.angle < -0.1)) return false;
+			if (_osc.Owner != Network.NetManager.Instance.GetLocalPlayer()) return false;
 
-			return false;
+			_lastRotation = _hinge.angle;
+			return true;
+
 		}
 
 		/// <summary>
@@ -180,12 +175,10 @@ namespace MSCMP.Game.Objects
 		public float[] ReturnSyncedVariables(bool sendAllVariables)
 		{
 			// Rear door variables.
-			if (_doorType == DoorTypes.RearDoor)
-			{
-				float[] variables = { _hinge.limits.min, _hinge.limits.max, _rigidbody.velocity.y };
-				return variables;
-			}
-			return null;
+			if (_doorType != DoorTypes.RearDoor) return null;
+
+			float[] variables = { _hinge.limits.min, _hinge.limits.max, _rigidbody.velocity.y };
+			return variables;
 		}
 
 		/// <summary>
@@ -194,19 +187,18 @@ namespace MSCMP.Game.Objects
 		public void HandleSyncedVariables(float[] variables)
 		{
 			// Set rear door variables.
-			if (_doorType == DoorTypes.RearDoor)
-			{
-				// Hinge limits.
-				JointLimits limits = _hinge.limits;
-				limits.min = variables[0];
-				limits.max = variables[1];
-				_hinge.limits = limits;
+			if (_doorType != DoorTypes.RearDoor) return;
 
-				// Door velocity.
-				Vector3 velocityNew = _rigidbody.velocity;
-				velocityNew.y = variables[2];
-				_rigidbody.velocity = velocityNew;
-			}
+			// Hinge limits.
+			JointLimits limits = _hinge.limits;
+			limits.min = variables[0];
+			limits.max = variables[1];
+			_hinge.limits = limits;
+
+			// Door velocity.
+			Vector3 velocityNew = _rigidbody.velocity;
+			velocityNew.y = variables[2];
+			_rigidbody.velocity = velocityNew;
 		}
 
 		/// <summary>

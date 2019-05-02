@@ -116,26 +116,24 @@ namespace MSCMP.Game.Objects
 		/// <param name="other"></param>
 		private void OnTriggerEnter(Collider other)
 		{
-			if (other.gameObject.name == "PLAYER")
+			if (other.gameObject.name != "PLAYER") return;
+
+			_canSit = true;
+			if (_isSitting == false)
 			{
-				_canSit = true;
+				_showGui = true;
+			}
 
-				if (_isSitting == false)
-				{
-					_showGui = true;
-				}
+			if (_player == null)
+			{
+				_player = other.gameObject;
+				_motor = _player.GetComponentInChildren<CharacterMotor>();
+			}
 
-				if (_player == null)
-				{
-					_player = other.gameObject;
-					_motor = _player.GetComponentInChildren<CharacterMotor>();
-				}
-
-				if (_playerCollider == null)
-				{
-					_playerCollider = _player.GetComponentInChildren<CapsuleCollider>();
-					_playerCollider.enabled = false;
-				}
+			if (_playerCollider == null)
+			{
+				_playerCollider = _player.GetComponentInChildren<CapsuleCollider>();
+				_playerCollider.enabled = false;
 			}
 		}
 
@@ -145,14 +143,12 @@ namespace MSCMP.Game.Objects
 		/// <param name="other"></param>
 		private void OnTriggerExit(Collider other)
 		{
-			if (other.gameObject.name == "PLAYER")
-			{
-				_canSit = false;
+			if (other.gameObject.name != "PLAYER") return;
 
-				_showGui = false;
-				_iconsFsm.Fsm.GetFsmBool("GUIpassenger").Value = false;
-				_textFsm.Fsm.GetFsmString("GUIinteraction").Value = "";
-			}
+			_canSit = false;
+			_showGui = false;
+			_iconsFsm.Fsm.GetFsmBool("GUIpassenger").Value = false;
+			_textFsm.Fsm.GetFsmString("GUIinteraction").Value = "";
 		}
 
 		/// <summary>

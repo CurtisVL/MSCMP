@@ -72,13 +72,12 @@ namespace MSCMP.Game
 		/// <param name="gameObject">The destroyed game object.</param>
 		public void DestroyObject(GameObject gameObject)
 		{
-			if (IsLightSwitch(gameObject))
+			if (!IsLightSwitch(gameObject)) return;
+
+			LightSwitch lightSwitch = GetLightSwitchByGameObject(gameObject);
+			if (lightSwitch != null)
 			{
-				LightSwitch lightSwitch = GetLightSwitchByGameObject(gameObject);
-				if (lightSwitch != null)
-				{
-					LightSwitches.Remove(lightSwitch);
-				}
+				LightSwitches.Remove(lightSwitch);
 			}
 		}
 
@@ -94,12 +93,7 @@ namespace MSCMP.Game
 				return;
 			}
 
-			bool isValid = false;
-			if (playMakerFsm.FsmVariables.FindFsmBool("Switch") != null)
-			{
-				isValid = true;
-			}
-
+			bool isValid = playMakerFsm.FsmVariables.FindFsmBool("Switch") != null;
 			if (isValid)
 			{
 				LightSwitch light = new LightSwitch(lightGo);

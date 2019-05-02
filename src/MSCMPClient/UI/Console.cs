@@ -15,7 +15,7 @@ namespace MSCMP.UI
 		/// <param name="args">The arguments - first one will be name of the command.</param>
 		public delegate void CommandDelegate(string[] args);
 
-		private static readonly Dictionary<string, CommandDelegate> _commands = new Dictionary<string, CommandDelegate>();
+		private static readonly Dictionary<string, CommandDelegate> Commands = new Dictionary<string, CommandDelegate>();
 
 		/// <summary>
 		/// Register new console command.
@@ -24,7 +24,7 @@ namespace MSCMP.UI
 		/// <param name="commandDelegate">The command delegate.</param>
 		public static void RegisterCommand(string command, CommandDelegate commandDelegate)
 		{
-			_commands.Add(command, commandDelegate);
+			Commands.Add(command, commandDelegate);
 		}
 
 		/// <summary>
@@ -42,7 +42,7 @@ namespace MSCMP.UI
 					return false;
 				}
 
-				CommandDelegate commandDelegate = _commands[args[0]];
+				CommandDelegate commandDelegate = Commands[args[0]];
 				if (commandDelegate != null)
 				{
 					commandDelegate.Invoke(args);
@@ -235,9 +235,11 @@ namespace MSCMP.UI
 			}
 
 			//Moving the cursor to the last character
-			TextEditor editor = GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl) as TextEditor;
-			editor.selectPos = _inputText.Length + 1;
-			editor.pos = _inputText.Length + 1;
+			if (GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl) is TextEditor editor)
+			{
+				editor.selectPos = _inputText.Length + 1;
+				editor.pos = _inputText.Length + 1;
+			}
 		}
 
 		/// <summary>

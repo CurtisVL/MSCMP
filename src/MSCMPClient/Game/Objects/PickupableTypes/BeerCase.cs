@@ -1,18 +1,20 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using Object = UnityEngine.Object;
 
-/// <summary>
-/// Hooks events related to beercases.
-/// </summary>
-namespace MSCMP.Game.Objects.PickupableTypes {
-	internal class BeerCase {
+namespace MSCMP.Game.Objects.PickupableTypes
+{
+	/// <summary>
+	/// Hooks events related to beercases.
+	/// </summary>
+	internal class BeerCase
+	{
 		private readonly GameObject _beerCaseGo;
 		private readonly Components.ObjectSyncComponent _osc;
 		private readonly PlayMakerFSM _beerCaseFsm;
 
 		//Get used bottles
-		public int UsedBottles {
+		public int UsedBottles
+		{
 			get => _beerCaseFsm.FsmVariables.FindFsmInt("DestroyedBottles").Value;
 			set => _beerCaseFsm.FsmVariables.FindFsmInt("DestroyedBottles").Value = value;
 		}
@@ -20,7 +22,8 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		public BeerCase(GameObject go) {
+		public BeerCase(GameObject go)
+		{
 			_beerCaseGo = go;
 			_osc = _beerCaseGo.GetComponent<Components.ObjectSyncComponent>();
 
@@ -31,10 +34,12 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// <summary>
 		/// Hook events.
 		/// </summary>
-		private void HookEvents() {
+		private void HookEvents()
+		{
 			EventHook.AddWithSync(_beerCaseFsm, "Remove bottle", () =>
 			{
-				if (_beerCaseFsm.Fsm.LastTransition.EventName == "MP_Remove bottle") {
+				if (_beerCaseFsm.Fsm.LastTransition.EventName == "MP_Remove bottle")
+				{
 					return true;
 				}
 
@@ -42,7 +47,8 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 			});
 
 			// Sync beer case bottle count with host.
-			if (Network.NetManager.Instance.IsOnline && !Network.NetManager.Instance.IsHost) {
+			if (Network.NetManager.Instance.IsOnline && !Network.NetManager.Instance.IsHost)
+			{
 				_osc.RequestObjectSync();
 			}
 		}
@@ -51,21 +57,27 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// Removes random bottles from the beer case.
 		/// </summary>
 		/// <param name="count">Amount of bottles that should be remaining.</param>
-		public void RemoveBottles(int count) {
+		public void RemoveBottles(int count)
+		{
 			int i = 0;
-			while (count > UsedBottles) {
-				if (UsedBottles != 23) {
+			while (count > UsedBottles)
+			{
+				if (UsedBottles != 23)
+				{
 					GameObject bottle = _beerCaseGo.transform.GetChild(i).gameObject;
 					i++;
-					if (bottle != null) {
+					if (bottle != null)
+					{
 						Object.Destroy(bottle);
 						UsedBottles++;
 					}
-					else {
+					else
+					{
 						Logger.Error($"Failed to remove bottle! No bottle GameObjects found!");
 					}
 				}
-				else {
+				else
+				{
 					Logger.Error($"Failed to remove bottle! UsedBottles: {UsedBottles}");
 				}
 			}

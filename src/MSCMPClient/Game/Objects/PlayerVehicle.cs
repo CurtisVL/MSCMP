@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace MSCMP.Game.Objects
 {
-	internal class PlayerVehicle 
+	internal class PlayerVehicle
 		: ISyncedObject
 	{
 		private readonly ObjectSyncComponent _syncComponent;
@@ -358,22 +358,20 @@ namespace MSCMP.Game.Objects
 		/// <returns>Variables to be sent to the remote client.</returns>
 		public float[] ReturnSyncedVariables(bool sendAllVariables)
 		{
-			if (_isSyncing)
+			if (!_isSyncing) return null;
+
+			// Removed fuel from this due to an error, maybe an update broke it?
+			if (_isBike)
 			{
-				// Removed fuel from this due to an error, maybe an update broke it?
-				if (_isBike)
-				{
-					float[] variables = { Steering, Throttle, Brake, ClutchInput, Gear, _steeringPivot.transform.localRotation.z };
-					return variables;
-				}
-				else
-				{
-					float[] variables = { Steering, Throttle, Brake, ClutchInput, Gear };
-					return variables;
-				}
+				float[] variables = { Steering, Throttle, Brake, ClutchInput, Gear, _steeringPivot.transform.localRotation.z };
+				return variables;
+			}
+			else
+			{
+				float[] variables = { Steering, Throttle, Brake, ClutchInput, Gear };
+				return variables;
 			}
 
-			return null;
 		}
 
 		/// <summary>
@@ -381,20 +379,19 @@ namespace MSCMP.Game.Objects
 		/// </summary>
 		public void HandleSyncedVariables(float[] variables)
 		{
-			if (variables != null)
+			if (variables == null) return;
+
+			Steering = variables[0];
+			Throttle = variables[1];
+			Brake = variables[2];
+			ClutchInput = variables[3];
+			Gear = (int)variables[4];
+			//Fuel = variables[5];
+			if (_isBike)
 			{
-				Steering = variables[0];
-				Throttle = variables[1];
-				Brake = variables[2];
-				ClutchInput = variables[3];
-				Gear = (int)variables[4];
-				//Fuel = variables[5];
-				if (_isBike)
-				{
-					Quaternion rot = _steeringPivot.transform.localRotation;
-					rot.z = variables[5];
-					_steeringPivot.transform.localRotation = rot;
-				}
+				Quaternion rot = _steeringPivot.transform.localRotation;
+				rot.z = variables[5];
+				_steeringPivot.transform.localRotation = rot;
 			}
 		}
 
@@ -605,16 +602,12 @@ namespace MSCMP.Game.Objects
 				}
 			}
 
-
 			// Dashboard states
 			string[] dashboardStateNames = { "ACC on", "Test", "ACC on 2", "Motor starting", "Shut off", "Motor OFF", "Wait button", "Wait player" };
 
 			foreach (string name in dashboardStateNames)
 			{
-				EventHook.Add(_dashboardFsm, name, () =>
-				{
-					return false;
-				});
+				EventHook.Add(_dashboardFsm, name, () => false);
 			}
 
 			// Range
@@ -637,12 +630,12 @@ namespace MSCMP.Game.Objects
 				{
 					WriteVehicleSwitchMessage(_syncComponent, SwitchIDs.HandbrakePull, false, _handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
 					return false;
-				}, actionOnExit: true);
+				}, true);
 				EventHook.Add(_handbrakeFsm, "INCREASE", () =>
 				{
 					WriteVehicleSwitchMessage(_syncComponent, SwitchIDs.HandbrakePull, false, _handbrakeFsm.Fsm.GetFsmFloat("KnobPos").Value);
 					return false;
-				}, actionOnExit: true);
+				}, true);
 			}
 
 			// Truck parking brake
@@ -681,56 +674,26 @@ namespace MSCMP.Game.Objects
 			{
 				EventHook.AddWithSync(_indicatorsFsm, "Activate dash");
 				EventHook.AddWithSync(_indicatorsFsm, "Activate dash 2");
-				EventHook.AddWithSync(_indicatorsFsm, "On", action: () =>
-				{
-					if (DriverIsLocal == false)
-					{
-						return true;
-					}
-					return false;
-				});
-				EventHook.AddWithSync(_indicatorsFsm, "On 2", action: () =>
-				{
-					if (DriverIsLocal == false)
-					{
-						return true;
-					}
-					return false;
-				});
-				EventHook.AddWithSync(_indicatorsFsm, "Off", action: () =>
-				{
-					if (DriverIsLocal == false)
-					{
-						return true;
-					}
-					return false;
-				});
-				EventHook.AddWithSync(_indicatorsFsm, "Off 2", action: () =>
-				{
-					if (DriverIsLocal == false)
-					{
-						return true;
-					}
-					return false;
-				});
+				EventHook.AddWithSync(_indicatorsFsm, "On", () => DriverIsLocal == false);
+				EventHook.AddWithSync(_indicatorsFsm, "On 2", () => DriverIsLocal == false);
+				EventHook.AddWithSync(_indicatorsFsm, "Off", () => DriverIsLocal == false);
+				EventHook.AddWithSync(_indicatorsFsm, "Off 2", () => DriverIsLocal == false);
 
-				EventHook.AddWithSync(_indicatorsFsm, "State 3", action: () =>
+				EventHook.AddWithSync(_indicatorsFsm, "State 3", () =>
 				{
-					if (DriverIsLocal == false)
+					if (DriverIsLocal) return false;
+
+					GameObject left = _gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Left").gameObject;
+					GameObject right = _gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Right").gameObject;
+
+					// Ferndale has a different hierarchy. Why not, right?
+					if (left == null)
 					{
-						GameObject left;
-						GameObject right;
-						left = _gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Left").gameObject;
-						right = _gameObject.transform.FindChild("LOD/Electricity/PowerON/Blinkers/Right").gameObject;
-						// Ferndale has a different hierarchy. Why not, right?
-						if (left == null)
-						{
-							left = _gameObject.transform.FindChild("LOD/Electricity 1/PowerON/Blinkers/Left").gameObject;
-							right = _gameObject.transform.FindChild("LOD/Electricity 1/PowerON/Blinkers/Right").gameObject;
-						}
-						left.SetActive(false);
-						right.SetActive(false);
+						left = _gameObject.transform.FindChild("LOD/Electricity 1/PowerON/Blinkers/Left").gameObject;
+						right = _gameObject.transform.FindChild("LOD/Electricity 1/PowerON/Blinkers/Right").gameObject;
 					}
+					left.SetActive(false);
+					right.SetActive(false);
 					return false;
 				});
 			}
@@ -856,10 +819,7 @@ namespace MSCMP.Game.Objects
 			// It's now 6+ months later, no idea what this means at all now. :p -Curtis
 			EventHook.Add(fsm, "Player in car", () =>
 			{
-				if (CurrentDrivingState == DrivingStates.Driver && !DriverIsLocal)
-				{
-					return true;
-				}
+				if (CurrentDrivingState == DrivingStates.Driver && !DriverIsLocal) return true;
 
 				CurrentDrivingState = DrivingStates.Driver;
 				_syncComponent.TakeSyncControl();
@@ -870,13 +830,12 @@ namespace MSCMP.Game.Objects
 			});
 			EventHook.Add(fsm, "Wait for player", () =>
 			{
-				if (CurrentDrivingState == DrivingStates.Driver && DriverIsLocal)
-				{
-					CurrentDrivingState = DrivingStates.None;
-					DriverIsLocal = false;
-					_syncComponent.SendConstantSync(false);
-					NetLocalPlayer.Instance.LeaveVehicle();
-				}
+				if (CurrentDrivingState != DrivingStates.Driver || !DriverIsLocal) return false;
+
+				CurrentDrivingState = DrivingStates.None;
+				DriverIsLocal = false;
+				_syncComponent.SendConstantSync(false);
+				NetLocalPlayer.Instance.LeaveVehicle();
 				return false;
 			});
 			if (_isBike)
@@ -1004,10 +963,12 @@ namespace MSCMP.Game.Objects
 		/// <param name="newValueFloat"></param>
 		public void WriteVehicleSwitchMessage(ObjectSyncComponent vehicle, SwitchIDs switchId, bool newValue, float newValueFloat)
 		{
-			Network.Messages.VehicleSwitchMessage msg = new Network.Messages.VehicleSwitchMessage();
-			msg.objectID = vehicle.ObjectId;
-			msg.switchID = (int)switchId;
-			msg.switchValue = newValue;
+			Network.Messages.VehicleSwitchMessage msg = new Network.Messages.VehicleSwitchMessage
+			{
+				objectID = vehicle.ObjectId,
+				switchID = (int)switchId,
+				switchValue = newValue
+			};
 			if (newValueFloat != -1)
 			{
 				msg.SwitchValueFloat = newValueFloat;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MSCMP.UI.Handlers;
 using UnityEngine;
 
 namespace MSCMP.UI
@@ -17,7 +18,7 @@ namespace MSCMP.UI
 		/// <summary>
 		/// Message box handler.
 		/// </summary>
-		private Handlers.MessageBoxHandler _messageBoxHandler;
+		private MessageBoxHandler _messageBoxHandler;
 
 		/// <summary>
 		/// List of lobbies.
@@ -42,7 +43,7 @@ namespace MSCMP.UI
 				canvas.transform.SetParent(transform, false);
 
 				GameObject messageBox = canvas.transform.FindChild("MessageBox").gameObject;
-				_messageBoxHandler = messageBox.AddComponent<Handlers.MessageBoxHandler>();
+				_messageBoxHandler = messageBox.AddComponent<MessageBoxHandler>();
 
 				DontDestroyOnLoad(gameObject);
 				DontDestroyOnLoad(canvas);
@@ -92,9 +93,9 @@ namespace MSCMP.UI
 		/// <param name="text">The text to show.</param>
 		/// <param name="onClose">The callback to call when OK button is pressed.</param>
 		/// <returns>true if message box was shown false if there is already some message box and this one could not be showed.</returns>
-		public bool ShowMessageBox(string text, Handlers.MessageBoxHandler.OnClose onClose = null)
+		public void ShowMessageBox(string text, MessageBoxHandler.OnClose onClose = null)
 		{
-			return _messageBoxHandler.Show(text, onClose);
+			_messageBoxHandler.Show(text, onClose);
 		}
 
 		/// <summary>

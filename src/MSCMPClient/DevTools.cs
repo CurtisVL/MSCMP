@@ -84,12 +84,12 @@ namespace MSCMP
 				string ourSpot = args[1].ToLower();
 				foreach (KeyValuePair<string, Vector4> spot in _spots)
 				{
-					if (spot.Key.ToLower() == ourSpot)
-					{
-						SetPosition(spot.Value.x, spot.Value.y, spot.Value.z, spot.Value.w);
-						Client.ConsoleMessage($"Teleported to {spot}!");
-						return;
-					}
+					if (spot.Key.ToLower() != ourSpot)
+						continue;
+
+					SetPosition(spot.Value.x, spot.Value.y, spot.Value.z, spot.Value.w);
+					Client.ConsoleMessage($"Teleported to {spot}!");
+					return;
 				}
 
 				Client.ConsoleMessage($"{args[1]} is an invalid spot. Type 'gotospot' with no parameters to see all the available spots!");
@@ -226,7 +226,6 @@ namespace MSCMP
 				return;
 			}
 
-
 			_devMenuButtonsRect.x = 5.0f;
 			_devMenuButtonsRect.y = 0.0f;
 
@@ -279,24 +278,23 @@ namespace MSCMP
 
 		private static void DrawClosestObjectNames()
 		{
-			foreach (GameObject go in Object.FindObjectsOfType<GameObject>())
+			foreach (GameObject gameObject in Object.FindObjectsOfType<GameObject>())
 			{
 				if (_localPlayer)
 				{
-					if ((go.transform.position - _localPlayer.transform.position).sqrMagnitude > 10)
+					if ((gameObject.transform.position - _localPlayer.transform.position).sqrMagnitude > 10)
 					{
 						continue;
 					}
 				}
 
-				Vector3 pos = Camera.main.WorldToScreenPoint(go.transform.position);
+				Vector3 pos = Camera.main.WorldToScreenPoint(gameObject.transform.position);
 				if (pos.z < 0.0f)
 				{
 					continue;
 				}
 
-
-				GUI.Label(new Rect(pos.x, Screen.height - pos.y, 500, 20), go.name);
+				GUI.Label(new Rect(pos.x, Screen.height - pos.y, 500, 20), gameObject.name);
 			}
 		}
 
@@ -320,7 +318,6 @@ namespace MSCMP
 
 		public static void UpdatePlayer()
 		{
-
 			// Pseudo AirBrk
 			if (_airBreak)
 			{
@@ -335,29 +332,29 @@ namespace MSCMP
 				}
 				if (Input.GetKey(KeyCode.KeypadPlus))
 				{
-					_localPlayer.transform.position = _localPlayer.transform.position + Vector3.up * speed;
+					_localPlayer.transform.position += Vector3.up * speed;
 				}
 				if (Input.GetKey(KeyCode.KeypadMinus))
 				{
-					_localPlayer.transform.position = _localPlayer.transform.position - Vector3.up * speed;
+					_localPlayer.transform.position -= Vector3.up * speed;
 				}
 				if (Input.GetKey(KeyCode.Keypad8))
 				{
 					//localPlayer.transform.position = localPlayer.transform.position + localPlayer.transform.rotation * Vector3.forward * speed;
-					_localPlayer.transform.position = _localPlayer.transform.position + _playerCamera.transform.rotation * Vector3.forward * speed;
+					_localPlayer.transform.position += _playerCamera.transform.rotation * Vector3.forward * speed;
 				}
 				if (Input.GetKey(KeyCode.Keypad2))
 				{
 					//localPlayer.transform.position = localPlayer.transform.position - localPlayer.transform.rotation * Vector3.forward * speed;
-					_localPlayer.transform.position = _localPlayer.transform.position - _playerCamera.transform.rotation * Vector3.forward * speed;
+					_localPlayer.transform.position -= _playerCamera.transform.rotation * Vector3.forward * speed;
 				}
 				if (Input.GetKey(KeyCode.Keypad4))
 				{
-					_localPlayer.transform.position = _localPlayer.transform.position - _localPlayer.transform.rotation * Vector3.right * speed;
+					_localPlayer.transform.position -= _localPlayer.transform.rotation * Vector3.right * speed;
 				}
 				if (Input.GetKey(KeyCode.Keypad6))
 				{
-					_localPlayer.transform.position = _localPlayer.transform.position + _localPlayer.transform.rotation * Vector3.right * speed;
+					_localPlayer.transform.position += _localPlayer.transform.rotation * Vector3.right * speed;
 				}
 			}
 		}

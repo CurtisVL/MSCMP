@@ -1,9 +1,9 @@
+using MSCMP.Network.Messages;
 using MSCMP.UI;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using MSCMP.Network.Messages;
-using Steamworks;
 using UnityEngine;
 
 namespace MSCMP.Network
@@ -21,6 +21,7 @@ namespace MSCMP.Network
 		private readonly CallResult<LobbyEnter_t> _lobbyEnterCallResult;
 		private readonly CallResult<LobbyMatchList_t> _lobbyListResult;
 		private CallResult<LobbyDataUpdate_t> _lobbyDataResult;
+
 		public enum Mode
 		{
 			None,
@@ -341,6 +342,7 @@ namespace MSCMP.Network
 					}
 					return;
 				}
+
 				CSteamID newPlayerSteamId = new CSteamID(msg.steamID);
 				if (newPlayerSteamId != _hostSteamId && newPlayerSteamId != GetLocalPlayer().SteamId)
 				{
@@ -358,6 +360,7 @@ namespace MSCMP.Network
 					Logger.Debug("Ignored connecting player as curent player is still loading!");
 					return;
 				}
+
 				MessagesList.AddMessage($"Player {Players[msg.playerID].GetName()} disconnected. ({msg.reason})", MessageSeverity.Info);
 				CleanupPlayer(msg.playerID);
 			});
@@ -372,7 +375,6 @@ namespace MSCMP.Network
 			if (Application.loadedLevelName == "MainMenu")
 			{
 				// This is not that slow as you may think - seriously!
-
 				GameObject[] gos = Resources.FindObjectsOfTypeAll<GameObject>();
 				GameObject loadingScreen = null;
 				foreach (GameObject go in gos)
@@ -383,7 +385,7 @@ namespace MSCMP.Network
 						break;
 					}
 				}
-				loadingScreen.SetActive(show);
+				loadingScreen?.SetActive(show);
 			}
 		}
 
@@ -407,7 +409,7 @@ namespace MSCMP.Network
 			BinaryWriter writer = new BinaryWriter(stream);
 
 			writer.Write(PROTOCOL_ID);
-			writer.Write((byte)message.MessageId);
+			writer.Write(message.MessageId);
 			if (!message.Write(writer))
 			{
 				Client.FatalError("Failed to write network message " + message.MessageId);
@@ -460,20 +462,20 @@ namespace MSCMP.Network
 		/// <param name="sendType">The send type.</param>
 		/// <param name="channel">The channel used to deliver message.</param>
 		/// <returns>true if message was sent false otherwise</returns>
-		public bool SendMessage<T>(NetPlayer player, T message, EP2PSend sendType, int channel = 0) where T : INetMessage
+		public void SendMessage<T>(NetPlayer player, T message, EP2PSend sendType, int channel = 0) where T : INetMessage
 		{
 			if (player == null)
 			{
-				return false;
+				return;
 			}
 
 			MemoryStream stream = new MemoryStream();
 			if (!WriteMessage(message, stream))
 			{
-				return false;
+				return;
 			}
 
-			return player.SendPacket(stream.GetBuffer(), sendType, channel);
+			player.SendPacket(stream.GetBuffer(), sendType, channel);
 		}
 
 		/// <summary>
@@ -512,18 +514,17 @@ namespace MSCMP.Network
 		/// Setup lobby to host a game.
 		/// </summary>
 		/// <returns>true if lobby setup request was properly sent, false otherwise</returns>
-		public bool SetupLobby()
+		public void SetupLobby()
 		{
 			Logger.Debug("Setting up lobby.");
 			SteamAPICall_t apiCall = SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, MAX_PLAYERS);
 			if (apiCall == SteamAPICall_t.Invalid)
 			{
 				Logger.Error("Unable to create lobby.");
-				return false;
+				return;
 			}
 			Logger.Debug("Waiting for lobby create reply..");
 			_lobbyCreatedCallResult.Set(apiCall);
-			return true;
 		}
 
 		/// <summary>
@@ -591,6 +592,7 @@ namespace MSCMP.Network
 		/// <summary>
 		/// Handle disconnect of a remote player.
 		/// </summary>
+		/// <param name="playerId"></param>
 		/// <param name="timeout">Was the disconnect caused by timeout?</param>
 		private void HandleDisconnect(int playerId, bool timeout)
 		{
@@ -603,9 +605,11 @@ namespace MSCMP.Network
 
 				CleanupPlayer(playerId);
 
-				PlayerLeaveMessage msg = new PlayerLeaveMessage();
-				msg.playerID = playerId;
-				msg.reason = reason;
+				PlayerLeaveMessage msg = new PlayerLeaveMessage
+				{
+					playerID = playerId,
+					reason = reason
+				};
 				BroadcastMessage(msg, EP2PSend.k_EP2PSendReliable);
 			}
 
@@ -660,7 +664,6 @@ namespace MSCMP.Network
 			}
 		}
 
-
 		/// <summary>
 		/// Process incomming network messages.
 		/// </summary>
@@ -675,7 +678,6 @@ namespace MSCMP.Network
 				}
 
 				// TODO: Pre allocate this buffer and reuse it here - we don't want garbage collector to go crazy with that.
-
 				byte[] data = new byte[size];
 
 				if (!SteamNetworking.ReadP2PPacket(data, size, out uint msgSize, out CSteamID senderSteamId))
@@ -756,12 +758,11 @@ namespace MSCMP.Network
 		/// </summary>
 		public void DrawNameTags()
 		{
-			if (Players.Count != 0)
+			if (Players.Count == 0) return;
+
+			foreach (KeyValuePair<int, NetPlayer> player in Players)
 			{
-				foreach (KeyValuePair<int, NetPlayer> player in Players)
-				{
-					player.Value.DrawNametag(player.Key);
-				}
+				player.Value.DrawNametag(player.Key);
 			}
 		}
 
@@ -802,14 +803,12 @@ namespace MSCMP.Network
 			if (IsHost)
 			{
 				// Setup THE PLAYER
-
 				_timeSinceLastHeartbeat = 0.0f;
 				Players.Add(Players.Count, new NetPlayer(this, _netWorld, senderSteamId));
 				int connectingPlayerId = Players.Count - 1;
 				Logger.Log("Connecting player is now ID: " + (Players.Count - 1));
 
 				// Check if version matches - if not ignore this player.
-
 				if (msg.protocolVersion != _protocolVersion)
 				{
 					RejectPlayer(connectingPlayerId, $"Mod version mismatch.");
@@ -817,13 +816,10 @@ namespace MSCMP.Network
 				}
 
 				// Player can be spawned here safely. Host is already in game and all game objects are here.
-
 				Players[connectingPlayerId].Spawn();
 				SendHandshake(Players[connectingPlayerId]);
 
 				MessagesList.AddMessage($"Player {Players[connectingPlayerId].GetName()} joined.", MessageSeverity.Info);
-
-				Players[connectingPlayerId].HasHandshake = true;
 
 				SendPlayerJoined(connectingPlayerId, Players[Players.Count - 1]);
 
@@ -831,7 +827,6 @@ namespace MSCMP.Network
 			else
 			{
 				// Check if protocol version matches.
-
 				if (msg.protocolVersion != _protocolVersion)
 				{
 					string message;
@@ -849,7 +844,6 @@ namespace MSCMP.Network
 				}
 
 				// All is fine - load game world.
-
 				MessagesList.AddMessage($"Connection established!", MessageSeverity.Info);
 
 				MpController.Instance.LoadLevel("GAME");
@@ -866,9 +860,11 @@ namespace MSCMP.Network
 		/// </summary>
 		private void SendHandshake(NetPlayer player)
 		{
-			HandshakeMessage message = new HandshakeMessage();
-			message.protocolVersion = _protocolVersion;
-			message.clock = GetNetworkClock();
+			HandshakeMessage message = new HandshakeMessage
+			{
+				protocolVersion = _protocolVersion,
+				clock = GetNetworkClock()
+			};
 			SendMessage(player, message, EP2PSend.k_EP2PSendReliable);
 		}
 
@@ -878,7 +874,6 @@ namespace MSCMP.Network
 		public void OnGameWorldLoad()
 		{
 			// If we are not online setup an lobby for players to connect.
-
 			if (!IsOnline)
 			{
 				SetupLobby();
@@ -916,8 +911,7 @@ namespace MSCMP.Network
 			}
 			return null;
 		}
-
-
+		
 		/// <summary>
 		/// Called after whole network world is loaded.
 		/// </summary>
@@ -925,8 +919,7 @@ namespace MSCMP.Network
 		{
 			_state = State.Playing;
 		}
-
-
+		
 		/// <summary>
 		/// Get current p2p session state.
 		/// </summary>
@@ -962,6 +955,7 @@ namespace MSCMP.Network
 		/// <summary>
 		/// Send player joined message to connected players.
 		/// </summary>
+		/// <param name="playerId"></param>
 		/// <param name="player">Player who joined.</param>
 		private void SendPlayerJoined(int playerId, NetPlayer player)
 		{
@@ -1025,13 +1019,12 @@ namespace MSCMP.Network
 			// This doesn't seem to call just yet!
 			for (int i = 0; i < _lobbyIDs.Count; i++)
 			{
-				if (_lobbyIDs[i].m_SteamID == result.m_ulSteamIDLobby)
-				{
-					Logger.Log("Lobby " + i + " :: " + SteamMatchmaking.GetLobbyData((CSteamID)_lobbyIDs[i].m_SteamID, "name"));
-					int numPlayers = SteamMatchmaking.GetNumLobbyMembers((CSteamID)_lobbyIDs[i]);
-					_lobbyNames.Add("Unknown name (" + numPlayers + "/16)");
-					return;
-				}
+				if (_lobbyIDs[i].m_SteamID != result.m_ulSteamIDLobby) continue;
+
+				Logger.Log("Lobby " + i + " :: " + SteamMatchmaking.GetLobbyData((CSteamID)_lobbyIDs[i].m_SteamID, "name"));
+				int numPlayers = SteamMatchmaking.GetNumLobbyMembers(_lobbyIDs[i]);
+				_lobbyNames.Add("Unknown name (" + numPlayers + "/16)");
+				return;
 			}
 			Mpgui.Instance.LobbyNames = _lobbyNames;
 		}

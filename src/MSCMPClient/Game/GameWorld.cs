@@ -4,6 +4,7 @@ using MSCMP.Game.Objects;
 using MSCMP.Game.Places;
 using System.Collections.Generic;
 using UnityEngine;
+using static MSCMP.Game.GameCallbacks;
 
 namespace MSCMP.Game
 {
@@ -97,7 +98,7 @@ namespace MSCMP.Game
 				}
 
 				// Make sure reported time is power of two..
-				_worldTimeCached = (float)((int)value / 2 * 2);
+				_worldTimeCached = (int)value / 2 * 2;
 
 				if (_worldTimeCached <= 2.0f)
 				{
@@ -127,7 +128,6 @@ namespace MSCMP.Game
 		public int WorldDay
 		{
 			get => PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value;
-
 			set => PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value = value;
 		}
 
@@ -137,7 +137,6 @@ namespace MSCMP.Game
 		public string PlayerLastName
 		{
 			get => _lastnameTextMesh.text;
-
 			set
 			{
 				_lastnameFsm.enabled = false;
@@ -168,11 +167,11 @@ namespace MSCMP.Game
 
 			// Make sure game world will get notified about play maker CreateObject/DestroyObject calls.
 
-			GameCallbacks.onPlayMakerObjectCreate += (instance, prefab) =>
+			onPlayMakerObjectCreate += (instance, prefab) =>
 			{
 				HandleNewObject(instance);
 			};
-			GameCallbacks.onPlayMakerObjectDestroy += HandleObjectDestroy;
+			onPlayMakerObjectDestroy += HandleObjectDestroy;
 
 			// Register game objects users.
 
@@ -192,11 +191,6 @@ namespace MSCMP.Game
 		/// The current game world hash.
 		/// </summary>
 		private int _worldHash;
-
-		/// <summary>
-		/// Get unique world hash.
-		/// </summary>
-		public int WorldHash => _worldHash;
 
 		/// <summary>
 		/// Was game world has already generated?
@@ -337,7 +331,6 @@ namespace MSCMP.Game
 		private void HandleObjectDestroy(GameObject gameObject)
 		{
 			// Iterate backwards so pickupable users will be notified before the database.
-
 			for (int i = _gameObjectUsers.Count; i > 0; --i)
 			{
 				_gameObjectUsers[i - 1].DestroyObject(gameObject);
@@ -350,9 +343,7 @@ namespace MSCMP.Game
 		public void OnLoad()
 		{
 			// Register all game objects.
-
 			GameObject[] gos = Resources.FindObjectsOfTypeAll<GameObject>();
-
 			foreach (GameObject go in gos)
 			{
 				if (!_worldHashGenerated)
@@ -372,17 +363,12 @@ namespace MSCMP.Game
 			_worldHashGenerated = true;
 
 			// Check mandatory objects.
-
 			Client.Assert(_worldTimeFsm != null, "No world time FSM found :(");
 			Client.Assert(_lastnameFsm != null, "Mailbox FSM couldn't be found!");
 			Client.Assert(_lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 
 			// Notify different parts of the mod about the world load.
-
-			if (GameCallbacks.onWorldLoad != null)
-			{
-				GameCallbacks.onWorldLoad();
-			}
+			onWorldLoad?.Invoke();
 		}
 
 		/// <summary>
@@ -391,16 +377,12 @@ namespace MSCMP.Game
 		public void OnUnload()
 		{
 			// Iterate backwards so pickupable users will be notified before the database.
-
 			for (int i = _gameObjectUsers.Count; i > 0; --i)
 			{
 				_gameObjectUsers[i - 1].DestroyObjects();
 			}
 
-			if (GameCallbacks.onWorldUnload != null)
-			{
-				GameCallbacks.onWorldUnload();
-			}
+			onWorldUnload?.Invoke();
 
 			_player = null;
 		}
@@ -410,20 +392,13 @@ namespace MSCMP.Game
 		/// </summary>
 		public void Update()
 		{
-			if (_player == null)
-			{
-				GameObject playerGo = GameObject.Find("PLAYER");
+			if (_player != null) return;
+			GameObject playerGo = GameObject.Find("PLAYER");
 
-				if (playerGo != null)
-				{
-					_player = new GamePlayer(playerGo);
+			if (playerGo == null) return;
+			_player = new GamePlayer(playerGo);
 
-					if (GameCallbacks.onLocalPlayerCreated != null)
-					{
-						GameCallbacks.onLocalPlayerCreated();
-					}
-				}
-			}
+			onLocalPlayerCreated?.Invoke();
 		}
 
 		/// <summary>

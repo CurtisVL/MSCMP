@@ -25,7 +25,7 @@ namespace MSCMP.Network
 		/// <summary>
 		/// The game object representing pickupable.
 		/// </summary>
-		public GameObject GameObject;
+		private GameObject _gameObject;
 
 		/// <summary>
 		/// Constructor.
@@ -35,7 +35,7 @@ namespace MSCMP.Network
 		public NetPickupable(ushort netId, GameObject go)
 		{
 			_netId = netId;
-			GameObject = go;
+			_gameObject = go;
 		}
 	}
 }

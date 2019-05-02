@@ -9,7 +9,7 @@ namespace MSCMP.Game
 	/// <summary>
 	/// Database containing prefabs of all pickupables.
 	/// </summary>
-	internal class GamePickupableDatabase 
+	internal class GamePickupableDatabase
 		: IGameObjectCollector
 	{
 		private static GamePickupableDatabase _instance;
@@ -32,13 +32,12 @@ namespace MSCMP.Game
 			GameCallbacks.onPlayMakerObjectCreate += (instance, prefab) =>
 			{
 				PrefabDesc descriptor = GetPrefabDesc(prefab);
-				if (descriptor != null)
-				{
-					PickupableMetaDataComponent metaDataComponent = instance.AddComponent<PickupableMetaDataComponent>();
-					metaDataComponent.PrefabId = descriptor.Id;
+				if (descriptor == null) return;
 
-					Logger.Log($"Pickupable has been spawned. ({instance.name})");
-				}
+				PickupableMetaDataComponent metaDataComponent = instance.AddComponent<PickupableMetaDataComponent>();
+				metaDataComponent.PrefabId = descriptor.Id;
+
+				Logger.Log($"Pickupable has been spawned. ({instance.name})");
 			};
 		}
 		~GamePickupableDatabase()
@@ -81,18 +80,21 @@ namespace MSCMP.Game
 				pickupable.transform.SetParent(null);
 
 				// Disable loading code on all spawned pickupables.
-
 				PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(pickupable, "Use");
 				if (fsm != null)
 				{
 					FsmState loadState = fsm.Fsm.GetState("Load");
 					if (loadState != null)
 					{
-						SendEvent action = new SendEvent();
-						action.eventTarget = new FsmEventTarget();
-						action.eventTarget.excludeSelf = false;
-						action.eventTarget.target = FsmEventTarget.EventTarget.Self;
-						action.sendEvent = fsm.Fsm.GetEvent("FINISHED");
+						SendEvent action = new SendEvent
+						{
+							eventTarget = new FsmEventTarget
+							{
+								excludeSelf = false,
+								target = FsmEventTarget.EventTarget.Self
+							},
+							sendEvent = fsm.Fsm.GetEvent("FINISHED")
+						};
 						PlayMakerUtils.AddNewAction(loadState, action);
 
 						Logger.Log("Installed skip load hack for prefab " + pickupable.name);
@@ -127,12 +129,13 @@ namespace MSCMP.Game
 			PickupableMetaDataComponent metaDataComponent = gameObject.AddComponent<PickupableMetaDataComponent>();
 			metaDataComponent.PrefabId = prefabId;
 
-			PrefabDesc desc = new PrefabDesc();
-			desc.GameObject = gameObject;
-			desc.Id = prefabId;
+			PrefabDesc desc = new PrefabDesc
+			{
+				GameObject = gameObject,
+				Id = prefabId
+			};
 
 			// Activate game object if it's not active to make sure we can access all play maker fsm.
-
 			bool wasActive = desc.GameObject.activeSelf;
 			if (!wasActive)
 			{
@@ -151,7 +154,6 @@ namespace MSCMP.Game
 			}
 
 			// Deactivate game object back if needed.
-
 			if (!wasActive)
 			{
 				desc.GameObject.SetActive(false);

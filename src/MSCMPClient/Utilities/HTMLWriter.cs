@@ -10,12 +10,11 @@ namespace MSCMP.Utilities
 	{
 		private readonly StreamWriter _streamWriter;
 
-		private readonly string _fileName = "";
-		public string FileName => _fileName;
+		public string FileName { get; }
 
 		public HtmlWriter(string fileName)
 		{
-			_fileName = fileName;
+			FileName = fileName;
 			_streamWriter = new StreamWriter(fileName, false, System.Text.Encoding.UTF8);
 			if (_streamWriter == null)
 			{

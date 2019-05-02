@@ -10,10 +10,7 @@ namespace MSCMP.Network
 		/// <summary>
 		/// The unique id of the network message.
 		/// </summary>
-		byte MessageId
-		{
-			get;
-		}
+		byte MessageId { get; }
 
 		/// <summary>
 		/// Deserialize network message from binary buffer.

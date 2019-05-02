@@ -7,23 +7,23 @@ namespace MSCMP.Utilities
 		/// <summary>
 		/// The 1x1 plain white pixel texture.
 		/// </summary>
-		private static readonly Texture2D _fillText = new Texture2D(1, 1);
+		private static readonly Texture2D FillText = new Texture2D(1, 1);
 
 		/// <summary>
 		/// Small label style.
 		/// </summary>
-		private static readonly GUIStyle _smallLabelStyle = new GUIStyle();
+		private static readonly GUIStyle SmallLabelStyle = new GUIStyle();
 
 		/// <summary>
 		/// Setup all rendering objects.
 		/// </summary>
 		public static void Setup()
 		{
-			_smallLabelStyle.fontSize = 11;
+			SmallLabelStyle.fontSize = 11;
 
-			_fillText.SetPixel(0, 0, Color.white);
-			_fillText.wrapMode = TextureWrapMode.Repeat;
-			_fillText.Apply();
+			FillText.SetPixel(0, 0, Color.white);
+			FillText.wrapMode = TextureWrapMode.Repeat;
+			FillText.Apply();
 		}
 
 		/// <summary>
@@ -32,9 +32,9 @@ namespace MSCMP.Utilities
 		/// <param name="rct">Where rectangle should be drawn.</param>
 		public static void DrawPlainColorRect(Rect rct)
 		{
-			if (_fillText != null)
+			if (FillText != null)
 			{
-				GUI.DrawTexture(rct, _fillText);
+				GUI.DrawTexture(rct, FillText);
 			}
 		}
 
@@ -51,13 +51,13 @@ namespace MSCMP.Utilities
 			{
 				rct.y += 1;
 				rct.x += 1;
-				_smallLabelStyle.normal.textColor = Color.black;
-				GUI.Label(rct, text, _smallLabelStyle);
+				SmallLabelStyle.normal.textColor = Color.black;
+				GUI.Label(rct, text, SmallLabelStyle);
 				rct.y -= 1;
 				rct.x -= 1;
 			}
-			_smallLabelStyle.normal.textColor = color;
-			GUI.Label(rct, text, _smallLabelStyle);
+			SmallLabelStyle.normal.textColor = color;
+			GUI.Label(rct, text, SmallLabelStyle);
 		}
 	}
 }

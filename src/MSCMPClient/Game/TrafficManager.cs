@@ -13,7 +13,7 @@ namespace MSCMP.Game
 		/// <summary>
 		/// Possible routes for AI vehicles to use.
 		/// </summary>
-		public enum Routes
+		private enum Routes
 		{
 			BusRoute,
 			DirtRoad,
