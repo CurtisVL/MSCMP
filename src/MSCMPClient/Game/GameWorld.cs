@@ -40,11 +40,6 @@ namespace MSCMP.Game {
 		LightSwitchManager lightSwitchManager = new LightSwitchManager();
 
 		/// <summary>
-		/// Weather manager.
-		/// </summary>
-		GameWeatherManager gameWeatherManager = new GameWeatherManager();
-
-		/// <summary>
 		/// Game vehicle database.
 		/// </summary>
 		GameVehicleDatabase gameVehicleDatabase = new GameVehicleDatabase();
@@ -172,7 +167,6 @@ namespace MSCMP.Game {
 			gameObjectUsers.Add(doorsManager);
 			gameObjectUsers.Add(gamePickupableDatabase);
 			gameObjectUsers.Add(lightSwitchManager);
-			gameObjectUsers.Add(gameWeatherManager);
 			gameObjectUsers.Add(gameVehicleDatabase);
 		}
 

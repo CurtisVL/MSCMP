@@ -28,6 +28,7 @@ namespace MSCMP.Game {
 			Boat,
 			GarageDoor,
 			VehicleDoor,
+			Weather,
 		}
 
 		/// <summary>

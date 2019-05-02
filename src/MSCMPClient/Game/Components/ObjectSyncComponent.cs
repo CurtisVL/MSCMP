@@ -131,6 +131,10 @@ namespace MSCMP.Game.Components {
 				case ObjectSyncManager.ObjectTypes.VehicleDoor:
 					syncedObject = new VehicleDoor(this.gameObject, this);
 					break;
+				// Weather.
+				case ObjectSyncManager.ObjectTypes.Weather:
+					syncedObject = new Weather(this.gameObject, this);
+					break;
 			}
 			IsSetup = true;
 		}
@@ -283,6 +287,12 @@ namespace MSCMP.Game.Components {
 				return;
 			}
 			if (syncedObject != null) {
+				// Weather requires a specific way of syncing.
+				if (ObjectType == ObjectSyncManager.ObjectTypes.Weather) {
+					Weather weather = syncedObject as Weather;
+					weather.SetPosAndRot(pos, rot);
+				}
+				// All other objects are synced based on what is required.
 				switch (syncedObject.flags()) {
 					case ObjectSyncManager.Flags.Full:
 						syncedObject.ObjectTransform().position = pos;

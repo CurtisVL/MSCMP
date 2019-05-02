@@ -87,7 +87,6 @@
     <Compile Include="Messages\VehicleSwitchMessage.cs" />
     <Compile Include="Messages\VehicleEnterMessage.cs" />
     <Compile Include="Messages\VehicleLeaveMessage.cs" />
-    <Compile Include="Messages\WeatherUpdateMessage.cs" />
     <Compile Include="Messages\WorldPeriodicalUpdateMessage.cs" />
     <Compile Include="NetMessageDesc.cs" />
     <Compile Include="Optional.cs" />

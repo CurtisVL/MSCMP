@@ -220,7 +220,6 @@ namespace MSCMP.Network {
 				// Game reports 'next hour' - we want to have transition so correct it.
 				GameWorld.Instance.WorldTime = (float)msg.sunClock - 2.0f;
 				GameWorld.Instance.WorldDay = (int)msg.worldDay;
-				GameWeatherManager.Instance.SetWeather(msg.currentWeather);
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerSyncMessage msg) => {
@@ -466,9 +465,8 @@ namespace MSCMP.Network {
 
 			if (timeToSendPeriodicalUpdate <= 0.0f) {
 				var message = new Messages.WorldPeriodicalUpdateMessage();
-				message.sunClock = (Byte)Game.GameWorld.Instance.WorldTime;
-				message.worldDay = (Byte)Game.GameWorld.Instance.WorldDay;
-				Game.GameWeatherManager.Instance.WriteWeather(message.currentWeather);
+				message.sunClock = (Byte)GameWorld.Instance.WorldTime;
+				message.worldDay = (Byte)GameWorld.Instance.WorldDay;
 				netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 
 				timeToSendPeriodicalUpdate = PERIODICAL_UPDATE_INTERVAL;
@@ -504,7 +502,7 @@ namespace MSCMP.Network {
 
 			// Write time
 
-			Game.GameWorld gameWorld = Game.GameWorld.Instance;
+			GameWorld gameWorld = GameWorld.Instance;
 			msg.dayTime = gameWorld.WorldTime;
 			msg.day = gameWorld.WorldDay;
 
@@ -676,10 +674,6 @@ namespace MSCMP.Network {
 					lights.TurnOn(light.toggle);
 				}
 			}
-
-			// Weather.
-
-			GameWeatherManager.Instance.SetWeather(msg.currentWeather);
 
 			// Pickupables
 

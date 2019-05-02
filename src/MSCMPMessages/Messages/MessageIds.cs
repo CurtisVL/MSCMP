@@ -23,7 +23,6 @@ namespace MSCMPMessages.Messages {
 		PickupableSetPosition,
 		WorldPeriodicalUpdate,
 		LightSwitch,
-		WeatherSync,
 		AnimSync,
 		VehicleSwitch,
 		ObjectSync,

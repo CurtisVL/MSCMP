@@ -16,10 +16,5 @@ namespace MSCMPMessages.Messages {
 		/// Current world day of the week.
 		/// </summary>
 		Byte worldDay;
-
-		/// <summary>
-		/// Current in game weather.
-		/// </summary>
-		WeatherUpdateMessage currentWeather;
 	}
 }
