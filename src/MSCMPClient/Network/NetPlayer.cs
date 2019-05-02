@@ -30,7 +30,7 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// The anim manager managing connection with this player.
 		/// </summary>
-		protected PlayerAnimManager animManager = null;
+		public PlayerAnimManager AnimManager = null;
 
 		/// <summary>
 		/// The game object representing character.
@@ -139,15 +139,9 @@ namespace MSCMP.Network {
 			// GameObject.DontDestroyOnLoad(go);
 
 			//Getting the Animation component of the model, and setting the priority layers of each animation
-			if (animManager == null) { animManager = new PlayerAnimManager(); Logger.Debug("AnimManager: JUST CREATED MORE!"); }
+			if (AnimManager == null) { AnimManager = new PlayerAnimManager(); Logger.Debug("AnimManager: JUST CREATED MORE!"); }
 			else Logger.Debug("AnimManager: We had already (from NetLocal) our animManager");
-			animManager.SetupAnimations(characterGameObject);
-
-			/*if (characterAnimationComponent != null) {
-				// Force character to stand.
-
-				PlayAnimation(AnimationId.Standing, true);
-			}*/
+			AnimManager.SetupAnimations(characterGameObject);
 
 			if (pickedUpObjectNetId != NetPickupable.INVALID_ID) {
 				UpdatePickedUpObject(true, false);
@@ -212,10 +206,10 @@ namespace MSCMP.Network {
 					UpdatePickedupPosition();
 				}
 
-				if (animManager != null) {
-					animManager.HandleOnFootMovementAnimations(speed);
-					animManager.CheckBlendedOutAnimationStates();
-					animManager.SyncVerticalHeadLook(characterGameObject, progress);
+				if (AnimManager != null) {
+					AnimManager.HandleOnFootMovementAnimations(speed);
+					AnimManager.CheckBlendedOutAnimationStates();
+					AnimManager.SyncVerticalHeadLook(characterGameObject, progress);
 				}
 			}
 
@@ -224,16 +218,17 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Draw this player name tag.
 		/// </summary>
-		public void DrawNametag() {
+		/// <param name="playerID">Player ID of player.</param>
+		public void DrawNametag(int playerID) {
 			if (characterGameObject != null) {
 				Vector3 spos = Camera.main.WorldToScreenPoint(characterGameObject.transform.position + Vector3.up * 2.0f);
 				if (spos.z > 0.0f) {
 					float width = 100.0f;
 					spos.x -= width / 2.0f;
 					GUI.color = Color.black;
-					GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName());
+					GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName() + " (" + playerID + ")");
 					GUI.color = Color.cyan;
-					GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName());
+					GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName() + " (" + playerID + ")");
 					GUI.color = Color.white;
 				}
 			}
@@ -268,7 +263,7 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="msg">The received synchronization message.</param>
 		public void HandleAnimSynchronize(Messages.AnimSyncMessage msg) {
-			if (animManager != null) animManager.HandleAnimations(msg);
+			if (AnimManager != null) AnimManager.HandleAnimations(msg);
 		}
 
 		/// <summary>

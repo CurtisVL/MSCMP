@@ -54,7 +54,7 @@ namespace MSCMP.Network {
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
-			if (animManager == null) animManager = new PlayerAnimManager();
+			if (AnimManager == null) AnimManager = new PlayerAnimManager();
 		}
 
 		/// <summary>
@@ -70,10 +70,10 @@ namespace MSCMP.Network {
 
 			timeToUpdate -= Time.deltaTime;
 			if (timeToUpdate <= 0.0f && netManager.IsPlaying) {
-				if (animManager != null) {
-					animManager.PACKETS_LEFT_TO_SYNC--;
-					if (animManager.PACKETS_LEFT_TO_SYNC <= 0) {
-						animManager.PACKETS_LEFT_TO_SYNC = animManager.PACKETS_TOTAL_FOR_SYNC;
+				if (AnimManager != null) {
+					AnimManager.PACKETS_LEFT_TO_SYNC--;
+					if (AnimManager.PACKETS_LEFT_TO_SYNC <= 0) {
+						AnimManager.PACKETS_LEFT_TO_SYNC = AnimManager.PACKETS_TOTAL_FOR_SYNC;
 						SendAnimSync();
 					}
 				}
@@ -145,16 +145,16 @@ namespace MSCMP.Network {
 
 			message.isGrounded = playerObject.GetComponentInChildren<CharacterMotor>().grounded;
 
-			message.activeHandState = animManager.GetActiveHandState(playerObject);
+			message.activeHandState = AnimManager.GetActiveHandState(playerObject);
 
 			message.swearId = int.MaxValue;
-			if (animManager.GetHandState(message.activeHandState) == PlayerAnimManager.HandStateId.MiddleFingering) {
+			if (AnimManager.GetHandState(message.activeHandState) == PlayerAnimManager.HandStateId.MiddleFingering) {
 				message.swearId = Utils.GetPlaymakerScriptByName(playerObject, "PlayerFunctions").Fsm.GetFsmInt("RandomInt").Value;
 			}
 			PlayMakerFSM speechFsm = Utils.GetPlaymakerScriptByName(playerObject, "Speech");
-			if (speechFsm.ActiveStateName == "Swear") message.swearId = animManager.Swears_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
-			else if (speechFsm.ActiveStateName == "Drunk speech") message.swearId = animManager.DrunkSpeaking_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
-			else if (speechFsm.ActiveStateName == "Yes gestures") message.swearId = animManager.Agreeing_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			if (speechFsm.ActiveStateName == "Swear") message.swearId = AnimManager.Swears_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			else if (speechFsm.ActiveStateName == "Drunk speech") message.swearId = AnimManager.DrunkSpeaking_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			else if (speechFsm.ActiveStateName == "Yes gestures") message.swearId = AnimManager.Agreeing_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
 
 			message.aimRot = playerObject.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
 			message.crouchPosition = Utils.GetPlaymakerScriptByName(playerObject, "Crouch").Fsm.GetFsmFloat("Position").Value;
@@ -164,8 +164,8 @@ namespace MSCMP.Network {
 			if (DrunkValue >= 4.5f) message.isDrunk = true;
 			else message.isDrunk = false;
 
-			if (!animManager.AreDrinksPreloaded()) animManager.PreloadDrinkObjects(playerObject);
-			message.drinkId = animManager.GetDrinkingObject(playerObject);
+			if (!AnimManager.AreDrinksPreloaded()) AnimManager.PreloadDrinkObjects(playerObject);
+			message.drinkId = AnimManager.GetDrinkingObject(playerObject);
 
 			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
 				return false;

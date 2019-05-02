@@ -212,6 +212,14 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		public ObjectSyncManager.Flags flags() {
+			return ObjectSyncManager.Flags.Full;
+		}
+
+		/// <summary>
 		/// Adds a passenger seat to the vehicle.
 		/// </summary>
 		void AddPassengerSeat(PlayMakerFSM fsm) {
@@ -487,8 +495,6 @@ namespace MSCMP.Game.Objects {
 					return false;
 				}));
 			}
-
-			// Vehicle switches
 
 			// Range
 			if (hasRange) {

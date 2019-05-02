@@ -19,7 +19,8 @@
 		VehicleInitMessage[]		vehicles;
 		PickupableSpawnMessage[]	pickupables;
 		LightSwitchMessage[]		lights;
-		WeatherUpdateMessage		currentWeather;
+		ConnectedPlayersMessage		connectedPlayers;
+		ObjectOwnerSync[]			objectOwners;
 
 		// Informations about player we have connected to.
 

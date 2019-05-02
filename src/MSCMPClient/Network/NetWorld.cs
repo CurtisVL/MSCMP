@@ -289,7 +289,7 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.AskForWorldStateMessage msg) => {
 				var msgF = new Messages.FullWorldSyncMessage();
 				WriteFullWorldSync(msgF);
-				netManager.BroadcastMessage(msgF, Steamworks.EP2PSend.k_EP2PSendReliable);
+				netManager.SendMessage(netManager.GetPlayer(sender), msgF, Steamworks.EP2PSend.k_EP2PSendReliable);
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleEnterMessage msg) => {
@@ -369,36 +369,74 @@ namespace MSCMP.Network {
 				// This *should* never happen, but apparently it's possible.
 				Client.Assert(osc != null, $"Object Sync Component wasn't found for object with ID {msg.objectID}, however, the object had a dictionary entry!");
 
-				// Set owner.
-				if (type == ObjectSyncManager.SyncTypes.SetOwner) {
-					if (osc.Owner == null || osc.Owner == netManager.GetPlayer(sender)) {
-						osc.OwnerSetToRemote(netManager.GetPlayer(sender));
-						osc.SendObjectSyncResponse(osc.ObjectID, true);
+				// Host controls who owns an object.
+				if (NetManager.Instance.IsHost) {
+					// Set owner on host.
+					if (type == ObjectSyncManager.SyncTypes.SetOwner) {
+						ObjectSyncManager.SetOwnerHandler(msg, osc, sender);
 					}
-					else {
-						Logger.Debug($"Set owner request rejected for object: {osc.transform.name} (Owner: {osc.Owner} Sender: {sender.m_SteamID})");
+					// Remove owner on host.
+					if (type == ObjectSyncManager.SyncTypes.RemoveOwner) {
+						if (osc.Owner == netManager.GetLocalPlayer()) {
+							ObjectSyncManager.RemoveOwnerHandler(msg, osc, sender);
+						}
 					}
-				}
-				// Remove owner.
-				else if (type == ObjectSyncManager.SyncTypes.RemoveOwner) {
-					if (osc.Owner == netManager.GetPlayer(sender)) {
-						osc.OwnerRemoved();
+					// Sync taken by force on host.
+					if (type == ObjectSyncManager.SyncTypes.ForceSetOwner) {
+						ObjectSyncManager.SyncTakenByForceHandler(msg, osc, sender);
 					}
-				}
-				// Force set owner.
-				else if (type == ObjectSyncManager.SyncTypes.ForceSetOwner) {
-					osc.Owner = netManager.GetPlayer(sender);
-					osc.SendObjectSyncResponse(osc.ObjectID, true);
-					osc.SyncTakenByForce();
-					osc.SyncEnabled = false;
 				}
 
-				// Set object's position and variables
-				if ((osc.Owner == netManager.GetPlayer(sender)) || (type == ObjectSyncManager.SyncTypes.PeriodicSync)) {
+				// Set ownership info on clients.
+				else {
+					NetPlayer player = netManager.GetPlayerByPlayerID(msg.OwnerPlayerID);
+					// Set owner.
+					if (type == ObjectSyncManager.SyncTypes.SetOwner) {
+						if (osc.Owner != netManager.GetLocalPlayer()) {
+							osc.OwnerSetToRemote(player);
+						}
+						osc.Owner = player;
+					}
+					// Remove owner.
+					else if (type == ObjectSyncManager.SyncTypes.RemoveOwner) {
+						if (osc.Owner != netManager.GetLocalPlayer()) {
+							osc.OwnerRemoved();
+						}
+						osc.Owner = null;
+					}
+					// Force set owner.
+					else if (type == ObjectSyncManager.SyncTypes.ForceSetOwner) {
+						if (osc.Owner != netManager.GetLocalPlayer()) {
+							osc.SyncTakenByForce();
+							osc.SyncEnabled = false;
+						}
+						osc.Owner = player;
+						if (osc.Owner == netManager.GetLocalPlayer()) {
+							osc.SyncEnabled = true;
+						}
+					}
+				}
+
+				// Set object's position and variables.
+				if ((osc.Owner == netManager.GetPlayer(sender)) || type == ObjectSyncManager.SyncTypes.PeriodicSync) {
+					// Send synced variables, or variables only sync in some cases.
 					if (msg.HasSyncedVariables) {
 						osc.HandleSyncedVariables(msg.SyncedVariables);
 					}
-					osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.position), Utils.NetQuatToGame(msg.rotation));
+
+					// Full sync.
+					if (msg.HasPosition && msg.HasRotation) {
+						osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.Position), Utils.NetQuatToGame(msg.Rotation));
+					}
+					// Position only sync.
+					else if (msg.HasPosition) {
+						Quaternion zero = new Quaternion(0, 0, 0, 0);
+						osc.SetPositionAndRotation(Utils.NetVec3ToGame(msg.Position), zero);
+					}
+					// Rotation only sync.
+					else if (msg.HasRotation) {
+						osc.SetPositionAndRotation(Vector3.zero, Utils.NetQuatToGame(msg.Rotation));
+					}
 				}
 			});
 
@@ -508,7 +546,6 @@ namespace MSCMP.Network {
 
 			// Write light switches.
 
-
 			List<LightSwitch> lights = Game.LightSwitchManager.Instance.lightSwitches;
 			int lightCount = lights.Count;
 			msg.lights = new Messages.LightSwitchMessage[lightCount];
@@ -522,9 +559,19 @@ namespace MSCMP.Network {
 				msg.lights[i] = lightMsg;
 			}
 
-			// Write weather
+			// Write connected players.
 
-			GameWeatherManager.Instance.WriteWeather(msg.currentWeather);
+			msg.connectedPlayers = new Messages.ConnectedPlayersMessage();
+			int[] playerIDs = new int[netManager.players.Count];
+			ulong[] steamIDs = new ulong[netManager.players.Count];
+			int index2 = 0;
+			foreach (var connectedPlayer in netManager.players) {
+				playerIDs[index2] = connectedPlayer.Key;
+				steamIDs[index2] = connectedPlayer.Value.SteamId.m_SteamID;
+				index2++;
+			}
+			msg.connectedPlayers.playerIDs = playerIDs;
+			msg.connectedPlayers.steamIDs = steamIDs;
 
 			// Write objects. (Pickupables, Player vehicles, AI vehicles)
 
@@ -570,6 +617,31 @@ namespace MSCMP.Network {
 					osc.gameObject.SetActive(false);
 				}
 				pickupableMessages.Add(pickupableMsg);
+			}
+
+			// Object owners.
+
+			int objectsCount = ObjectSyncManager.Instance.ObjectIDs.Count;
+			msg.objectOwners = new Messages.ObjectOwnerSync[objectsCount];
+
+			Dictionary<NetPlayer, int> playersReversed = new Dictionary<NetPlayer, int>();
+			foreach (var player in netManager.players) {
+				playersReversed.Add(player.Value, player.Key);
+			}
+
+			Logger.Debug($"Writing owners of {objectsCount} objects!");
+			int index = 0;
+			foreach (var objectId in ObjectSyncManager.Instance.ObjectIDs) {
+				var objectMsg = new Messages.ObjectOwnerSync();
+				objectMsg.objectID = objectId.Key;
+				if (objectId.Value.Owner != null) {
+					objectMsg.ownerPlayerID = playersReversed[objectId.Value.Owner];
+				}
+				else {
+					objectMsg.ownerPlayerID = -1;
+				}
+				msg.objectOwners[index] = objectMsg;
+				index++;
 			}
 
 			msg.pickupables = pickupableMessages.ToArray();
@@ -639,7 +711,30 @@ namespace MSCMP.Network {
 					GameObject.Destroy(kv.Value);
 				}
 			}
-			
+
+			// Connected players.
+
+			int i = 0;
+			foreach (int newPlayerID in msg.connectedPlayers.playerIDs) {
+				Steamworks.CSteamID localSteamID = Steamworks.SteamUser.GetSteamID();
+				Steamworks.CSteamID newPlayerSteamID = new Steamworks.CSteamID(msg.connectedPlayers.steamIDs[i]);
+				// If player is not host or local player, setup new player.
+				if (newPlayerSteamID != netManager.GetHostPlayer().SteamId && newPlayerSteamID != localSteamID) {
+					netManager.players.Add(newPlayerID, new NetPlayer(netManager, this, newPlayerSteamID));
+					netManager.players[newPlayerID].Spawn();
+					Logger.Debug("Setup new player at ID: " + newPlayerID);
+				}
+				i++;
+			}
+
+			// Object owners.
+
+			foreach (Messages.ObjectOwnerSync syncMsg in msg.objectOwners) {
+				if (syncMsg.ownerPlayerID != -1) {
+					ObjectSyncManager.Instance.ObjectIDs[syncMsg.objectID].Owner = netManager.GetPlayerByPlayerID(syncMsg.ownerPlayerID);
+				}
+			}
+
 			GamePickupableDatabase.Instance.Pickupables.Clear();
 			playerIsLoading = false;
 			
@@ -652,7 +747,7 @@ namespace MSCMP.Network {
 		/// </summary>
 		public void AskForFullWorldSync() {
 			Messages.AskForWorldStateMessage msg = new Messages.AskForWorldStateMessage();
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			netManager.SendMessage(netManager.GetHostPlayer(), msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 #if !PUBLIC_RELEASE

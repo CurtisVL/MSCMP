@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using MSCMP.Game;
 using MSCMP.Game.Objects;

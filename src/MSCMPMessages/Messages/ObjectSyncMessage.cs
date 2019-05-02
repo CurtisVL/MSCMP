@@ -4,7 +4,10 @@
 
 		int objectID;
 
+		[Optional]
 		Vector3Message position;
+
+		[Optional]
 		QuaternionMessage rotation;
 
 		[Optional]
@@ -12,5 +15,8 @@
 
 		[Optional]
 		float[] syncedVariables;
+
+		[Optional]
+		int ownerPlayerID;
 	}
 }

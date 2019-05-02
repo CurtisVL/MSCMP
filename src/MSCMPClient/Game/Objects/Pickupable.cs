@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MSCMP.Game.Objects.PickupableTypes;
 using UnityEngine;
@@ -57,6 +57,14 @@ namespace MSCMP.Game.Objects {
 					break;
 				}
 			}
+		}
+
+		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		public ObjectSyncManager.Flags flags() {
+			return ObjectSyncManager.Flags.Full;
 		}
 
 		/// <summary>

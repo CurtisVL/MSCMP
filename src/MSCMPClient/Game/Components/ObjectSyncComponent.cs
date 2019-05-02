@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using MSCMP.Network;
 using MSCMP.Game.Objects;
 
@@ -47,6 +47,12 @@ namespace MSCMP.Game.Components {
 		/// GameObject this component is attached to. Used as a reference for when object is disabled.
 		/// </summary>
 		GameObject thisObject;
+
+		/// <summary>
+		/// Sync interval in frames.
+		/// </summary>
+		int currentFrame = 0;
+		int syncInterval = 1;
 
 
 		/// <summary>
@@ -129,18 +135,25 @@ namespace MSCMP.Game.Components {
 		/// Called once per frame.
 		/// </summary>
 		void Update() {
-			if (!IsSetup && !SyncEnabled) {
-				return;
-			}
+			if (currentFrame >= syncInterval) {
+				currentFrame = 0;
 
-			// Updates object's position continuously, or, if the CanSync criteria is met.
-			if (syncedObject.CanSync() || sendConstantSync) {
-				SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, false);
-			}
+				if (!IsSetup && !SyncEnabled) {
+					return;
+				}
 
-			// Periodically update the object's position if periodic sync is enabled.
-			if (syncedObject.PeriodicSyncEnabled() && ObjectSyncManager.Instance.ShouldPeriodicSync(Owner, SyncEnabled)) {
-				SendObjectSync(ObjectSyncManager.SyncTypes.PeriodicSync, true, false);
+				// Updates object's position continuously, or, if the CanSync criteria is met.
+				if (syncedObject.CanSync() || sendConstantSync) {
+					SendObjectSync(ObjectSyncManager.SyncTypes.GenericSync, true, false);
+				}
+
+				// Periodically update the object's position if periodic sync is enabled.
+				if (syncedObject.PeriodicSyncEnabled() && ObjectSyncManager.Instance.ShouldPeriodicSync(Owner, SyncEnabled)) {
+					SendObjectSync(ObjectSyncManager.SyncTypes.PeriodicSync, true, false);
+				}
+			}
+			else {
+				currentFrame++;
 			}
 		}
 
@@ -148,11 +161,15 @@ namespace MSCMP.Game.Components {
 		/// Sends a sync update of the object.
 		/// </summary>
 		public void SendObjectSync(ObjectSyncManager.SyncTypes type, bool sendVariables, bool syncWasRequested) {
+			if (ObjectType == ObjectSyncManager.ObjectTypes.Weather) {
+				SendObjectSync(ObjectID, syncedObject.ObjectTransform().localPosition, syncedObject.ObjectTransform().localRotation, type, syncedObject.ReturnSyncedVariables(true), syncedObject.flags());
+			}
+
 			if (sendVariables) {
-				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, syncedObject.ReturnSyncedVariables(true));
+				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, syncedObject.ReturnSyncedVariables(true), syncedObject.flags());
 			}
 			else {
-				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, null);
+				SendObjectSync(ObjectID, syncedObject.ObjectTransform().position, syncedObject.ObjectTransform().rotation, type, null, syncedObject.flags());
 			}
 		}
 
@@ -262,8 +279,18 @@ namespace MSCMP.Game.Components {
 				return;
 			}
 			if (syncedObject != null) {
-				syncedObject.ObjectTransform().position = pos;
-				syncedObject.ObjectTransform().rotation = rot;
+				switch (syncedObject.flags()) {
+					case ObjectSyncManager.Flags.Full:
+						syncedObject.ObjectTransform().position = pos;
+						syncedObject.ObjectTransform().rotation = rot;
+						break;
+					case ObjectSyncManager.Flags.PositionOnly:
+						syncedObject.ObjectTransform().position = pos;
+						break;
+					case ObjectSyncManager.Flags.RotationOnly:
+						syncedObject.ObjectTransform().rotation = rot;
+						break;
+				}
 			}
 		}
 
@@ -288,16 +315,90 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		/// <param name="objectID">The Object ID of the object.</param>
 		/// <param name="setOwner">Set owner of the object.</param>
-		public void SendObjectSync(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables) {
+		public void SendObjectSync(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables, ObjectSyncManager.Flags flags) {
+			if (NetManager.Instance.IsHost) {
+				SendObjectSyncHost(objectID, pos, rot, syncType, syncedVariables, flags);
+				return;
+			}
+
 			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
 			msg.objectID = objectID;
-			msg.position = Utils.GameVec3ToNet(pos);
-			msg.rotation = Utils.GameQuatToNet(rot);
 			msg.SyncType = (int)syncType;
 			if (syncedVariables != null) {
 				msg.SyncedVariables = syncedVariables;
 			}
+
+			switch (flags) {
+				case ObjectSyncManager.Flags.Full:
+					msg.Position = Utils.GameVec3ToNet(pos);
+					msg.Rotation = Utils.GameQuatToNet(rot);
+					break;
+				case ObjectSyncManager.Flags.RotationOnly:
+					msg.Rotation = Utils.GameQuatToNet(rot);
+					break;
+				case ObjectSyncManager.Flags.PositionOnly:
+					msg.Position = Utils.GameVec3ToNet(pos);
+					break;
+			}
+
 			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Send object sync as the host.
+		/// </summary>
+		public void SendObjectSyncHost(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables, ObjectSyncManager.Flags flags) {
+			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
+			msg.objectID = objectID;
+			msg.SyncType = (int)syncType;
+			if (syncedVariables != null) {
+				msg.SyncedVariables = syncedVariables;
+			}
+
+			switch (flags) {
+				case ObjectSyncManager.Flags.Full:
+					msg.Position = Utils.GameVec3ToNet(pos);
+					msg.Rotation = Utils.GameQuatToNet(rot);
+					break;
+				case ObjectSyncManager.Flags.RotationOnly:
+					msg.Rotation = Utils.GameQuatToNet(rot);
+					break;
+				case ObjectSyncManager.Flags.PositionOnly:
+					msg.Position = Utils.GameVec3ToNet(pos);
+					break;
+			}
+
+			if (syncType != ObjectSyncManager.SyncTypes.PeriodicSync && syncType != ObjectSyncManager.SyncTypes.GenericSync) {
+				Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
+				// Set owner as host.
+				if (syncType == ObjectSyncManager.SyncTypes.SetOwner) {
+					Logger.Log("Host is taking ownership of this object! - " + gameObject.name);
+					if (Owner == null) {
+						Owner = NetManager.Instance.GetLocalPlayer();
+						SyncEnabled = true;
+						msgBroadcast.SyncType = (int)ObjectSyncManager.SyncTypes.SetOwner;
+					}
+				}
+				// Remove owner as host.
+				else if (syncType == ObjectSyncManager.SyncTypes.RemoveOwner) {
+					Owner = null;
+					OwnerRemoved();
+					msgBroadcast.SyncType = (int)ObjectSyncManager.SyncTypes.RemoveOwner;
+				}
+				// Force take sync control as host.
+				else if (syncType == ObjectSyncManager.SyncTypes.ForceSetOwner) {
+					Logger.Log("Host is force taking ownership of this object! - " + gameObject.name);
+					SyncEnabled = true;
+				}
+
+				// Send updated ownership info to other clients.
+				msgBroadcast.objectID = msg.objectID;
+				msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(Steamworks.SteamUser.GetSteamID());
+				NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
+			}
+			else {
+				NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			}
 		}
 
 		/// <summary>
@@ -307,19 +408,7 @@ namespace MSCMP.Game.Components {
 		public void RequestObjectSync(int objectID) {
 			Network.Messages.ObjectSyncRequestMessage msg = new Network.Messages.ObjectSyncRequestMessage();
 			msg.objectID = objectID;
-			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
-		}
-
-		/// <summary>
-		/// Send object sync.
-		/// </summary>
-		/// <param name="objectID">The Object ID of the object.</param>
-		/// <param name="accepted">If request to take sync ownership was accepted.</param>
-		public void SendObjectSyncResponse(int objectID, bool accepted) {
-			Network.Messages.ObjectSyncResponseMessage msg = new Network.Messages.ObjectSyncResponseMessage();
-			msg.objectID = objectID;
-			msg.accepted = accepted;
-			NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			NetManager.Instance.SendMessage(NetManager.Instance.GetHostPlayer(), msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 	}
 }

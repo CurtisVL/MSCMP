@@ -200,6 +200,14 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		public ObjectSyncManager.Flags flags() {
+			return ObjectSyncManager.Flags.Full;
+		}
+
+		/// <summary>
 		/// Get object's Transform.
 		/// </summary>
 		/// <returns>Object's Transform.</returns>

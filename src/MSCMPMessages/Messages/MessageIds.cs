@@ -28,7 +28,11 @@ namespace MSCMPMessages.Messages {
 		VehicleSwitch,
 		ObjectSync,
 		ObjectSyncResponse,
+		ObjectOwnerSync,
 		EventHookSync,
 		RequestObjectSync,
+		ConnectedPlayers,
+		PlayerJoin,
+		PlayerLeave,
 	}
 }

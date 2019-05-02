@@ -2,6 +2,11 @@ using UnityEngine;
 
 namespace MSCMP.Game {
 	interface ISyncedObject {
+		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		ObjectSyncManager.Flags flags();
 
 		/// <summary>
 		/// Transform of the object.

@@ -79,6 +79,14 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		public ObjectSyncManager.Flags flags() {
+			return ObjectSyncManager.Flags.Full;
+		}
+
+		/// <summary>
 		/// Hook events related to the boat.
 		/// </summary>
 		void HookEvents() {

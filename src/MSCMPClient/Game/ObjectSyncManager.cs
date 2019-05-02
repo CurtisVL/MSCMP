@@ -1,4 +1,5 @@
 using MSCMP.Game.Components;
+using MSCMP.Network;
 using System.Collections.Concurrent;
 using UnityEngine;
 
@@ -29,14 +30,25 @@ namespace MSCMP.Game {
 		}
 
 		/// <summary>
-		/// Sync types
+		/// Sync types.
 		/// </summary>
 		public enum SyncTypes {
 			GenericSync,
 			SetOwner,
 			RemoveOwner,
 			ForceSetOwner,
-			PeriodicSync,
+			PeriodicSync
+		}
+
+		/// <summary>
+		/// Specific flags for what to sync on each object.
+		/// </summary>
+		public enum Flags
+		{
+			Full,
+			RotationOnly,
+			PositionOnly,
+			VariablesOnly
 		}
 
 		/// <summary>
@@ -127,6 +139,79 @@ namespace MSCMP.Game {
 			else {
 				return null;
 			}
+		}
+
+		/// <summary>
+		/// Handle set owner messages on the host.
+		/// </summary>
+		public static void SetOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
+			NetPlayer player = NetManager.Instance.GetPlayer(sender);
+			// No one owns the object, accept ownership request.
+			if (osc.Owner == null || osc.Owner == player) {
+				osc.Owner = player;
+				osc.OwnerSetToRemote(NetManager.Instance.GetPlayer(sender));
+				SendSyncResponse(player, msg.objectID, true);
+
+				// Send updated ownership info to other clients.
+				Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
+				msgBroadcast.objectID = msg.objectID;
+				msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+				msgBroadcast.SyncType = (int)SyncTypes.SetOwner;
+				NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
+			}
+			// Someone else owns the object, deny ownership request.
+			else {
+				SendSyncResponse(player, msg.objectID, false);
+			}
+		}
+
+		/// <summary>
+		/// Handles remove owner messages on the host.
+		/// </summary>
+		public static void RemoveOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
+			osc.Owner = null;
+			osc.OwnerRemoved();
+			
+			// Send updated ownership info to other clients.
+			Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
+			msgBroadcast.objectID = msg.objectID;
+			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+			msgBroadcast.SyncType = (int)SyncTypes.RemoveOwner;
+			NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Handles sync taken by force messages on the host.
+		/// </summary>
+		public static void SyncTakenByForceHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
+			if (osc.Owner == NetManager.Instance.GetLocalPlayer()) {
+				osc.SyncTakenByForce();
+				osc.SyncEnabled = false;
+			}
+			osc.Owner = NetManager.Instance.GetPlayer(sender);
+
+			if (osc.Owner == NetManager.Instance.GetLocalPlayer()) {
+				osc.SyncEnabled = true;
+			}
+
+			// Send updated ownership info to other clients.
+			Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
+			msgBroadcast.objectID = msg.objectID;
+			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+			msgBroadcast.SyncType = (int)SyncTypes.ForceSetOwner;
+			NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Send sync response to clients.
+		/// </summary>
+		/// <param name="player">Player to send message to.</param>
+		/// <param name="accepted">If the request was approved.</param>
+		public static void SendSyncResponse(NetPlayer player, int objectID, bool accepted) {
+			Network.Messages.ObjectSyncResponseMessage msgResponse = new Network.Messages.ObjectSyncResponseMessage();
+			msgResponse.objectID = objectID;
+			msgResponse.accepted = accepted;
+			NetManager.Instance.SendMessage(player, msgResponse, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 	}
 }

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +18,11 @@ namespace MSCMP.UI {
 		/// Message box handler.
 		/// </summary>
 		private Handlers.MessageBoxHandler messageBoxHandler = null;
+
+		/// <summary>
+		/// List of lobbies.
+		/// </summary>
+		public List<string> LobbyNames = new List<string>();
 
 		public MPGUI() {
 			Instance = this;
@@ -78,6 +85,37 @@ namespace MSCMP.UI {
 		/// <returns>true if message box was shown false if there is already some message box and this one could not be showed.</returns>
 		public bool ShowMessageBox(string text, Handlers.MessageBoxHandler.OnClose onClose = null) {
 			return messageBoxHandler.Show(text, onClose);
+		}
+
+		/// <summary>
+		/// Lobby selection UI.
+		/// </summary>
+		void OnGUI() {
+			if (Application.loadedLevelName == "MainMenu") {
+				GUI.Label(new Rect(10, 50, 250, 20), "Dedicated servers:");
+
+				int i = 75;
+				int lobbyIndex = 0;
+				foreach (string lobby in LobbyNames) {
+					if (GUI.Button(new Rect(10, i, 250, 40), lobby)) {
+						Network.NetManager.Instance.JoinLobbyFromUI(lobbyIndex);
+					}
+					i += 45;
+					lobbyIndex++;
+				}
+
+				if (LobbyNames.Count == 0) {
+					if (GUI.Button(new Rect(10, i, 250, 40), "No dedicated servers found")) {
+
+					}
+				}
+
+				/*
+				if (GUI.Button(new Rect(10, i, 250, 40), "Refresh list")) {
+					Network.NetManager.Instance.RequestLobbies();
+				}
+				*/
+			}
 		}
 	}
 }

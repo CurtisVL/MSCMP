@@ -6,20 +6,10 @@ namespace MSCMP.Network {
 	/// Class managing the animations of the player.
 	/// </summary>
 	class PlayerAnimManager {
-		public static PlayerAnimManager Instance = null;
+		List<AnimState> states = new List<AnimState>();
 
-		public PlayerAnimManager() {
-			Instance = this;
-		}
-
-		~PlayerAnimManager() {
-			Instance = null;
-		}
-
-		static List<AnimState> states = new List<AnimState>();
-
-		static GameObject characterGameObject = null;
-		static Animation characterAnimationComponent = null;
+		GameObject characterGameObject = null;
+		Animation characterAnimationComponent = null;
 
 		/// <summary>
 		/// Currently played animation id.
@@ -459,7 +449,7 @@ namespace MSCMP.Network {
 			public override void Deactivate() { PlayActionAnim(AnimationId.Pushing, false); }
 		}
 
-		private static void RegisterAnimStates() {
+		private void RegisterAnimStates() {
 			states.Add(new LeaningState());
 			states.Add(new JumpState());
 			states.Add(new FingerState());

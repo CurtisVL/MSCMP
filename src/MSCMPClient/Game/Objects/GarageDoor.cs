@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +20,14 @@ namespace MSCMP.Game.Objects {
 			lastRotation = gameObject.transform.localRotation.z;
 
 			HookEvents(go);
+		}
+
+		/// <summary>
+		/// Specifics for syncing this object.
+		/// </summary>
+		/// <returns>What should be synced for this object.</returns>
+		public ObjectSyncManager.Flags flags() {
+			return ObjectSyncManager.Flags.Full;
 		}
 
 		/// <summary>

@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using MSCMP.UI;
 
 namespace MSCMP.Network {
 	class NetManager {
-		private const int MAX_PLAYERS = 2;
+		private const int MAX_PLAYERS = 16;
 		private const int PROTOCOL_VERSION = 2;
 		private const uint PROTOCOL_ID = 0x6d73636d;
 
@@ -14,6 +15,8 @@ namespace MSCMP.Network {
 		private Steamworks.Callback<Steamworks.P2PSessionConnectFail_t> p2pConnectFailCallback = null;
 		private Steamworks.CallResult<Steamworks.LobbyCreated_t> lobbyCreatedCallResult = null;
 		private Steamworks.CallResult<Steamworks.LobbyEnter_t> lobbyEnterCallResult = null;
+		private Steamworks.CallResult<Steamworks.LobbyMatchList_t> lobbyListResult = null;
+		private Steamworks.CallResult<Steamworks.LobbyDataUpdate_t> lobbyDataResult = null;
 		public enum Mode {
 			None,
 			Host,
@@ -43,8 +46,12 @@ namespace MSCMP.Network {
 			get { return state == State.Playing;  }
 		}
 		private Steamworks.CSteamID currentLobbyId = Steamworks.CSteamID.Nil;
-
-		private NetPlayer[] players = new NetPlayer[MAX_PLAYERS];
+		
+		//private NetPlayer[] players = new NetPlayer[MAX_PLAYERS];
+		/// <summary>
+		/// Stores player's ID, as well as NetPlayer.
+		/// </summary>
+		public Dictionary<int, NetPlayer> players = new Dictionary<int, NetPlayer>();
 
 		/// <summary>
 		/// The interval between sending individual heartbeat.
@@ -111,6 +118,16 @@ namespace MSCMP.Network {
 		DateTime? connectionStartedTime;
 
 		/// <summary>
+		/// SteamID of host, used when connecting to a lobby.
+		/// </summary>
+		Steamworks.CSteamID hostSteamID;
+
+		/// <summary>
+		/// Local player ID of this client.
+		/// </summary>
+		int localPlayerID = -1;
+
+		/// <summary>
 		/// Get ticks since connection started.
 		/// </summary>
 		public ulong TicksSinceConnectionStarted {
@@ -119,6 +136,21 @@ namespace MSCMP.Network {
 				return (ulong)((DateTime.UtcNow - this.connectionStartedTime)?.Ticks);
 			}
 		}
+
+		/// <summary>
+		/// Lobby IDs found from current lobbies request.
+		/// </summary>
+		List<Steamworks.CSteamID> lobbyIDs = new List<Steamworks.CSteamID>();
+
+		/// <summary>
+		/// Lobby names from current lobbies request.
+		/// </summary>
+		List<string> lobbyNames = new List<string>();
+
+		/// <summary>
+		/// Lobby owner SteamIDs.
+		/// </summary>
+		List<Steamworks.CSteamID> lobbyOwners = new List<Steamworks.CSteamID>();
 
 		public NetManager() {
 			Instance = this;
@@ -132,8 +164,12 @@ namespace MSCMP.Network {
 			gameLobbyJoinRequestedCallback = Steamworks.Callback<Steamworks.GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
 			lobbyCreatedCallResult = new Steamworks.CallResult<Steamworks.LobbyCreated_t>(OnLobbyCreated);
 			lobbyEnterCallResult = new Steamworks.CallResult<Steamworks.LobbyEnter_t>(OnLobbyEnter);
+			lobbyListResult = new Steamworks.CallResult<Steamworks.LobbyMatchList_t>(OnLobbyList);
+			lobbyDataResult = new Steamworks.CallResult<Steamworks.LobbyDataUpdate_t>(OnGetLobbyInfo);
 
 			RegisterProtocolMessagesHandlers();
+
+			RequestLobbies();
 		}
 
 		/// <summary>
@@ -150,7 +186,7 @@ namespace MSCMP.Network {
 		/// <param name="result">The callback result.</param>
 		void OnP2PSessionRequest(Steamworks.P2PSessionRequest_t result) {
 			if (Steamworks.SteamNetworking.AcceptP2PSessionWithUser(result.m_steamIDRemote)) {
-				Logger.Log($"Accepted p2p session with {result.m_steamIDRemote}");
+				Logger.Debug($"Accepted p2p session with {result.m_steamIDRemote}");
 			}
 			else {
 				Logger.Error($"Failed to accept P2P session with {result.m_steamIDRemote}");
@@ -164,7 +200,7 @@ namespace MSCMP.Network {
 		/// <param name="ioFailure">Did IO failure happen?</param>
 		void OnLobbyCreated(Steamworks.LobbyCreated_t result, bool ioFailure) {
 			if (result.m_eResult != Steamworks.EResult.k_EResultOK || ioFailure) {
-				Logger.Log($"Failed to create lobby. (result: {result.m_eResult}, io failure: {ioFailure})");
+				Logger.Debug($"Failed to create lobby. (result: {result.m_eResult}, io failure: {ioFailure})");
 
 				MPGUI.Instance.ShowMessageBox($"Failed to create lobby due to steam error.\n{result.m_eResult}/{ioFailure}", () => {
 					MPController.Instance.LoadLevel("MainMenu");
@@ -176,7 +212,8 @@ namespace MSCMP.Network {
 			MessagesList.AddMessage("Session started.", MessageSeverity.Info);
 
 			// Setup local player.
-			players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
+			players.Add(0, new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID()));
+			localPlayerID = 0;
 
 			mode = Mode.Host;
 			state = State.Playing;
@@ -192,24 +229,23 @@ namespace MSCMP.Network {
 			if (ioFailure || result.m_EChatRoomEnterResponse != (uint)Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess) {
 				Logger.Error("Failed to join lobby. (reponse: {result.m_EChatRoomEnterResponse}, ioFailure: {ioFailure})");
 				MPGUI.Instance.ShowMessageBox($"Failed to join lobby.\n(reponse: {result.m_EChatRoomEnterResponse}, ioFailure: {ioFailure})");
-
-				players[1] = null;
 				return;
 			}
-
-			// Setup local player.
-			players[0] = new NetLocalPlayer(this, netWorld, Steamworks.SteamUser.GetSteamID());
 
 			Logger.Debug("Entered lobby: " + result.m_ulSteamIDLobby);
 
 			MessagesList.AddMessage("Entered lobby.", MessageSeverity.Info);
+
+			// Setup host player.
+			players.Add(0, new NetPlayer(this, netWorld, hostSteamID));
+			Logger.Debug("Setup host player as ID: 0");
 
 			mode = Mode.Player;
 			state = State.LoadingGameWorld;
 			currentLobbyId = new Steamworks.CSteamID(result.m_ulSteamIDLobby);
 
 			ShowLoadingScreen(true);
-			SendHandshake(players[1]);
+			SendHandshake(players[0]);
 		}
 
 		/// <summary>
@@ -237,7 +273,52 @@ namespace MSCMP.Network {
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.DisconnectMessage msg) => {
-				HandleDisconnect(false);
+				HandleDisconnect(GetPlayerIDBySteamID(sender), false);
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.ConnectedPlayersMessage msg) => {
+				int i = 0;
+				foreach (int newPlayerID in msg.playerIDs) {
+					Steamworks.CSteamID localSteamID = Steamworks.SteamUser.GetSteamID();
+					Steamworks.CSteamID newPlayerSteamID = new Steamworks.CSteamID(msg.steamIDs[i]);
+					// If player is not host or local player, setup new player.
+					if (newPlayerSteamID != hostSteamID && newPlayerSteamID != localSteamID) {
+						players.Add(newPlayerID, new NetPlayer(this, netWorld, newPlayerSteamID));
+						players[newPlayerID].Spawn();
+						Logger.Debug("Setup new player at ID: " + newPlayerID);
+					}
+					i++;
+				}
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerJoinMessage msg) => {
+				if (NetWorld.Instance.playerIsLoading) {
+					if (msg.steamID == Steamworks.SteamUser.GetSteamID().m_SteamID && localPlayerID == -1) {
+						players.Add(msg.playerID, new NetLocalPlayer(this, netWorld, new Steamworks.CSteamID(msg.steamID)));
+						localPlayerID = msg.playerID;
+						Logger.Debug("Setup local player as ID: " + msg.playerID);
+					}
+					else {
+						Logger.Debug("Ignored connecting player as curent player is still loading!");
+					}
+					return;
+				}
+				Steamworks.CSteamID newPlayerSteamID = new Steamworks.CSteamID(msg.steamID);
+				if (newPlayerSteamID != hostSteamID && newPlayerSteamID != GetLocalPlayer().SteamId) {
+					players.Add(msg.playerID, new NetPlayer(this, netWorld, newPlayerSteamID));
+					players[msg.playerID].Spawn();
+					MessagesList.AddMessage($"Player {players[msg.playerID].GetName()} joined.", MessageSeverity.Info);
+					Logger.Debug("New player connected at ID: " + msg.playerID);
+				}
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerLeaveMessage msg) => {
+				if (NetWorld.Instance.playerIsLoading) {
+					Logger.Debug("Ignored connecting player as curent player is still loading!");
+					return;
+				}
+				MessagesList.AddMessage($"Player {players[msg.playerID].GetName()} disconnected. ({msg.reason})", MessageSeverity.Info);
+				CleanupPlayer(msg.playerID);
 			});
 		}
 
@@ -298,7 +379,7 @@ namespace MSCMP.Network {
 		/// <param name="channel">The channel used to deliver message.</param>
 		/// <returns></returns>
 		public bool BroadcastMessage<T>(T message, Steamworks.EP2PSend sendType, int channel = 0) where T : INetMessage {
-			if (players[1] == null) {
+			if (players.Count == 0) {
 				return false;
 			}
 
@@ -307,12 +388,12 @@ namespace MSCMP.Network {
 				return false;
 			}
 
-			foreach (NetPlayer player in players) {
-				if (player is NetLocalPlayer) {
+			foreach (var player in players) {
+				if (player.Value is NetLocalPlayer) {
 					continue;
 				}
 
-				player?.SendPacket(stream.GetBuffer(), sendType, channel);
+				player.Value?.SendPacket(stream.GetBuffer(), sendType, channel);
 			}
 			return true;
 		}
@@ -344,34 +425,42 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="request">The request.</param>
 		private void OnGameLobbyJoinRequested(Steamworks.GameLobbyJoinRequested_t request) {
-			Steamworks.SteamAPICall_t apiCall = Steamworks.SteamMatchmaking.JoinLobby(request.m_steamIDLobby);
+			JoinLobby(request.m_steamIDLobby, request.m_steamIDFriend);
+		}
+
+		/// <summary>
+		/// Join a lobby with the specified ID.
+		/// </summary>
+		/// <param name="lobbyID">Lobby ID.</param>
+		/// <param name="hostID">host ID.</param>
+		public void JoinLobby(Steamworks.CSteamID lobbyID, Steamworks.CSteamID hostID) {
+			Steamworks.SteamAPICall_t apiCall = Steamworks.SteamMatchmaking.JoinLobby(lobbyID);
 			if (apiCall == Steamworks.SteamAPICall_t.Invalid) {
-				Logger.Error($"Unable to join lobby {request.m_steamIDLobby}. JoinLobby call failed.");
+				Logger.Error($"Unable to join lobby {lobbyID}. JoinLobby call failed.");
 				MPGUI.Instance.ShowMessageBox($"Failed to join lobby.\nPlease try again later.");
 				return;
 			}
 
 			Logger.Debug("Setup player.");
 
-			// Setup remote player. The HOST.
 			timeSinceLastHeartbeat = 0.0f;
-			players[1] = new NetPlayer(this, netWorld, request.m_steamIDFriend);
+			hostSteamID = hostID;
 
 			lobbyEnterCallResult.Set(apiCall);
 		}
-
+	
 		/// <summary>
 		/// Setup lobby to host a game.
 		/// </summary>
 		/// <returns>true if lobby setup request was properly sent, false otherwise</returns>
 		public bool SetupLobby() {
-			Logger.Log("Setting up lobby.");
+			Logger.Debug("Setting up lobby.");
 			Steamworks.SteamAPICall_t apiCall = Steamworks.SteamMatchmaking.CreateLobby(Steamworks.ELobbyType.k_ELobbyTypeFriendsOnly, MAX_PLAYERS);
 			if (apiCall == Steamworks.SteamAPICall_t.Invalid) {
-				Logger.Log("Unable to create lobby.");
+				Logger.Error("Unable to create lobby.");
 				return false;
 			}
-			Logger.Log("Waiting for lobby create reply..");
+			Logger.Debug("Waiting for lobby create reply..");
 			lobbyCreatedCallResult.Set(apiCall);
 			return true;
 		}
@@ -384,8 +473,8 @@ namespace MSCMP.Network {
 			currentLobbyId = Steamworks.CSteamID.Nil;
 			mode = Mode.None;
 			state = State.Idle;
-			players[0].Dispose();
-			players[0] = null;
+			players[localPlayerID].Dispose();
+			players.Clear();
 			Logger.Log("Left lobby.");
 		}
 
@@ -406,19 +495,19 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <returns>true if there is another player connected and playing in the session, false otherwise</returns>
 		public bool IsNetworkPlayerConnected() {
-			return players[1] != null;
+			return players.Count > 1;
 		}
 
 		/// <summary>
 		/// Cleanup remote player.
 		/// </summary>
-		public void CleanupPlayer() {
-			if (players[1] == null) {
+		public void CleanupPlayer(int playerID) {
+			if (players[playerID] == null) {
 				return;
 			}
-			Steamworks.SteamNetworking.CloseP2PSessionWithUser(players[1].SteamId);
-			players[1].Dispose();
-			players[1] = null;
+			Steamworks.SteamNetworking.CloseP2PSessionWithUser(players[playerID].SteamId);
+			players[playerID].Dispose();
+			players.Remove(playerID);
 		}
 
 
@@ -426,27 +515,33 @@ namespace MSCMP.Network {
 		/// Disconnect from the active multiplayer session.
 		/// </summary>
 		public void Disconnect() {
-			BroadcastMessage(new Messages.DisconnectMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
+			SendMessage(GetHostPlayer(), new Messages.DisconnectMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
 			connectionStartedTime = null;
 			LeaveLobby();
 		}
 
 		/// <summary>
-		/// Handle disconnect of the remote player.
+		/// Handle disconnect of a remote player.
 		/// </summary>
 		/// <param name="timeout">Was the disconnect caused by timeout?</param>
-		private void HandleDisconnect(bool timeout) {
+		private void HandleDisconnect(int playerID, bool timeout) {
 			ShowLoadingScreen(false);
 
 			if (IsHost) {
 				string reason = timeout ? "timeout" : "part";
-				MessagesList.AddMessage($"Player {players[1].GetName()} disconnected. ({reason})", MessageSeverity.Info);
+				MessagesList.AddMessage($"Player {players[playerID].GetName()} disconnected. ({reason})", MessageSeverity.Info);
+
+				CleanupPlayer(playerID);
+
+				Messages.PlayerLeaveMessage msg = new Messages.PlayerLeaveMessage();
+				msg.playerID = playerID;
+				msg.reason = reason;
+				BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			}
-			CleanupPlayer();
 
 			// Go to main menu if we are normal player - the session just closed.
 
-			if (IsPlayer) {
+			if (IsPlayer && players[playerID].SteamId == Steamworks.SteamUser.GetSteamID()) {
 				LeaveLobby();
 				MPController.Instance.LoadLevel("MainMenu");
 
@@ -467,19 +562,21 @@ namespace MSCMP.Network {
 				return;
 			}
 
-			timeSinceLastHeartbeat += Time.deltaTime;
+			foreach (var player in players) {
+				timeSinceLastHeartbeat += Time.deltaTime;
 
-			if (timeSinceLastHeartbeat >= TIMEOUT_TIME) {
-				HandleDisconnect(true);
-			}
-			else {
-				timeToSendHeartbeat -= Time.deltaTime;
-				if (timeToSendHeartbeat <= 0.0f) {
-					Messages.HeartbeatMessage message = new Messages.HeartbeatMessage();
-					message.clientClock = GetNetworkClock();
-					BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
+				if (timeSinceLastHeartbeat >= TIMEOUT_TIME) {
+					HandleDisconnect(player.Key, true);
+				}
+				else {
+					timeToSendHeartbeat -= Time.deltaTime;
+					if (timeToSendHeartbeat <= 0.0f) {
+						Messages.HeartbeatMessage message = new Messages.HeartbeatMessage();
+						message.clientClock = GetNetworkClock();
+						BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 
-					timeToSendHeartbeat = HEARTBEAT_INTERVAL;
+						timeToSendHeartbeat = HEARTBEAT_INTERVAL;
+					}
 				}
 			}
 		}
@@ -548,8 +645,8 @@ namespace MSCMP.Network {
 			}
 #endif
 
-			foreach (NetPlayer player in players) {
-				player?.Update();
+			foreach (var player in players) {
+				player.Value?.Update();
 			}
 		}
 
@@ -567,8 +664,10 @@ namespace MSCMP.Network {
 		/// Draw player nametags.
 		/// </summary>
 		public void DrawNameTags() {
-			if (players[1] != null) {
-				players[1].DrawNametag();
+			if (players.Count != 0) {
+				foreach (var player in players) {
+					player.Value.DrawNametag(player.Key);
+				}
 			}
 		}
 
@@ -576,13 +675,13 @@ namespace MSCMP.Network {
 		/// Reject remote player during connection phase.
 		/// </summary>
 		/// <param name="reason">The rejection reason.</param>
-		void RejectPlayer(string reason) {
-			MessagesList.AddMessage($"Player {players[1].GetName()} connection rejected. {reason}", MessageSeverity.Error);
+		void RejectPlayer(int playerID, string reason) {
+			MessagesList.AddMessage($"Player {players[playerID].GetName()} connection rejected. {reason}", MessageSeverity.Error);
 
 			Logger.Error($"Player rejected. {reason}");
-			SendHandshake(players[1]);
-			players[1].Dispose();
-			players[1] = null;
+			SendHandshake(players[playerID]);
+			players[playerID].Dispose();
+			players[playerID] = null;
 		}
 
 		/// <summary>
@@ -603,38 +702,33 @@ namespace MSCMP.Network {
 		/// <param name="msg">Hand shake message.</param>
 		private void HandleHandshake(Steamworks.CSteamID senderSteamId, Messages.HandshakeMessage msg) {
 			if (IsHost) {
-				if (players[1] != null) {
-					Logger.Log("Received handshake from player but player is already here.");
-					LeaveLobby();
-					return;
-				}
-
 				// Setup THE PLAYER
 
 				timeSinceLastHeartbeat = 0.0f;
-				players[1] = new NetPlayer(this, netWorld, senderSteamId);
+				players.Add(players.Count, new NetPlayer(this, netWorld, senderSteamId));
+				int connectingPlayerID = players.Count - 1;
+				Logger.Log("Connecting player is now ID: " + (players.Count - 1));
 
 				// Check if version matches - if not ignore this player.
 
 				if (msg.protocolVersion != PROTOCOL_VERSION) {
-					RejectPlayer($"Mod version mismatch.");
+					RejectPlayer(connectingPlayerID, $"Mod version mismatch.");
 					return;
 				}
 
 				// Player can be spawned here safely. Host is already in game and all game objects are here.
 
-				players[1].Spawn();
-				SendHandshake(players[1]);
+				players[connectingPlayerID].Spawn();
+				SendHandshake(players[connectingPlayerID]);
 
-				MessagesList.AddMessage($"Player {players[1].GetName()} joined.", MessageSeverity.Info);
+				MessagesList.AddMessage($"Player {players[connectingPlayerID].GetName()} joined.", MessageSeverity.Info);
+
+				players[connectingPlayerID].hasHandshake = true;
+
+				SendPlayerJoined(connectingPlayerID, players[players.Count - 1]);
+
 			}
 			else {
-				if (players[1] == null) {
-					Logger.Log("Received handshake from host but host is not here.");
-					LeaveLobby();
-					return;
-				}
-
 				// Check if protocol version matches.
 
 				if (msg.protocolVersion != PROTOCOL_VERSION) {
@@ -660,7 +754,6 @@ namespace MSCMP.Network {
 			}
 
 			remoteClock = msg.clock;
-			players[1].hasHandshake = true;
 			connectionStartedTime = DateTime.UtcNow;
 		}
 
@@ -695,7 +788,7 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <returns>Local player object.</returns>
 		public NetLocalPlayer GetLocalPlayer() {
-			return (NetLocalPlayer)players[0];
+			return (NetLocalPlayer)players[localPlayerID];
 		}
 
 		/// <summary>
@@ -704,9 +797,9 @@ namespace MSCMP.Network {
 		/// <param name="steamId">The steam id used to find player for.</param>
 		/// <returns>Network player object or null if there is not player matching given steam id.</returns>
 		public NetPlayer GetPlayer(Steamworks.CSteamID steamId) {
-			foreach (NetPlayer player in players) {
-				if (player?.SteamId == steamId) {
-					return player;
+			foreach (var player in players) {
+				if (player.Value?.SteamId == steamId) {
+					return player.Value;
 				}
 			}
 			return null;
@@ -732,6 +825,110 @@ namespace MSCMP.Network {
 				return false;
 			}
 			return Steamworks.SteamNetworking.GetP2PSessionState(players[1].SteamId, out sessionState);
+		}
+
+		/// <summary>
+		/// Find player ID based on SteamID.
+		/// </summary>
+		/// <param name="steamID">Steam ID of player to find.</param>
+		/// <returns></returns>
+		public int GetPlayerIDBySteamID(Steamworks.CSteamID steamID) {
+			foreach (var player in players) {
+				if (player.Value.SteamId == steamID) {
+					return player.Key;
+				}
+			}
+			return -1;
+		}
+
+		/// <summary>
+		/// Send player joined message to connected players.
+		/// </summary>
+		/// <param name="player">Player who joined.</param>
+		private void SendPlayerJoined(int playerID, NetPlayer player) {
+			Messages.PlayerJoinMessage msg = new Messages.PlayerJoinMessage();
+			msg.playerID = playerID;
+			msg.steamID = player.SteamId.m_SteamID;
+			BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+		}
+
+		/// <summary>
+		/// Request current game lobbies.
+		/// </summary>
+		public void RequestLobbies() {
+			Logger.Log("Trying to get list of available lobbies ...");
+			Steamworks.SteamAPICall_t apiCall = Steamworks.SteamMatchmaking.RequestLobbyList();
+			lobbyListResult.Set(apiCall);
+		}
+
+		/// <summary>
+		/// Lobby list result.
+		/// </summary>
+		/// <param name="result">Lobby list.</param>
+		void OnLobbyList(Steamworks.LobbyMatchList_t result, bool ioFailure) {
+			Logger.Log("Found " + result.m_nLobbiesMatching + " lobbies!");
+
+			lobbyIDs.Clear();
+			lobbyNames.Clear();
+			for (int i = 0; i < result.m_nLobbiesMatching; i++) {
+				Steamworks.CSteamID lobbyID = Steamworks.SteamMatchmaking.GetLobbyByIndex(i);
+				Steamworks.CSteamID lobbyOwner = Steamworks.SteamMatchmaking.GetLobbyOwner(lobbyID);
+				if (lobbyOwner.m_SteamID != 0) {
+					lobbyIDs.Add(lobbyID);
+					lobbyOwners.Add(lobbyOwner);
+					Logger.Log("Lobby ID of index " + i + ": " + lobbyID + " - Owner: " + lobbyOwner);
+					bool success = Steamworks.SteamMatchmaking.RequestLobbyData(lobbyID);
+					if (!success) {
+						Logger.Error("Failed to get lobby info!");
+					}
+
+					// Temp until lobby data callback is fixed!
+					int numPlayers = Steamworks.SteamMatchmaking.GetNumLobbyMembers(lobbyID);
+					lobbyNames.Add("Lobby (" + numPlayers + "/16)");
+				}
+			}
+			MPGUI.Instance.LobbyNames = lobbyNames;
+		}
+
+		/// <summary>
+		/// Lobby info result.
+		/// </summary>
+		/// <param name="result">Lobby info.</param>
+		void OnGetLobbyInfo(Steamworks.LobbyDataUpdate_t result, bool ioFailure) {
+			// This doesn't seem to call just yet!
+			for (int i = 0; i < lobbyIDs.Count; i++) {
+				if (lobbyIDs[i].m_SteamID == result.m_ulSteamIDLobby) {
+					Logger.Log("Lobby " + i + " :: " + Steamworks.SteamMatchmaking.GetLobbyData((Steamworks.CSteamID)lobbyIDs[i].m_SteamID, "name"));
+					int numPlayers = Steamworks.SteamMatchmaking.GetNumLobbyMembers((Steamworks.CSteamID)lobbyIDs[i]);
+					lobbyNames.Add("Unknown name (" + numPlayers + "/16)");
+					return;
+				}
+			}
+			MPGUI.Instance.LobbyNames = lobbyNames;
+		}
+
+		/// <summary>
+		/// Join lobby from UI buttons.
+		/// </summary>
+		/// <param name="index">Index of the button.</param>
+		public void JoinLobbyFromUI(int index) {
+			JoinLobby(lobbyIDs[index], lobbyOwners[index]);
+		}
+
+		/// <summary>
+		/// Return the host NetPlayer.
+		/// </summary>
+		/// <returns>Host NetPlayer.</returns>
+		public NetPlayer GetHostPlayer() {
+			return players[0];
+		}
+
+		/// <summary>
+		/// Return NetPlayer of a player by their Player ID.
+		/// </summary>
+		/// <returns>NetPlayer of player.</returns>
+		public NetPlayer GetPlayerByPlayerID(int playerID) {
+			return players[playerID];
 		}
 	}
 }
