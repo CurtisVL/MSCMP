@@ -337,6 +337,13 @@ namespace MSCMP.Game.Objects {
 		}
 
 		/// <summary>
+		/// Called when sync control is taken by force. 
+		/// </summary> 
+		public void SyncTakenByForce() {
+			SetRemoteSteering(true);
+		}
+
+		/// <summary>
 		/// Returns variables to be sent to the remote client.
 		/// </summary>
 		/// <returns>Variables to be sent to the remote client.</returns>
@@ -374,8 +381,6 @@ namespace MSCMP.Game.Objects {
 					steeringPivot.transform.localRotation = rot;
 				}
 			}
-		}
-
 		}
 
 		/// <summary>
