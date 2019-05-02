@@ -229,14 +229,46 @@ namespace MSCMP.Game {
 				shopManager.Setup(gameObject);
 			}
 			else if (gameObject.name == "BOAT") {
-				ObjectSyncComponent osc = gameObject.transform.FindChild("GFX").FindChild("Colliders").FindChild("Collider").gameObject.AddComponent<ObjectSyncComponent>();
+				ObjectSyncComponent osc = gameObject.transform.FindChild("GFX/Colliders/Collider").gameObject.AddComponent<ObjectSyncComponent>();
 				osc.Setup(ObjectSyncManager.ObjectTypes.Boat, ObjectSyncManager.AUTOMATIC_ID);
 			}
+
+			// Garage doors.
 			else if (gameObject.name == "GarageDoors") {
-				ObjectSyncComponent oscLeft = gameObject.transform.FindChild("DoorLeft").FindChild("Coll").gameObject.AddComponent<ObjectSyncComponent>();
+				ObjectSyncComponent oscLeft = gameObject.transform.FindChild("DoorLeft/Coll").gameObject.AddComponent<ObjectSyncComponent>();
 				oscLeft.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AUTOMATIC_ID);
-				ObjectSyncComponent oscRight = gameObject.transform.FindChild("DoorRight").FindChild("Coll").gameObject.AddComponent<ObjectSyncComponent>();
+				ObjectSyncComponent oscRight = gameObject.transform.FindChild("DoorRight/Coll").gameObject.AddComponent<ObjectSyncComponent>();
 				oscRight.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AUTOMATIC_ID);
+			}
+			// Old car shed doors.
+			else if (gameObject.name == "Doors" && gameObject.transform.parent.name == "Shed") {
+				PlayMakerFSM doorLeft = gameObject.transform.FindChild("DoorLeft/Mesh").gameObject.GetComponent<PlayMakerFSM>();
+				EventHook.AddWithSync(doorLeft, "Open door");
+				EventHook.AddWithSync(doorLeft, "Close door");
+				PlayMakerFSM doorRight = gameObject.transform.FindChild("DoorRight/Mesh").gameObject.GetComponent<PlayMakerFSM>();
+				EventHook.AddWithSync(doorRight, "Open door");
+				EventHook.AddWithSync(doorRight, "Close door");
+			}
+
+			// Weather system.
+			else if (gameObject.name == "Clouds" && gameObject.transform.parent.name == "CloudSystem") {
+				ObjectSyncComponent osc = gameObject.AddComponent<ObjectSyncComponent>();
+				osc.Setup(ObjectSyncManager.ObjectTypes.Weather, ObjectSyncManager.AUTOMATIC_ID);
+			}
+
+			// Sewage well jobs.
+			else if (gameObject.name.StartsWith("HouseShit")) {
+				ObjectSyncComponent osc = gameObject.AddComponent<ObjectSyncComponent>();
+				osc.Setup(ObjectSyncManager.ObjectTypes.SewageWell, ObjectSyncManager.AUTOMATIC_ID);
+			}
+
+			// Phone.
+			else if (gameObject.name == "Ring") {
+				phoneManager.Setup(gameObject);
+			}
+			// Map.
+			else if (gameObject.name == "MAP" && gameObject.transform.FindChild("Darts")) {
+				mapManager.Setup(gameObject);
 			}
 		}
 

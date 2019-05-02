@@ -53,7 +53,12 @@ namespace MSCMP.Game {
 		/// <param name="gameObject">The game object to check and eventually register.</param>
 		public void CollectGameObject(GameObject gameObject) {
 			// Player vehicles
-			if (gameObject.name == "Colliders" && gameObject.transform.FindChild("CarCollider") != null || gameObject.name == "Colliders" && gameObject.transform.FindChild("Coll") != null) {
+			if (gameObject.name == "Colliders" && gameObject.transform.FindChild("CarCollider") != null || gameObject.name == "Colliders" && gameObject.transform.FindChild("Coll") != null || gameObject.name == "Colliders" && gameObject.transform.FindChild("Collider") != null) {
+				// Boat gets confused and ends up being collected here.
+				if (gameObject.transform.parent.name == "GFX") {
+					return;
+				}
+
 				if (vehiclesPlayer.ContainsValue(gameObject)) {
 					Logger.Debug($"Duplicate Player vehicle prefab '{gameObject.name}' rejected");
 				}
@@ -63,8 +68,16 @@ namespace MSCMP.Game {
 
 					GameObject carCollider;
 					if (gameObject.transform.FindChild("CarCollider") == null) {
-						carCollider = gameObject.transform.FindChild("Coll").gameObject;
+						// Truck.
+						if (gameObject.transform.FindChild("Coll")) {
+							carCollider = gameObject.transform.FindChild("Coll").gameObject;
+						}
+						// Tractor.
+						else {
+							carCollider = gameObject.transform.FindChild("Collider").gameObject;
+						}
 					}
+					// Basically everything else.
 					else {
 						carCollider = gameObject.transform.FindChild("CarCollider").gameObject;
 					}

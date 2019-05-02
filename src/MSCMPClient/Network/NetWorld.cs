@@ -317,29 +317,12 @@ namespace MSCMP.Network {
 				player.LeaveVehicle();
 			});
 
-			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleStateMessage msg) => {
-				float startTime = -1;
-
-				ObjectSyncComponent vehicle = ObjectSyncManager.Instance.ObjectIDs[msg.objectID];
-				if (vehicle == null) {
-					Logger.Log("Remote player tried to set state of vehicle " + msg.objectID + " but there is no vehicle with such id.");
-					return;
-				}
-
-				if (msg.HasStartTime) {
-					startTime = msg.StartTime;
-				}
-
-				PlayerVehicle subType = vehicle.GetObjectSubtype() as PlayerVehicle;
-				subType.SetEngineState((PlayerVehicle.EngineStates)msg.state, (PlayerVehicle.DashboardStates)msg.dashstate, startTime);
-			});
-
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.VehicleSwitchMessage msg) => {
 				float newValueFloat = -1;
 
 				PlayerVehicle vehicle = ObjectSyncManager.Instance.ObjectIDs[msg.objectID].GetObjectSubtype() as PlayerVehicle;
 				if (vehicle == null) {
-					Logger.Log("Remote player tried to change a switch in vehicle " + msg.objectID + " but there is no vehicle with such id.");
+					Logger.Debug("Remote player tried to change a switch in vehicle " + msg.objectID + " but there is no vehicle with such id.");
 					return;
 				}
 
