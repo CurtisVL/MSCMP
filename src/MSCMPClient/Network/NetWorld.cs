@@ -10,6 +10,11 @@ namespace MSCMP.Network {
 	class NetWorld {
 
 		/// <summary>
+		/// If we should log object registering debug messages.
+		/// </summary>
+		public static bool DisplayObjectRegisteringDebug = false;
+
+		/// <summary>
 		/// Maximum count of the supported vehicles.
 		/// </summary>
 		public const int MAX_VEHICLES = Byte.MaxValue;
@@ -190,7 +195,7 @@ namespace MSCMP.Network {
 				if (ObjectSyncManager.GetObjectByID(msg.id)) {
 					gameObject = ObjectSyncManager.GetObjectByID(msg.id);
 				}
-				Client.Assert(gameObject != null, "Tried to activate pickupable but its not spawned!");
+				Client.Assert(gameObject != null, "Tried to activate a pickupable but it's not spawned! Does any connected client or you have other mods beside MSC:MP installed? Try uninstalling them!");
 
 				if (msg.activate) {
 					gameObject.SetActive(true);
@@ -225,7 +230,7 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerSyncMessage msg) => {
 				NetPlayer player = netManager.GetPlayer(sender);
 				if (player == null) {
-					Logger.Log($"Received synchronization packet from {sender} but there is not player registered using this id.");
+					Logger.Error($"Received synchronization packet from {sender} but there is not player registered using this id.");
 					return;
 				}
 
@@ -236,7 +241,7 @@ namespace MSCMP.Network {
 				NetPlayer player = netManager.GetPlayer(sender);
 				if (player == null)
 				{
-					Logger.Log($"Received animation synchronization packet from {sender} but there is not player registered using this id.");
+					Logger.Error($"Received animation synchronization packet from {sender} but there is not player registered using this id.");
 					return;
 				}
 
@@ -246,13 +251,13 @@ namespace MSCMP.Network {
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.OpenDoorsMessage msg) => {
 				NetPlayer player = netManager.GetPlayer(sender);
 				if (player == null) {
-					Logger.Log($"Received OpenDoorsMessage however there is no matching player {sender}! (open: {msg.open}");
+					Logger.Error($"Received OpenDoorsMessage however there is no matching player {sender}! (open: {msg.open}");
 					return;
 				}
 
 				GameDoor doors = GameDoorsManager.Instance.FindGameDoors(Utils.NetVec3ToGame(msg.position));
 				if (doors == null) {
-					Logger.Log($"Player tried to open door, however, the door could not be found!");
+					Logger.Error($"Player tried to open door, however, the door could not be found!");
 					return;
 				}
 				doors.Open(msg.open);
@@ -344,7 +349,7 @@ namespace MSCMP.Network {
 					osc = ObjectSyncManager.GetSyncComponentByID(msg.objectID);
 				}
 				else {
-					Logger.Log($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
+					Logger.Error($"Specified object is not yet added to the ObjectID's Dictionary! (Object ID: {msg.objectID})");
 					return;
 				}
 
@@ -571,7 +576,9 @@ namespace MSCMP.Network {
 					wasActive = false;
 					osc.gameObject.SetActive(true);
 				}
-				Logger.Debug($"Writing object: {osc.gameObject.name}");
+				if (NetWorld.DisplayObjectRegisteringDebug) {
+					Logger.Debug($"Writing object: {osc.gameObject.name}");
+				}
 
 				var pickupableMsg = new Messages.PickupableSpawnMessage();
 
@@ -645,7 +652,7 @@ namespace MSCMP.Network {
 
 			// Read time
 
-			Game.GameWorld gameWorld = Game.GameWorld.Instance;
+			Game.GameWorld gameWorld = GameWorld.Instance;
 			gameWorld.WorldTime = msg.dayTime;
 			gameWorld.WorldDay = msg.day;
 
@@ -657,7 +664,7 @@ namespace MSCMP.Network {
 
 			foreach (Messages.DoorsInitMessage door in msg.doors) {
 				Vector3 position = Utils.NetVec3ToGame(door.position);
-				Game.Objects.GameDoor doors = Game.GameDoorsManager.Instance.FindGameDoors(position);
+				GameDoor doors = GameDoorsManager.Instance.FindGameDoors(position);
 				Client.Assert(doors != null, $"Unable to find doors at: {position}.");
 				if (doors.IsOpen != door.open) {
 					doors.Open(door.open);
@@ -668,7 +675,7 @@ namespace MSCMP.Network {
 
 			foreach (Messages.LightSwitchMessage light in msg.lights) {
 				Vector3 position = Utils.NetVec3ToGame(light.pos);
-				Game.Objects.LightSwitch lights = Game.LightSwitchManager.Instance.FindLightSwitch(position);
+				LightSwitch lights = LightSwitchManager.Instance.FindLightSwitch(position);
 				Client.Assert(lights != null, $"Unable to find light switch at: {position}.");
 				if (lights.SwitchStatus != light.toggle) {
 					lights.TurnOn(light.toggle);
@@ -756,7 +763,7 @@ namespace MSCMP.Network {
 		public ObjectSyncComponent GetPickupableByGameObject(GameObject go) {
 			foreach (var osc in ObjectSyncManager.Instance.ObjectIDs) {
 				if (osc.Value.GetGameObject() == null) {
-					Logger.Log($"Found a broken ObjectID entry (Couldn't return GameObject) whilst trying to get pickupable by GameObject, ID: {osc.Value.ObjectID}");
+					Logger.Error($"Found a broken ObjectID entry (Couldn't return GameObject) whilst trying to get pickupable by GameObject, ID: {osc.Value.ObjectID}");
 					continue;
 				}
 
@@ -825,7 +832,7 @@ namespace MSCMP.Network {
 						foreach (var go in ObjectSyncManager.Instance.ObjectIDs) {
 							if (go.Value.gameObject.GetComponent<PickupableMetaDataComponent>().prefabId == msg.prefabId) {
 								gameObject = go.Value.gameObject;
-								Logger.Log("Prefab mismatch was resolved.");
+								Logger.Debug("Prefab mismatch was resolved.");
 								resolved = true;
 								break;
 							}

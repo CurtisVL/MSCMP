@@ -144,7 +144,9 @@ namespace MSCMP.Game {
 
 			prefabs.Add(desc);
 
-			Logger.Debug($"Registered new prefab {gameObject.name} ({gameObject.GetInstanceID()}) into pickupable database. (Prefab ID: {prefabId})");
+			if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+				Logger.Debug($"Registered new prefab {gameObject.name} ({gameObject.GetInstanceID()}) into pickupable database. (Prefab ID: {prefabId})");
+			}
 		}
 
 		/// <summary>

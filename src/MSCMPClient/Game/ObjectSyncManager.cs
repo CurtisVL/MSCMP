@@ -83,13 +83,17 @@ namespace MSCMP.Game {
 				if (steamID.m_SteamID == 0) {
 					steamID = Steamworks.SteamUser.GetSteamID();
 				}
-				Logger.Debug($"Added new ObjectID at: {ObjectIDs.Count + 1}");
+				if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+					Logger.Debug($"Added new ObjectID at: {ObjectIDs.Count + 1} Object type: {osc.ObjectType}");
+				}
 				ObjectIDs.GetOrAdd(ObjectIDs.Count + 1, osc);
 				return ObjectIDs.Count;
 			}
 			// Assign object a specific ObjectID.
 			else {
-				Logger.Debug($"Force adding new ObjectID at: {objectID}");
+				if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+					Logger.Debug($"Force adding new ObjectID at: {objectID}");
+				}
 				if (ObjectIDs.ContainsKey(objectID)) {
 					ObjectIDs[objectID] = osc;
 				}

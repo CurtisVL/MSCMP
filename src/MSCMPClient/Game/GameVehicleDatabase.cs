@@ -91,8 +91,9 @@ namespace MSCMP.Game {
 				}
 				else {
 					vehiclesAI.Add(vehiclesAI.Count + 1, gameObject);
-					Logger.Debug($"Registered AI vehicle prefab '{gameObject.name}' (AI Vehicle ID: {vehiclesAI.Count})");
-
+					if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+						Logger.Debug($"Registered AI vehicle prefab '{gameObject.name}' (AI Vehicle ID: {vehiclesAI.Count})");
+					}
 					GameObject carCollider = gameObject.transform.FindChild("CarColliderAI").gameObject;
 					carCollider.gameObject.AddComponent<ObjectSyncComponent>().Setup(ObjectSyncManager.ObjectTypes.AIVehicle, ObjectSyncManager.AUTOMATIC_ID);
 				}

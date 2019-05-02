@@ -41,7 +41,9 @@ namespace MSCMP.Game.Objects {
 		/// Initialise passenger seat
 		/// </summary>
 		void Start() {
-			Logger.Debug($"Passenger seat added, vehicle: {VehicleType}");
+			if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+				Logger.Debug($"Passenger seat added, vehicle: {VehicleType}");
+			}
 
 			guiGameObject = GameObject.Find("GUI");
 

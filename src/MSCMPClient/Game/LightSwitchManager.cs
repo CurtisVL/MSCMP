@@ -88,7 +88,6 @@ namespace MSCMP.Game {
 			if (isValid) {
 				LightSwitch light = new LightSwitch(lightGO);
 				lightSwitches.Add(light);
-				Logger.Log($"Registered new light switch: {lightGO.name}");
 
 				light.onLightSwitchUse = (lightObj, turnedOn) => {
 					onLightSwitchUsed(lightGO, !light.SwitchStatus);

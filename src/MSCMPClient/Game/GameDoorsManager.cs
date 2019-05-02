@@ -104,7 +104,9 @@ namespace MSCMP.Game {
 				GameDoor door = new GameDoor(this, gameObject);
 				doors.Add(door);
 
-				Logger.Debug("Registered doors " + gameObject.name);
+				if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+					Logger.Debug("Registered doors " + gameObject.name);
+				}
 			}
 		}
 
