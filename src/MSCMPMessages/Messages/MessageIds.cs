@@ -30,6 +30,8 @@ namespace MSCMPMessages.Messages {
 		ObjectOwnerSync,
 		EventHookSync,
 		RequestObjectSync,
+		Phone,
+		DartSync,
 		ConnectedPlayers,
 		PlayerJoin,
 		PlayerLeave,

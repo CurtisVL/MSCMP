@@ -272,6 +272,14 @@ namespace MSCMP.Network {
 				timeSinceLastHeartbeat = 0.0f;
 			});
 
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PhoneMessage msg) => {
+				Game.PhoneManager.Instance.PhoneCall(msg.topic, msg.timesToRing);
+			});
+
+			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.DartSyncMessage msg) => {
+				Game.MapManager.Instance.SyncDartsHandler(msg.darts);
+			});
+			
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.DisconnectMessage msg) => {
 				HandleDisconnect(GetPlayerIDBySteamID(sender), false);
 			});
@@ -637,6 +645,9 @@ namespace MSCMP.Network {
 			netWorld.Update();
 			UpdateHeartbeat();
 			ProcessMessages();
+			if (Game.PhoneManager.Instance != null) {
+				Game.PhoneManager.Instance.OnUpdate();
+			}
 
 #if !PUBLIC_RELEASE
 			if (Input.GetKeyDown(KeyCode.F8) && players[1] != null) {

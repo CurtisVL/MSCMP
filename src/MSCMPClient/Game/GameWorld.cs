@@ -59,6 +59,16 @@ namespace MSCMP.Game {
 		/// </summary>
 		Shop shopManager = new Shop();
 
+		/// <summary>
+		/// Phone manager.
+		/// </summary>
+		PhoneManager phoneManager = new PhoneManager();
+
+		/// <summary>
+		/// Map manager.
+		/// </summary>
+		MapManager mapManager = new MapManager();
+
 		private GamePlayer player = null;
 
 		/// <summary>
