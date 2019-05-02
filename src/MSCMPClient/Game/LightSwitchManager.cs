@@ -1,21 +1,24 @@
+using MSCMP.Game.Objects;
 using System.Collections.Generic;
 using UnityEngine;
-using MSCMP.Game.Objects;
 
-namespace MSCMP.Game {
+namespace MSCMP.Game
+{
 	/// <summary>
 	/// Class managing state of the light switches in game.
 	/// </summary>
-	class LightSwitchManager : IGameObjectCollector {
+	internal class LightSwitchManager 
+		: IGameObjectCollector
+	{
 		/// <summary>
 		/// Singleton of the light switch manager.
 		/// </summary>
-		public static LightSwitchManager Instance = null;
+		public static LightSwitchManager Instance;
 
 		/// <summary>
 		/// List of light switches.
 		/// </summary>
-		public List<LightSwitch> lightSwitches = new List<LightSwitch>();
+		public readonly List<LightSwitch> LightSwitches = new List<LightSwitch>();
 
 		public delegate void OnLightSwitchUsed(GameObject lightSwitch, bool turnedOn);
 
@@ -24,11 +27,13 @@ namespace MSCMP.Game {
 		/// </summary>
 		public OnLightSwitchUsed onLightSwitchUsed;
 
-		public LightSwitchManager() {
+		public LightSwitchManager()
+		{
 			Instance = this;
 		}
 
-		~LightSwitchManager() {
+		~LightSwitchManager()
+		{
 			Instance = null;
 		}
 
@@ -37,15 +42,18 @@ namespace MSCMP.Game {
 		/// </summary>
 		/// <param name="gameObject">Game object to check.</param>
 		/// <returns>true if given game object is light switch, false otherwise</returns>
-		bool IsLightSwitch(GameObject gameObject) {
+		private bool IsLightSwitch(GameObject gameObject)
+		{
 			return gameObject.name.StartsWith("switch_");
 		}
 
 		/// <summary>
 		/// Collect light switches.
 		/// </summary>
-		public void CollectGameObject(GameObject gameObject) {
-			if (IsLightSwitch(gameObject) && GetLightSwitchByGameObject(gameObject) == null) {
+		public void CollectGameObject(GameObject gameObject)
+		{
+			if (IsLightSwitch(gameObject) && GetLightSwitchByGameObject(gameObject) == null)
+			{
 				AddLightSwitch(gameObject);
 			}
 		}
@@ -53,19 +61,23 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Destroy all collected objects references.
 		/// </summary>
-		public void DestroyObjects() {
-			lightSwitches.Clear();
+		public void DestroyObjects()
+		{
+			LightSwitches.Clear();
 		}
 
 		/// <summary>
 		/// Handle destroy of game object.
 		/// </summary>
 		/// <param name="gameObject">The destroyed game object.</param>
-		public void DestroyObject(GameObject gameObject) {
-			if (IsLightSwitch(gameObject)) {
-				var lightSwitch = GetLightSwitchByGameObject(gameObject);
-				if (lightSwitch != null) {
-					lightSwitches.Remove(lightSwitch);
+		public void DestroyObject(GameObject gameObject)
+		{
+			if (IsLightSwitch(gameObject))
+			{
+				LightSwitch lightSwitch = GetLightSwitchByGameObject(gameObject);
+				if (lightSwitch != null)
+				{
+					LightSwitches.Remove(lightSwitch);
 				}
 			}
 		}
@@ -73,24 +85,29 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Adds light switches by GameObject
 		/// </summary>
-		/// <param name="lightGO">LightSwitch GameObject.</param>
-		public void AddLightSwitch(GameObject lightGO) {
-			PlayMakerFSM playMakerFsm = Utils.GetPlaymakerScriptByName(lightGO, "Use");
-			if (playMakerFsm == null) {
+		/// <param name="lightGo">LightSwitch GameObject.</param>
+		public void AddLightSwitch(GameObject lightGo)
+		{
+			PlayMakerFSM playMakerFsm = Utils.GetPlaymakerScriptByName(lightGo, "Use");
+			if (playMakerFsm == null)
+			{
 				return;
 			}
 
 			bool isValid = false;
-			if (playMakerFsm.FsmVariables.FindFsmBool("Switch") != null) {
+			if (playMakerFsm.FsmVariables.FindFsmBool("Switch") != null)
+			{
 				isValid = true;
 			}
 
-			if (isValid) {
-				LightSwitch light = new LightSwitch(lightGO);
-				lightSwitches.Add(light);
+			if (isValid)
+			{
+				LightSwitch light = new LightSwitch(lightGo);
+				LightSwitches.Add(light);
 
-				light.onLightSwitchUse = (lightObj, turnedOn) => {
-					onLightSwitchUsed(lightGO, !light.SwitchStatus);
+				light.onLightSwitchUse = (lightObj, turnedOn) =>
+				{
+					onLightSwitchUsed(lightGo, !light.SwitchStatus);
 				};
 			}
 		}
@@ -98,11 +115,14 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Find light switch from position
 		/// </summary>
-		/// <param name="name">Light switch position.</param>
+		/// <param name="pos">Light switch position.</param>
 		/// <returns></returns>
-		public LightSwitch FindLightSwitch(Vector3 pos) {
-			foreach (LightSwitch light in lightSwitches) {
-				if ((Vector3.Distance(light.Position, pos) < 0.1f)) {
+		public LightSwitch FindLightSwitch(Vector3 pos)
+		{
+			foreach (LightSwitch light in LightSwitches)
+			{
+				if (Vector3.Distance(light.Position, pos) < 0.1f)
+				{
 					return light;
 				}
 			}
@@ -114,9 +134,12 @@ namespace MSCMP.Game {
 		/// </summary>
 		/// <param name="gameObject">The game object to get lightswitch by.</param>
 		/// <returns>Lightswitch instance or null if there is no lightswitch matching this game object.</returns>
-		public LightSwitch GetLightSwitchByGameObject(GameObject gameObject) {
-			foreach (var light in lightSwitches) {
-				if (light.GameObject == gameObject) {
+		public LightSwitch GetLightSwitchByGameObject(GameObject gameObject)
+		{
+			foreach (LightSwitch light in LightSwitches)
+			{
+				if (light.GameObject == gameObject)
+				{
 					return light;
 				}
 			}

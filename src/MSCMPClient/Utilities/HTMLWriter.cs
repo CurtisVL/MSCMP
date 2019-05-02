@@ -3,84 +3,98 @@ using System.Collections;
 using System.IO;
 
 
-namespace MSCMP.Utilities {
-	class HTMLWriter : IDisposable {
+namespace MSCMP.Utilities
+{
+	internal class HtmlWriter 
+		: IDisposable
+	{
+		private readonly StreamWriter _streamWriter;
 
-		StreamWriter streamWriter = null;
+		private readonly string _fileName = "";
+		public string FileName => _fileName;
 
-		string fileName = "";
-		public string FileName
+		public HtmlWriter(string fileName)
 		{
-			get { return fileName; }
-		}
-
-		public HTMLWriter(string fileName) {
-			this.fileName = fileName;
-			streamWriter = new StreamWriter(fileName, false, System.Text.Encoding.UTF8);
-			if (streamWriter == null) {
+			_fileName = fileName;
+			_streamWriter = new StreamWriter(fileName, false, System.Text.Encoding.UTF8);
+			if (_streamWriter == null)
+			{
 				Logger.Log($"Failed to write document - {fileName}!");
 			}
-			else {
-				streamWriter.AutoFlush = false;
+			else
+			{
+				_streamWriter.AutoFlush = false;
 			}
 		}
 
-		public void Dispose() {
-			streamWriter.Close();
+		public void Dispose()
+		{
+			_streamWriter.Close();
 		}
 
-		public void WriteString(string str) {
-			streamWriter.Write(str);
+		public void WriteString(string str)
+		{
+			_streamWriter.Write(str);
 		}
 
-		Stack tagStack = new Stack();
+		private readonly Stack _tagStack = new Stack();
 
-		public void ShortTag(string name, string attributes = "") {
+		public void ShortTag(string name, string attributes = "")
+		{
 			WriteString($"<{name}");
-			if (attributes.Length > 0) {
+			if (attributes.Length > 0)
+			{
 				WriteString($" {attributes}");
 			}
 			WriteString("/>");
 		}
 
-		public void StartTag(string name, string attributes = "") {
+		public void StartTag(string name, string attributes = "")
+		{
 			WriteString($"<{name}");
-			if (attributes.Length > 0) {
+			if (attributes.Length > 0)
+			{
 				WriteString($" {attributes}");
 			}
 			WriteString(">");
-			tagStack.Push(name);
+			_tagStack.Push(name);
 		}
 
-		public void EndTag() {
-			string tagName = (string)tagStack.Pop();
+		public void EndTag()
+		{
+			string tagName = (string)_tagStack.Pop();
 			WriteString($"</{tagName}>");
 		}
 
-		public void NewLine() {
+		public void NewLine()
+		{
 			ShortTag("br");
 		}
 
-
-		public void WriteValue(string value) {
+		public void WriteValue(string value)
+		{
 			WriteString(value);
 		}
 
-		public void OneLiner(string tag, string value, string attributes = "") {
+		public void OneLiner(string tag, string value, string attributes = "")
+		{
 			StartTag(tag, attributes);
-				WriteValue(value);
+			WriteValue(value);
 			EndTag();
 		}
 
-		public void Link(string url, string value, string attributes = "") {
+		public void Link(string url, string value, string attributes = "")
+		{
 			StartTag("a", $"href=\"{url}\" " + attributes);
 			WriteValue(value);
 			EndTag();
 		}
-		public delegate void WriteContents(HTMLWriter writer);
+		public delegate void WriteContents(HtmlWriter writer);
 
-		public static bool WriteDocument(string fileName, string title, string cssStyleFile, WriteContents writeDelegate) {
-			using (HTMLWriter writer = new HTMLWriter(fileName)) {
+		public static bool WriteDocument(string fileName, string title, string cssStyleFile, WriteContents writeDelegate)
+		{
+			using (HtmlWriter writer = new HtmlWriter(fileName))
+			{
 				writer.StartTag("head");
 				{
 					writer.StartTag("title");
@@ -89,7 +103,8 @@ namespace MSCMP.Utilities {
 					}
 					writer.EndTag();
 
-					if (cssStyleFile.Length > 0) {
+					if (cssStyleFile.Length > 0)
+					{
 						writer.ShortTag("link", "rel=\"stylesheet\" type=\"text/css\" href=\"" + cssStyleFile + "\"");
 					}
 				}
@@ -103,7 +118,5 @@ namespace MSCMP.Utilities {
 			}
 			return true;
 		}
-
-
 	}
 }

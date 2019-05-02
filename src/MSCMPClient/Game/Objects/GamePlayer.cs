@@ -1,32 +1,26 @@
-using System;
-using HutongGames.PlayMaker;
-using UnityEngine;
 using MSCMP.Game.Components;
-using MSCMP.Network;
+using UnityEngine;
 
-namespace MSCMP.Game.Objects {
+namespace MSCMP.Game.Objects
+{
 	/// <summary>
 	/// Class representing local player object.
 	/// </summary>
-	class GamePlayer {
-		PlayMakerFSM pickupFsm = null;
+	internal class GamePlayer
+	{
+		private readonly PlayMakerFSM _pickupFsm;
 
-		private GameObject gameObject = null;
-		private GameObject pickedUpGameObject = null;
+		private GameObject _pickedUpGameObject;
 
 		/// <summary>
 		/// Get game object representing player.
 		/// </summary>
-		public GameObject Object {
-			get { return gameObject; }
-		}
+		public GameObject Object { get; }
 
 		/// <summary>
 		/// Get object player has picked up.
 		/// </summary>
-		public GameObject PickedUpObject {
-			get { return pickedUpGameObject;  }
-		}
+		public GameObject PickedUpObject => _pickedUpGameObject;
 
 		/// <summary>
 		/// Instance.
@@ -38,40 +32,46 @@ namespace MSCMP.Game.Objects {
 		/// Constructor.
 		/// </summary>
 		/// <param name="gameObject">The game object to pickup.</param>
-		public GamePlayer(GameObject gameObject) {
-			this.gameObject = gameObject;
+		public GamePlayer(GameObject gameObject)
+		{
+			Object = gameObject;
 			Instance = this;
-			
-			pickupFsm = Utils.GetPlaymakerScriptByName(gameObject, "PickUp");
 
-			if (pickupFsm != null) {
+			_pickupFsm = Utils.GetPlaymakerScriptByName(gameObject, "PickUp");
+
+			if (_pickupFsm != null)
+			{
 				// Pickup events
-				EventHook.Add(pickupFsm, "Part picked", new Func<bool>(() => {
-					this.PickupObject();
+				EventHook.Add(_pickupFsm, "Part picked", () =>
+				{
+					PickupObject();
 					return false;
-				}));
-				EventHook.Add(pickupFsm, "Item picked", new Func<bool>(() => {
-					this.PickupObject();
+				});
+				EventHook.Add(_pickupFsm, "Item picked", () =>
+				{
+					PickupObject();
 					return false;
-				}));
+				});
 
 				// Throw event
-				EventHook.Add(pickupFsm, "Throw part", new Func<bool>(() => {
-					this.ThrowObject();
+				EventHook.Add(_pickupFsm, "Throw part", () =>
+				{
+					ThrowObject();
 					return false;
-				}));
+				});
 
 				// Drop event
-				EventHook.Add(pickupFsm, "Drop part", new Func<bool>(() => {
-					this.DropObject();
+				EventHook.Add(_pickupFsm, "Drop part", () =>
+				{
+					DropObject();
 					return false;
-				}));
+				});
 			}
 
 			GameObject trigger = GameObject.CreatePrimitive(PrimitiveType.Sphere);
 			trigger.transform.localScale = new Vector3(100, 100, 100);
 			trigger.GetComponent<SphereCollider>().isTrigger = true;
-			GameObject.Destroy(trigger.GetComponent<MeshRenderer>());
+			UnityEngine.Object.Destroy(trigger.GetComponent<MeshRenderer>());
 
 			trigger.transform.position = gameObject.transform.position;
 			trigger.transform.parent = gameObject.transform;
@@ -82,38 +82,42 @@ namespace MSCMP.Game.Objects {
 		/// <summary>
 		/// Handle pickup of the object.
 		/// </summary>
-		private void PickupObject() {
-			pickedUpGameObject = pickupFsm.Fsm.GetFsmGameObject("PickedObject").Value;
-			ObjectSyncComponent osc = pickedUpGameObject.GetComponent<ObjectSyncComponent>();
+		private void PickupObject()
+		{
+			_pickedUpGameObject = _pickupFsm.Fsm.GetFsmGameObject("PickedObject").Value;
+			ObjectSyncComponent osc = _pickedUpGameObject.GetComponent<ObjectSyncComponent>();
 			osc.TakeSyncControl();
 			osc.SendConstantSync(true);
 
-			Logger.Log("Picked up object: " + pickedUpGameObject);
+			Logger.Log("Picked up object: " + _pickedUpGameObject);
 		}
 
 		/// <summary>
 		/// Handle throw of the object.
 		/// </summary>
-		private void ThrowObject() {
-			Logger.Log("Threw object: " + pickedUpGameObject);
-			pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
-			pickedUpGameObject = null;
+		private void ThrowObject()
+		{
+			Logger.Log("Threw object: " + _pickedUpGameObject);
+			_pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
+			_pickedUpGameObject = null;
 		}
 
 		/// <summary>
 		/// Handle drop of the object.
 		/// </summary>
-		private void DropObject() {
-			Logger.Log("Dropped object: " + pickedUpGameObject);
-			pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
-			pickedUpGameObject = null;
+		private void DropObject()
+		{
+			Logger.Log("Dropped object: " + _pickedUpGameObject);
+			_pickedUpGameObject.GetComponent<ObjectSyncComponent>().SendConstantSync(false);
+			_pickedUpGameObject = null;
 		}
 
 		/// <summary>
 		/// Drops object when it has been stolen from the player.
 		/// </summary>
-		public void DropStolenObject() {
-			pickupFsm.SendEvent("MP_Drop part");
+		public void DropStolenObject()
+		{
+			_pickupFsm.SendEvent("MP_Drop part");
 		}
 	}
 }

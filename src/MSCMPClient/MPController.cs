@@ -1,67 +1,70 @@
+using MSCMP.Game;
+using MSCMP.Network;
+using MSCMP.Utilities;
+using System.Collections.Generic;
 using UnityEngine;
 
-using System.Collections.Generic;
-using System;
-using MSCMP.Network;
-using MSCMP.Game;
-using MSCMP.Utilities;
-
-namespace MSCMP {
+namespace MSCMP
+{
 	/// <summary>
 	/// Main multiplayer mode controller component.
 	/// </summary>
-	class MPController : MonoBehaviour {
-
-		public static MPController Instance = null;
+	internal class MpController
+		: MonoBehaviour
+	{
+		public static MpController Instance;
 
 		/// <summary>
 		/// Object managing whole networking.
 		/// </summary>
-		NetManager netManager = null;
+		private NetManager _netManager;
 
 		/// <summary>
 		/// Name of the currently loaded level.
 		/// </summary>
-		string currentLevelName = "";
+		private string _currentLevelName = "";
 
 		/// <summary>
 		/// Current scroll value of the invite panel.
 		/// </summary>
-		Vector2 friendsScrollViewPos = new Vector2();
+		private Vector2 _friendsScrollViewPos;
 
 		/// <summary>
 		/// The mod logo texture.
 		/// </summary>
-		Texture2D modLogo = null;
+		private Texture2D _modLogo;
 
 		/// <summary>
 		/// Game world manager object.
 		/// </summary>
-		GameWorld gameWorld = new GameWorld();
+		private readonly GameWorld _gameWorld = new GameWorld();
 
 		/// <summary>
 		/// Console object.
 		/// </summary>
-		UI.Console console = new UI.Console();
+		private readonly UI.Console _console = new UI.Console();
 
-		MPController() {
+		private MpController()
+		{
 			Instance = this;
 		}
 
-		~MPController() {
+		~MpController()
+		{
 			Instance = null;
 		}
 
-		void Start() {
+		private void Start()
+		{
 			Steamworks.SteamAPI.Init();
 
-			DontDestroyOnLoad(this.gameObject);
+			DontDestroyOnLoad(gameObject);
 
-			netManager = new NetManager();
+			_netManager = new NetManager();
 
-			modLogo = Client.LoadAsset<Texture2D>("Assets/Textures/MSCMPLogo.png");
+			_modLogo = Client.LoadAsset<Texture2D>("Assets/Textures/MSCMPLogo.png");
 
-			IMGUIUtils.Setup();
+			ImguiUtils.Setup();
 
 #if !PUBLIC_RELEASE
 			// Skip splash screen in development builds.
@@ -75,22 +78,27 @@ namespace MSCMP {
 		/// Callback called when unity loads new event.
 		/// </summary>
 		/// <param name="newLevelName"></param>
-		void OnLevelSwitch(string newLevelName) {
-			if (currentLevelName == "GAME") {
-				gameWorld.OnUnload();
+		private void OnLevelSwitch(string newLevelName)
+		{
+			if (_currentLevelName == "GAME")
+			{
+				_gameWorld.OnUnload();
 			}
 
-			if (newLevelName == "GAME") {
-				gameWorld.OnLoad();
-				netManager.OnGameWorldLoad();
+			if (newLevelName == "GAME")
+			{
+				_gameWorld.OnLoad();
+				_netManager.OnGameWorldLoad();
 				return;
 			}
 
 			// When leaving game to main menu disconenct from the session.
 
-			if (currentLevelName == "GAME" && newLevelName == "MainMenu") {
-				if (netManager.IsOnline) {
-					netManager.Disconnect();
+			if (_currentLevelName == "GAME" && newLevelName == "MainMenu")
+			{
+				if (_netManager.IsOnline)
+				{
+					_netManager.Disconnect();
 				}
 			}
 		}
@@ -98,24 +106,28 @@ namespace MSCMP {
 		/// <summary>
 		/// Updates IMGUI of the multiplayer.
 		/// </summary>
-		void OnGUI() {
-			if (netManager.IsOnline) {
-				netManager.DrawNameTags();
+		private void OnGui()
+		{
+			if (_netManager.IsOnline)
+			{
+				_netManager.DrawNameTags();
 			}
 
 			GUI.color = Color.white;
-			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + Client.GetMODDisplayVersion());
+			GUI.Label(new Rect(2, Screen.height - 18, 500, 20), "MSCMP " + Client.GetModDisplayVersion());
 
 			GUI.color = new Color(1.0f, 1.0f, 1.0f, 0.25f);
-			GUI.DrawTexture(new Rect(2, Screen.height - 80, 76, 66), modLogo);
+			GUI.DrawTexture(new Rect(2, Screen.height - 80, 76, 66), _modLogo);
 
 			// Draw online state.
 
-			if (netManager.IsOnline) {
+			if (_netManager.IsOnline)
+			{
 				GUI.color = Color.green;
-				GUI.Label(new Rect(2, 2, 500, 20), "ONLINE " + (netManager.IsHost ? "HOST" : "PLAYER"));
+				GUI.Label(new Rect(2, 2, 500, 20), "ONLINE " + (_netManager.IsHost ? "HOST" : "PLAYER"));
 			}
-			else {
+			else
+			{
 				GUI.color = Color.red;
 				GUI.Label(new Rect(2, 2, 500, 20), "OFFLINE");
 			}
@@ -124,128 +136,141 @@ namespace MSCMP {
 
 			// Friends widget.
 
-			if (ShouldSeeInvitePanel()) {
+			if (ShouldSeeInvitePanel())
+			{
 				UpdateInvitePanel();
 			}
 
 #if !PUBLIC_RELEASE
-			DevTools.OnGUI();
+			DevTools.OnGui();
 
-			if (DevTools.netStats) {
-				netManager.DrawDebugGUI();
+			if (DevTools.NetStats)
+			{
+				_netManager.DrawDebugGui();
 			}
 
-			gameWorld.UpdateIMGUI();
+			_gameWorld.UpdateImgui();
 #endif
 
-			console.Draw();
+			_console.Draw();
 		}
 
 		/// <summary>
 		/// The interval between each friend list updates from steam in seconds.
 		/// </summary>
-		const float FRIENDLIST_UPDATE_INTERVAL = 10.0f;
+		private const float FRIENDLIST_UPDATE_INTERVAL = 10.0f;
 
 		/// <summary>
 		/// Time left to next friend update.
 		/// </summary>
-		float timeToUpdateFriendList = 0.0f;
+		private float _timeToUpdateFriendList;
 
-		struct FriendEntry {
-			public Steamworks.CSteamID steamId;
-			public string name;
-			public bool playingMSC;
+		private struct FriendEntry
+		{
+			public Steamworks.CSteamID SteamId;
+			public string Name;
+			public bool PlayingMsc;
 		}
 
 		/// <summary>
 		/// Time in seconds player can have between invite.
 		/// </summary>
-		const float INVITE_COOLDOWN = 10.0f;
+		private const float INVITE_COOLDOWN = 10.0f;
 
 		/// <summary>
 		/// Current invite cooldown value.
 		/// </summary>
-		float inviteCooldown = 0.0f;
+		private float _inviteCooldown;
 
-		List<FriendEntry> onlineFriends = new List<FriendEntry>();
+		private readonly List<FriendEntry> _onlineFriends = new List<FriendEntry>();
 
 		/// <summary>
 		/// Steam id of the recently invited friend.
 		/// </summary>
-		Steamworks.CSteamID invitedFriendSteamId = new Steamworks.CSteamID();
+		private Steamworks.CSteamID _invitedFriendSteamId;
 
 		/// <summary>
 		/// Check if invite panel is visible.
 		/// </summary>
 		/// <returns>true if invite panel is visible false otherwise</returns>
-		bool IsInvitePanelVisible() {
+		private bool IsInvitePanelVisible()
+		{
 			return PlayMakerGlobals.Instance.Variables.FindFsmBool("PlayerInMenu").Value;
 		}
 
 		/// <summary>
 		/// Update friend list.
 		/// </summary>
-		void UpdateFriendList() {
-			if (inviteCooldown > 0.0f) {
-				inviteCooldown -= Time.deltaTime;
+		private void UpdateFriendList()
+		{
+			if (_inviteCooldown > 0.0f)
+			{
+				_inviteCooldown -= Time.deltaTime;
 			}
-			else {
+			else
+			{
 				// Reset invited friend steam id.
 
-				invitedFriendSteamId.Clear();
+				_invitedFriendSteamId.Clear();
 			}
 
-			timeToUpdateFriendList -= Time.deltaTime;
-			if (timeToUpdateFriendList > 0.0f) {
+			_timeToUpdateFriendList -= Time.deltaTime;
+			if (_timeToUpdateFriendList > 0.0f)
+			{
 				return;
 			}
 
-			onlineFriends.Clear();
+			_onlineFriends.Clear();
 
 			Steamworks.EFriendFlags friendFlags = Steamworks.EFriendFlags.k_EFriendFlagImmediate;
 			int friendsCount = Steamworks.SteamFriends.GetFriendCount(friendFlags);
 
-			for (int i = 0; i < friendsCount; ++i) {
+			for (int i = 0; i < friendsCount; ++i)
+			{
 				Steamworks.CSteamID friendSteamId = Steamworks.SteamFriends.GetFriendByIndex(i, friendFlags);
 
-				if (Steamworks.SteamFriends.GetFriendPersonaState(friendSteamId) == Steamworks.EPersonaState.k_EPersonaStateOffline) {
+				if (Steamworks.SteamFriends.GetFriendPersonaState(friendSteamId) == Steamworks.EPersonaState.k_EPersonaStateOffline)
+				{
 					continue;
 				}
-
-
-
+				
 				FriendEntry friend = new FriendEntry();
-				friend.steamId = friendSteamId;
-				friend.name = Steamworks.SteamFriends.GetFriendPersonaName(friendSteamId);
+				friend.SteamId = friendSteamId;
+				friend.Name = Steamworks.SteamFriends.GetFriendPersonaName(friendSteamId);
 
 				Steamworks.FriendGameInfo_t gameInfo;
 				Steamworks.SteamFriends.GetFriendGamePlayed(friendSteamId, out gameInfo);
-				friend.playingMSC = (gameInfo.m_gameID.AppID() == Client.GAME_APP_ID);
+				friend.PlayingMsc = gameInfo.m_gameID.AppID() == Client.GameAppId;
 
-				if (friend.playingMSC) {
-					onlineFriends.Insert(0, friend);
+				if (friend.PlayingMsc)
+				{
+					_onlineFriends.Insert(0, friend);
 				}
-				else {
-					onlineFriends.Add(friend);
+				else
+				{
+					_onlineFriends.Add(friend);
 				}
 			}
 
-			timeToUpdateFriendList = FRIENDLIST_UPDATE_INTERVAL;
+			_timeToUpdateFriendList = FRIENDLIST_UPDATE_INTERVAL;
 		}
 
 		/// <summary>
 		/// Should player see invite panel?
 		/// </summary>
 		/// <returns>true if invite panel should be visible, false otherwise</returns>
-		bool ShouldSeeInvitePanel() {
-			return netManager.IsHost && !netManager.IsNetworkPlayerConnected();
+		private bool ShouldSeeInvitePanel()
+		{
+			return _netManager.IsHost && !_netManager.IsNetworkPlayerConnected();
 		}
 
 		/// <summary>
 		/// Updates invite panel IMGUI.
 		/// </summary>
-		private void UpdateInvitePanel() {
-			if (!IsInvitePanelVisible()) {
+		private void UpdateInvitePanel()
+		{
+			if (!IsInvitePanelVisible())
+			{
 				GUI.color = Color.white;
 				GUI.Label(new Rect(0, Screen.height - 100, 200.0f, 20.0f), "[ESCAPE] - Invite friend");
 				return;
@@ -259,7 +284,7 @@ namespace MSCMP {
 			// Draw header
 
 			GUI.color = new Color(1.0f, 0.5f, 0.0f, 0.8f);
-			IMGUIUtils.DrawPlainColorRect(invitePanelRect);
+			ImguiUtils.DrawPlainColorRect(invitePanelRect);
 
 			GUI.color = Color.white;
 			invitePanelRect.x += 2.0f;
@@ -272,23 +297,26 @@ namespace MSCMP {
 			invitePanelRect.height = invitePanelHeight;
 
 			GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.8f);
-			IMGUIUtils.DrawPlainColorRect(invitePanelRect);
+			ImguiUtils.DrawPlainColorRect(invitePanelRect);
 
 			GUI.color = new Color(1.0f, 0.5f, 0.0f, 0.8f);
-			int onlineFriendsCount = onlineFriends.Count;
+			int onlineFriendsCount = _onlineFriends.Count;
 
 			invitePanelRect.height -= 2.0f;
 
-			if (onlineFriendsCount == 0) {
+			if (onlineFriendsCount == 0)
+			{
 				GUI.color = Color.white;
 
-				var previousAlignment = GUI.skin.label.alignment;
+				TextAnchor previousAlignment = GUI.skin.label.alignment;
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 				bool playerIsOffline = Steamworks.SteamFriends.GetPersonaState() == Steamworks.EPersonaState.k_EPersonaStateOffline;
-				if (playerIsOffline) {
+				if (playerIsOffline)
+				{
 					GUI.Label(invitePanelRect, "You cannot invite friends while in steam offline mode.\n\nSwitch back your steam status to online to be able to invite players.");
 				}
-				else {
+				else
+				{
 					GUI.Label(invitePanelRect, "You don't have any friends online.");
 				}
 				GUI.skin.label.alignment = previousAlignment;
@@ -298,48 +326,57 @@ namespace MSCMP {
 			}
 
 
-			friendsScrollViewPos = GUI.BeginScrollView(invitePanelRect, friendsScrollViewPos, new Rect(0, 0, invitePanelWidth - 20.0f, 20.0f * onlineFriendsCount));
+			_friendsScrollViewPos = GUI.BeginScrollView(invitePanelRect, _friendsScrollViewPos, new Rect(0, 0, invitePanelWidth - 20.0f, 20.0f * onlineFriendsCount));
 
-			int firstVisibleFriendId = (int)(friendsScrollViewPos.y / rowHeight);
+			int firstVisibleFriendId = (int)(_friendsScrollViewPos.y / rowHeight);
 			int maxVisibleFriends = (int)(invitePanelHeight / rowHeight);
 			int lastIndex = firstVisibleFriendId + maxVisibleFriends + 1;
-			if (lastIndex > onlineFriendsCount) {
+			if (lastIndex > onlineFriendsCount)
+			{
 				lastIndex = onlineFriendsCount;
 			}
-			for (int i = firstVisibleFriendId; i < lastIndex; ++i) {
-				FriendEntry friend = onlineFriends[i];
-				if (friend.playingMSC) {
+			for (int i = firstVisibleFriendId; i < lastIndex; ++i)
+			{
+				FriendEntry friend = _onlineFriends[i];
+				if (friend.PlayingMsc)
+				{
 					GUI.color = Color.green;
 				}
-				else {
+				else
+				{
 					GUI.color = Color.white;
 				}
 
 				Rect friendRect = new Rect(2, 1 + rowHeight * i, 200.0f, rowHeight);
 
-				GUI.Label(friendRect, friend.name);
+				GUI.Label(friendRect, friend.Name);
 
 				friendRect.x += 180.0f;
 				friendRect.width = 100.0f;
 
-				Steamworks.CSteamID friendSteamId = friend.steamId;
+				Steamworks.CSteamID friendSteamId = friend.SteamId;
 
-				if (invitedFriendSteamId == friendSteamId) {
-					GUI.Label(friendRect, String.Format("INVITED! ({0:F1}s)", inviteCooldown));
+				if (_invitedFriendSteamId == friendSteamId)
+				{
+					GUI.Label(friendRect, $"INVITED! ({_inviteCooldown:F1}s)");
 					continue;
 				}
 
-				if (inviteCooldown > 0.0f) {
+				if (_inviteCooldown > 0.0f)
+				{
 					continue;
 				}
 
-				if (GUI.Button(friendRect, "Invite")) {
-					if (netManager.InviteToMyLobby(friendSteamId)) {
-						invitedFriendSteamId = friendSteamId;
-						inviteCooldown = INVITE_COOLDOWN;
+				if (GUI.Button(friendRect, "Invite"))
+				{
+					if (_netManager.InviteToMyLobby(friendSteamId))
+					{
+						_invitedFriendSteamId = friendSteamId;
+						_inviteCooldown = INVITE_COOLDOWN;
 					}
-					else {
-						UI.MPGUI.Instance.ShowMessageBox("Failed to invite friend due to steam error.");
+					else
+					{
+						UI.Mpgui.Instance.ShowMessageBox("Failed to invite friend due to steam error.");
 					}
 
 				}
@@ -348,25 +385,29 @@ namespace MSCMP {
 			GUI.EndScrollView();
 		}
 
-		void OnLevelWasLoaded(int level) {
+		private void OnLevelWasLoaded(int level)
+		{
 			string loadedLevelName = Application.loadedLevelName;
 			OnLevelSwitch(loadedLevelName);
-			currentLevelName = loadedLevelName;
+			_currentLevelName = loadedLevelName;
 		}
 
 		/// <summary>
 		/// Update multiplayer state.
 		/// </summary>
-		void LateUpdate() {
-			Utils.CallSafe("Update", () => {
+		private void LateUpdate()
+		{
+			Utils.CallSafe("Update", () =>
+			{
 				Steamworks.SteamAPI.RunCallbacks();
 
-				if (IsInvitePanelVisible()) {
+				if (IsInvitePanelVisible())
+				{
 					UpdateFriendList();
 				}
 
-				gameWorld.Update();
-				netManager.Update();
+				_gameWorld.Update();
+				_netManager.Update();
 
 
 				// Development stuff.
@@ -380,15 +421,14 @@ namespace MSCMP {
 		/// Wrapper around unitys load level method to call OnLevelSwitch even if level is the same.
 		/// </summary>
 		/// <param name="levelName">The name of the level to load.</param>
-		public void LoadLevel(string levelName) {
+		public void LoadLevel(string levelName)
+		{
 			Application.LoadLevel(levelName);
 		}
 
 		/// <summary>
 		/// Can this client instance use save?
 		/// </summary>
-		public bool CanUseSave {
-			get { return !netManager.IsOnline || netManager.IsHost; }
-		}
+		public bool CanUseSave => !_netManager.IsOnline || _netManager.IsHost;
 	}
 }

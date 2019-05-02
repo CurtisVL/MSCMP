@@ -1,23 +1,24 @@
 using MSCMP.Game;
 using MSCMP.Game.Objects;
+using MSCMP.Network.Messages;
 using UnityEngine;
 
-namespace MSCMP.Network {
-
+namespace MSCMP.Network
+{
 	/// <summary>
 	/// Class handling local player state.
 	/// </summary>
-	class NetLocalPlayer : NetPlayer {
-
+	internal class NetLocalPlayer : NetPlayer
+	{
 		/// <summary>
 		/// Instance.
 		/// </summary>
-		public static NetLocalPlayer Instance = null;
+		public static NetLocalPlayer Instance;
 
 		/// <summary>
 		/// How much time in seconds left until next synchronization packet will be sent.
 		/// </summary>
-		private float timeToUpdate = 0.0f;
+		private float _timeToUpdate;
 
 		/// <summary>
 		/// Synchronization interval in milliseconds.
@@ -30,25 +31,29 @@ namespace MSCMP.Network {
 		/// <param name="netManager">The network manager owning this player.</param>
 		/// <param name="netWorld">Network world owning this player.</param>
 		/// <param name="steamId">The steam id of the player.</param>
-		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId) {
+		public NetLocalPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) : base(netManager, netWorld, steamId)
+		{
 			Instance = this;
 
-			GameDoorsManager.Instance.onDoorsOpen = (GameObject door) => {
-				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
+			GameDoorsManager.Instance.onDoorsOpen = door =>
+			{
+				OpenDoorsMessage msg = new OpenDoorsMessage();
 				msg.position = Utils.GameVec3ToNet(door.transform.position);
 				msg.open = true;
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
-			GameDoorsManager.Instance.onDoorsClose = (GameObject door) => {
-				Messages.OpenDoorsMessage msg = new Messages.OpenDoorsMessage();
+			GameDoorsManager.Instance.onDoorsClose = door =>
+			{
+				OpenDoorsMessage msg = new OpenDoorsMessage();
 				msg.position = Utils.GameVec3ToNet(door.transform.position);
 				msg.open = false;
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			};
 
-			LightSwitchManager.Instance.onLightSwitchUsed = (GameObject lswitch, bool turnedOn) => {
-				Messages.LightSwitchMessage msg = new Messages.LightSwitchMessage();
+			LightSwitchManager.Instance.onLightSwitchUsed = (lswitch, turnedOn) =>
+			{
+				LightSwitchMessage msg = new LightSwitchMessage();
 				msg.pos = Utils.GameVec3ToNet(lswitch.transform.position);
 				msg.toggle = turnedOn;
 				netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
@@ -60,25 +65,31 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Update state of the local player.
 		/// </summary>
-		public override void Update() {
-			if (state == State.Passenger) {
+		public override void Update()
+		{
+			if (state == State.Passenger)
+			{
 				// Skip update when we don't have anything to do.
 				return;
 			}
 
 			// Synchronization sending.
 
-			timeToUpdate -= Time.deltaTime;
-			if (timeToUpdate <= 0.0f && netManager.IsPlaying) {
-				if (AnimManager != null) {
-					AnimManager.PACKETS_LEFT_TO_SYNC--;
-					if (AnimManager.PACKETS_LEFT_TO_SYNC <= 0) {
-						AnimManager.PACKETS_LEFT_TO_SYNC = AnimManager.PACKETS_TOTAL_FOR_SYNC;
+			_timeToUpdate -= Time.deltaTime;
+			if (_timeToUpdate <= 0.0f && NetManager.IsPlaying)
+			{
+				if (AnimManager != null)
+				{
+					AnimManager.PacketsLeftToSync--;
+					if (AnimManager.PacketsLeftToSync <= 0)
+					{
+						AnimManager.PacketsLeftToSync = AnimManager.PacketsTotalForSync;
 						SendAnimSync();
 					}
 				}
 
-				switch (state) {
+				switch (state)
+				{
 					case State.OnFoot:
 						SendOnFootSync();
 						break;
@@ -90,35 +101,40 @@ namespace MSCMP.Network {
 		/// Send on foot sync to the server.
 		/// </summary>
 		/// <returns>true if sync message was sent false otherwise</returns>
-		private bool SendOnFootSync() {
+		private bool SendOnFootSync()
+		{
 			GamePlayer player = GameWorld.Instance.Player;
-			if (player == null) {
+			if (player == null)
+			{
 				return false;
 			}
 			GameObject playerObject = player.Object;
-			if (playerObject == null) {
+			if (playerObject == null)
+			{
 				return false;
 			}
 
-			Messages.PlayerSyncMessage message = new Messages.PlayerSyncMessage();
+			PlayerSyncMessage message = new PlayerSyncMessage();
 
 			message.position = Utils.GameVec3ToNet(playerObject.transform.position);
 			message.rotation = Utils.GameQuatToNet(playerObject.transform.rotation);
 
-			if (player.PickedUpObject) {
+			if (player.PickedUpObject)
+			{
 				Transform objectTrans = player.PickedUpObject.transform;
-				var data = new Messages.PickedUpSync();
+				PickedUpSync data = new PickedUpSync();
 				data.position = Utils.GameVec3ToNet(objectTrans.position);
 				data.rotation = Utils.GameQuatToNet(objectTrans.rotation);
 
 				message.PickedUpData = data;
 			}
 
-			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
+			if (!NetManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable))
+			{
 				return false;
 			}
 
-			timeToUpdate = (float)SYNC_INTERVAL / 1000;
+			_timeToUpdate = (float)SYNC_INTERVAL / 1000;
 			return true;
 		}
 
@@ -126,7 +142,8 @@ namespace MSCMP.Network {
 		/// Send anim sync to the server.
 		/// </summary>
 		/// <returns>true if sync message was sent false otherwise</returns>
-		private bool SendAnimSync() {
+		private bool SendAnimSync()
+		{
 			GamePlayer player = GameWorld.Instance.Player;
 			if (player == null) return false;
 
@@ -135,9 +152,9 @@ namespace MSCMP.Network {
 
 			if (playerObject.GetComponentInChildren<CharacterMotor>() == null) return false; //Player is dying!
 
-			Messages.AnimSyncMessage message = new Messages.AnimSyncMessage();
+			AnimSyncMessage message = new AnimSyncMessage();
 
-			message.isRunning = (Utils.GetPlaymakerScriptByName(playerObject, "Running").Fsm.ActiveStateName == "Run");
+			message.isRunning = Utils.GetPlaymakerScriptByName(playerObject, "Running").Fsm.ActiveStateName == "Run";
 
 			float leanRotation = Utils.GetPlaymakerScriptByName(playerObject, "Reach").Fsm.GetFsmFloat("Position").Value;
 			if (leanRotation != 0.0f) message.isLeaning = true;
@@ -148,26 +165,28 @@ namespace MSCMP.Network {
 			message.activeHandState = AnimManager.GetActiveHandState(playerObject);
 
 			message.swearId = int.MaxValue;
-			if (AnimManager.GetHandState(message.activeHandState) == PlayerAnimManager.HandStateId.MiddleFingering) {
+			if (AnimManager.GetHandState(message.activeHandState) == PlayerAnimManager.HandStateId.MiddleFingering)
+			{
 				message.swearId = Utils.GetPlaymakerScriptByName(playerObject, "PlayerFunctions").Fsm.GetFsmInt("RandomInt").Value;
 			}
 			PlayMakerFSM speechFsm = Utils.GetPlaymakerScriptByName(playerObject, "Speech");
-			if (speechFsm.ActiveStateName == "Swear") message.swearId = AnimManager.Swears_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
-			else if (speechFsm.ActiveStateName == "Drunk speech") message.swearId = AnimManager.DrunkSpeaking_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
-			else if (speechFsm.ActiveStateName == "Yes gestures") message.swearId = AnimManager.Agreeing_Offset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			if (speechFsm.ActiveStateName == "Swear") message.swearId = AnimManager.SwearsOffset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			else if (speechFsm.ActiveStateName == "Drunk speech") message.swearId = AnimManager.DrunkSpeakingOffset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
+			else if (speechFsm.ActiveStateName == "Yes gestures") message.swearId = AnimManager.AgreeingOffset + speechFsm.Fsm.GetFsmInt("RandomInt").Value;
 
 			message.aimRot = playerObject.transform.FindChild("Pivot/Camera/FPSCamera").transform.rotation.eulerAngles.x;
 			message.crouchPosition = Utils.GetPlaymakerScriptByName(playerObject, "Crouch").Fsm.GetFsmFloat("Position").Value;
 
-			GameObject DrunkObject = playerObject.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera").gameObject;
-			float DrunkValue = Utils.GetPlaymakerScriptByName(DrunkObject, "Drunk Mode").Fsm.GetFsmFloat("DrunkYmax").Value;
-			if (DrunkValue >= 4.5f) message.isDrunk = true;
+			GameObject drunkObject = playerObject.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera").gameObject;
+			float drunkValue = Utils.GetPlaymakerScriptByName(drunkObject, "Drunk Mode").Fsm.GetFsmFloat("DrunkYmax").Value;
+			if (drunkValue >= 4.5f) message.isDrunk = true;
 			else message.isDrunk = false;
 
 			if (!AnimManager.AreDrinksPreloaded()) AnimManager.PreloadDrinkObjects(playerObject);
 			message.drinkId = AnimManager.GetDrinkingObject(playerObject);
 
-			if (!netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable)) {
+			if (!NetManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendUnreliable))
+			{
 				return false;
 			}
 
@@ -179,92 +198,103 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="vehicle">The vehicle to enter.</param>
 		/// <param name="passenger">Is player entering vehicle as passenger?</param>
-		public override void EnterVehicle(Game.Components.ObjectSyncComponent vehicle, bool passenger) {
+		public override void EnterVehicle(Game.Components.ObjectSyncComponent vehicle, bool passenger)
+		{
 			base.EnterVehicle(vehicle, passenger);
 
-			Messages.VehicleEnterMessage msg = new Messages.VehicleEnterMessage();
-			msg.objectID = vehicle.ObjectID;
+			VehicleEnterMessage msg = new VehicleEnterMessage();
+			msg.objectID = vehicle.ObjectId;
 			msg.passenger = passenger;
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			NetManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			vehicle.TakeSyncControl();
 		}
 
 		/// <summary>
 		/// Leave vehicle player is currently sitting in.
 		/// </summary>
-		public override void LeaveVehicle() {
+		public override void LeaveVehicle()
+		{
 			base.LeaveVehicle();
 
-			netManager.BroadcastMessage(new Messages.VehicleLeaveMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
+			NetManager.BroadcastMessage(new VehicleLeaveMessage(), Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 		/// <summary>
 		/// Write player state into the network message.
 		/// </summary>
 		/// <param name="msg">Message to write to.</param>
-		public void WriteSpawnState(Messages.FullWorldSyncMessage msg) {
+		public void WriteSpawnState(FullWorldSyncMessage msg)
+		{
 			msg.spawnPosition = Utils.GameVec3ToNet(GetPosition());
 			msg.spawnRotation = Utils.GameQuatToNet(GetRotation());
 
 			msg.pickedUpObject = NetPickupable.INVALID_ID;
 		}
-		
+
 		/// <summary>
 		/// Send EventHook sync message.
 		/// </summary>
-		/// <param name="fsmID">FSM ID</param>
-		/// <param name="fsmEventID">FSM Event ID</param>
+		/// <param name="fsmId">FSM ID</param>
+		/// <param name="fsmEventId">FSM Event ID</param>
 		/// <param name="fsmEventName">Optional FSM Event name</param>
-		public void SendEventHookSync(int fsmID, int fsmEventID, string fsmEventName = "none") {
-			Messages.EventHookSyncMessage msg = new Messages.EventHookSyncMessage();
-			msg.fsmID = fsmID;
-			msg.fsmEventID = fsmEventID;
+		public void SendEventHookSync(int fsmId, int fsmEventId, string fsmEventName = "none")
+		{
+			EventHookSyncMessage msg = new EventHookSyncMessage();
+			msg.fsmID = fsmId;
+			msg.fsmEventID = fsmEventId;
 			msg.request = false;
-			if (fsmEventName != "none") {
+			if (fsmEventName != "none")
+			{
 				msg.FsmEventName = fsmEventName;
 			}
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			NetManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 		/// <summary>
 		/// Request event sync from host.
 		/// </summary>
-		/// <param name="fsmID">FSM ID</param>
+		/// <param name="fsmId">FSM ID</param>
 		/// <param name="fsmEventID">FSM Event ID</param>
-		public void RequestEventHookSync(int fsmID) {
-			Messages.EventHookSyncMessage msg = new Messages.EventHookSyncMessage();
-			msg.fsmID = fsmID;
+		public void RequestEventHookSync(int fsmId)
+		{
+			EventHookSyncMessage msg = new EventHookSyncMessage();
+			msg.fsmID = fsmId;
 			msg.fsmEventID = -1;
 			msg.request = true;
-			netManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
+			NetManager.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
 
 		/// <summary>
 		/// Switches state of this player.
 		/// </summary>
 		/// <param name="newState">The state to switch to.</param>
-		protected override void SwitchState(State newState) {
-			if (state == newState) {
+		protected override void SwitchState(State newState)
+		{
+			if (state == newState)
+			{
 				return;
 			}
 
 			base.SwitchState(newState);
 
 			// Force synchronization to be send on next frame.
-			timeToUpdate = 0.0f;
+			_timeToUpdate = 0.0f;
 		}
 
 		/// <summary>
 		/// Get world position of the character.
 		/// </summary>
 		/// <returns>World position of the player character.</returns>
-		public override Vector3 GetPosition() {
+		public override Vector3 GetPosition()
+		{
 			GamePlayer player = GameWorld.Instance.Player;
-			if (player == null) {
+			if (player == null)
+			{
 				return Vector3.zero;
 			}
-			var playerObject = player.Object;
-			if (playerObject == null) {
+			GameObject playerObject = player.Object;
+			if (playerObject == null)
+			{
 				return Vector3.zero;
 			}
 			return playerObject.transform.position;
@@ -274,13 +304,16 @@ namespace MSCMP.Network {
 		/// Get world rotation of the character.
 		/// </summary>
 		/// <returns>World rotation of the player character.</returns>
-		public override Quaternion GetRotation() {
+		public override Quaternion GetRotation()
+		{
 			GamePlayer player = GameWorld.Instance.Player;
-			if (player == null) {
+			if (player == null)
+			{
 				return Quaternion.identity;
 			}
-			var playerObject = player.Object;
-			if (playerObject == null) {
+			GameObject playerObject = player.Object;
+			if (playerObject == null)
+			{
 				return Quaternion.identity;
 			}
 			return playerObject.transform.rotation;
@@ -290,7 +323,8 @@ namespace MSCMP.Network {
 		/// Get steam name of the player.
 		/// </summary>
 		/// <returns>Steam name of the player.</returns>
-		public override string GetName() {
+		public override string GetName()
+		{
 			return Steamworks.SteamFriends.GetPersonaName();
 		}
 
@@ -299,13 +333,16 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="pos">The position to teleport to.</param>
 		/// <param name="rot">The rotation to teleport to.</param>
-		public override void Teleport(Vector3 pos, Quaternion rot) {
+		public override void Teleport(Vector3 pos, Quaternion rot)
+		{
 			GamePlayer player = GameWorld.Instance.Player;
-			if (player == null) {
+			if (player == null)
+			{
 				return;
 			}
-			var playerObject = player.Object;
-			if (playerObject == null) {
+			GameObject playerObject = player.Object;
+			if (playerObject == null)
+			{
 				return;
 			}
 			playerObject.transform.position = pos;

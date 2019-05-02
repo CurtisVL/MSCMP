@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MSCMP {
+namespace MSCMP
+{
 	/// <summary>
 	/// Class containing PlayMaker utils.
 	/// </summary>
-	static class PlayMakerUtils {
+	internal static class PlayMakerUtils
+	{
 
 		/// <summary>
 		/// Add new global transition from the given event to the state name to the given PlayMaker FSM.
@@ -14,10 +16,12 @@ namespace MSCMP {
 		/// <param name="fsm">The PlayMaker FSM to add global transition for.</param>
 		/// <param name="ev">The event triggering the transition.</param>
 		/// <param name="stateName">The state this transition activates.</param>
-		static public void AddNewGlobalTransition(PlayMakerFSM fsm, FsmEvent ev, string stateName) {
+		public static void AddNewGlobalTransition(PlayMakerFSM fsm, FsmEvent ev, string stateName)
+		{
 			FsmTransition[] oldTransitions = fsm.FsmGlobalTransitions;
 			List<FsmTransition> temp = new List<FsmTransition>();
-			foreach (FsmTransition t in oldTransitions) {
+			foreach (FsmTransition t in oldTransitions)
+			{
 				temp.Add(t);
 			}
 			FsmTransition transition = new FsmTransition();
@@ -34,11 +38,13 @@ namespace MSCMP {
 		/// </summary>
 		/// <param name="state">The state to add action to.</param>
 		/// <param name="action">The action to add.</param>
-		static public void AddNewAction(FsmState state, FsmStateAction action) {
+		public static void AddNewAction(FsmState state, FsmStateAction action)
+		{
 			FsmStateAction[] oldActions = state.Actions;
 			List<FsmStateAction> temp = new List<FsmStateAction>();
 			temp.Add(action);
-			foreach (var v in oldActions) {
+			foreach (FsmStateAction v in oldActions)
+			{
 				temp.Add(v);
 			}
 			state.Actions = temp.ToArray();
@@ -49,17 +55,20 @@ namespace MSCMP {
 		/// </summary>
 		/// <param name="fsm">The FSM you want to delete it from</param>
 		/// <param name="eventName">The event(and global transition) name</param>
-		static public void RemoveEvent(PlayMakerFSM fsm, string eventName) {
+		public static void RemoveEvent(PlayMakerFSM fsm, string eventName)
+		{
 			FsmTransition[] oldTransitions = fsm.FsmGlobalTransitions;
 			List<FsmTransition> temp = new List<FsmTransition>();
-			foreach (FsmTransition t in oldTransitions) {
+			foreach (FsmTransition t in oldTransitions)
+			{
 				if (t.EventName != eventName) temp.Add(t);
 			}
 			fsm.Fsm.GlobalTransitions = temp.ToArray();
 
 			FsmEvent[] oldEvents = fsm.Fsm.Events;
 			List<FsmEvent> temp2 = new List<FsmEvent>();
-			foreach (FsmEvent t in oldEvents) {
+			foreach (FsmEvent t in oldEvents)
+			{
 				if (t.Name != eventName) temp2.Add(t);
 			}
 			fsm.Fsm.Events = temp2.ToArray();
@@ -71,12 +80,13 @@ namespace MSCMP {
 		/// <param name="gameObject">The gameObject you want to set</param>
 		/// <param name="fsmName">The FSM that contains the state</param>
 		/// <param name="state">The name of the state</param>
-		static public void SetToState(GameObject gameObject, string fsmName, string state) {
+		public static void SetToState(GameObject gameObject, string fsmName, string state)
+		{
 			string hookedEventName = state + "-MSCMP";
 			PlayMakerFSM fsm = Utils.GetPlaymakerScriptByName(gameObject, fsmName);
 
 			FsmEvent ourEvent = fsm.Fsm.GetEvent(hookedEventName);
-			PlayMakerUtils.AddNewGlobalTransition(fsm, ourEvent, state);
+			AddNewGlobalTransition(fsm, ourEvent, state);
 
 			fsm.SendEvent(hookedEventName);
 			RemoveEvent(fsm, hookedEventName);

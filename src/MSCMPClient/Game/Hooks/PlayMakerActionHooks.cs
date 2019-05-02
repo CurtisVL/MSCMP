@@ -1,20 +1,23 @@
-using System;
-using System.Reflection;
-using System.Collections.Generic;
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 
-namespace MSCMP.Game.Hooks {
+namespace MSCMP.Game.Hooks
+{
 	/// <summary>
 	/// Class containing various PlayMaker action hooks.
 	/// </summary>
-	static class PlayMakerActionHooks {
-
+	internal static class PlayMakerActionHooks
+	{
 		/// <summary>
 		/// Create object PlayMaker action hook.
 		/// </summary>
-		class MyCreateObject : CreateObject {
-			public override void OnEnter() {
+		private class MyCreateObject : CreateObject
+		{
+			public override void OnEnter()
+			{
 				base.OnEnter();
 				GameCallbacks.onPlayMakerObjectCreate?.Invoke(storeObject.Value, gameObject.Value);
 			}
@@ -23,9 +26,12 @@ namespace MSCMP.Game.Hooks {
 		/// <summary>
 		/// Destroy object PlayMaker action hook.
 		/// </summary>
-		class MyDestroyObject : DestroyObject {
-			public override void OnEnter() {
-				if (gameObject.Value != null) {
+		private class MyDestroyObject : DestroyObject
+		{
+			public override void OnEnter()
+			{
+				if (gameObject.Value != null)
+				{
 					GameCallbacks.onPlayMakerObjectDestroy?.Invoke(gameObject.Value);
 				}
 				base.OnEnter();
@@ -35,8 +41,10 @@ namespace MSCMP.Game.Hooks {
 		/// <summary>
 		/// Destroy self PlayMaker action hook.
 		/// </summary>
-		class MyDestroySelf : DestroySelf {
-			public override void OnEnter() {
+		private class MyDestroySelf : DestroySelf
+		{
+			public override void OnEnter()
+			{
 				GameCallbacks.onPlayMakerObjectDestroy?.Invoke(Owner);
 				base.OnEnter();
 			}
@@ -45,10 +53,13 @@ namespace MSCMP.Game.Hooks {
 		/// <summary>
 		/// Activate game object PlayMaker action hook.
 		/// </summary>
-		class MyActivateGameObject : ActivateGameObject {
-			public override void OnEnter() {
+		private class MyActivateGameObject : ActivateGameObject
+		{
+			public override void OnEnter()
+			{
 				UnityEngine.GameObject go = Fsm.GetOwnerDefaultTarget(gameObject);
-				if (go == null) {
+				if (go == null)
+				{
 					Finish();
 					return;
 				}
@@ -60,21 +71,24 @@ namespace MSCMP.Game.Hooks {
 		/// <summary>
 		/// Set game object position PlayMaker action hook.
 		/// </summary>
-		class MySetPosition : SetPosition {
-			public override void OnEnter() {
+		private class MySetPosition : SetPosition
+		{
+			public override void OnEnter()
+			{
 				UnityEngine.GameObject go = Fsm.GetOwnerDefaultTarget(gameObject);
-				if (go == null) {
+				if (go == null)
+				{
 					Finish();
 					return;
 				}
 
-				UnityEngine.Vector3 newPosition = this.vector.Value;
-				if (!this.x.IsNone)
-					newPosition.x = this.x.Value;
-				if (!this.y.IsNone)
-					newPosition.y = this.y.Value;
-				if (!this.z.IsNone)
-					newPosition.z = this.z.Value;
+				UnityEngine.Vector3 newPosition = vector.Value;
+				if (!x.IsNone)
+					newPosition.x = x.Value;
+				if (!y.IsNone)
+					newPosition.y = y.Value;
+				if (!z.IsNone)
+					newPosition.z = z.Value;
 
 				GameCallbacks.onPlayMakerSetPosition?.Invoke(go, newPosition, space);
 
@@ -89,328 +103,457 @@ namespace MSCMP.Game.Hooks {
 		/// </summary>
 		/// <param name="fileName">The file name.</param>
 		/// <returns>true if file is whitelisted, false otherwise</returns>
-		static bool IsWhitelistedFile(string fileName) {
+		private static bool IsWhitelistedFile(string fileName)
+		{
 			return fileName == "options.txt";
 		}
 
-		private class MySaveAudioClip : SaveAudioClip {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveAudioClip : SaveAudioClip
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveBool : SaveBool {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveBool : SaveBool
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveBoxCollider : SaveBoxCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveBoxCollider : SaveBoxCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveCapsuleCollider : SaveCapsuleCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveCapsuleCollider : SaveCapsuleCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveColor : SaveColor {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveColor : SaveColor
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveFloat : SaveFloat {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveFloat : SaveFloat
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveInt : SaveInt {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveInt : SaveInt
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveMaterial : SaveMaterial {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveMaterial : SaveMaterial
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveMeshCollider : SaveMeshCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveMeshCollider : SaveMeshCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveQuaternion : SaveQuaternion {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveQuaternion : SaveQuaternion
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveSphereCollider : SaveSphereCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveSphereCollider : SaveSphereCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveString : SaveString {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveString : SaveString
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveTexture : SaveTexture {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveTexture : SaveTexture
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveTransform : SaveTransform {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveTransform : SaveTransform
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveVector2 : SaveVector2 {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveVector2 : SaveVector2
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		private class MySaveVector3 : SaveVector3 {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		private class MySaveVector3 : SaveVector3
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
 
 
-		public class MyLoadAudioClip : LoadAudioClip {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadAudioClip : LoadAudioClip
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadBool : LoadBool {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadBool : LoadBool
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadBoxCollider : LoadBoxCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadBoxCollider : LoadBoxCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadCapsuleCollider : LoadCapsuleCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadCapsuleCollider : LoadCapsuleCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadColor : LoadColor {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadColor : LoadColor
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadFloat : LoadFloat {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadFloat : LoadFloat
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadInt : LoadInt {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadInt : LoadInt
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadMaterial : LoadMaterial {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadMaterial : LoadMaterial
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadMeshCollider : LoadMeshCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadMeshCollider : LoadMeshCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadQuaternion : LoadQuaternion {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadQuaternion : LoadQuaternion
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadSphereCollider : LoadSphereCollider {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadSphereCollider : LoadSphereCollider
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadString : LoadString {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadString : LoadString
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadTexture : LoadTexture {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadTexture : LoadTexture
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadTransform : LoadTransform {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadTransform : LoadTransform
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadVector2 : LoadVector2 {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadVector2 : LoadVector2
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
 		}
-		public class MyLoadVector3 : LoadVector3 {
-			public override void OnEnter() {
-				if (MPController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value)) {
+		public class MyLoadVector3 : LoadVector3
+		{
+			public override void OnEnter()
+			{
+				if (MpController.Instance.CanUseSave || IsWhitelistedFile(saveFile.Value))
+				{
 					base.OnEnter();
 				}
-				else {
+				else
+				{
 					Finish();
 				}
 			}
@@ -421,12 +564,14 @@ namespace MSCMP.Game.Hooks {
 		/// <summary>
 		/// Install PlayMaker actions hooks.
 		/// </summary>
-		public static void Install() {
-			Utils.CallSafe("Hook PlayMaker actions", () => {
+		public static void Install()
+		{
+			Utils.CallSafe("Hook PlayMaker actions", () =>
+			{
 				Type type = typeof(ActionData);
 				FieldInfo actionTypeLookup = type.GetField("ActionTypeLookup", BindingFlags.Static | BindingFlags.NonPublic);
 
-				Dictionary<string, System.Type> value = (Dictionary<string, System.Type>)actionTypeLookup.GetValue(null);
+				Dictionary<string, Type> value = (Dictionary<string, Type>)actionTypeLookup.GetValue(null);
 				value.Add("HutongGames.PlayMaker.Actions.CreateObject", typeof(MyCreateObject));
 				value.Add("HutongGames.PlayMaker.Actions.DestroySelf", typeof(MyDestroySelf));
 				value.Add("HutongGames.PlayMaker.Actions.DestroyObject", typeof(MyDestroyObject));

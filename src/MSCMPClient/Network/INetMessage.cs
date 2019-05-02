@@ -1,14 +1,17 @@
 ﻿using System.IO;
 
-namespace MSCMP.Network {
+namespace MSCMP.Network
+{
 	/// <summary>
 	/// Base class of the network message.
 	/// </summary>
-	public interface INetMessage {
+	public interface INetMessage
+	{
 		/// <summary>
 		/// The unique id of the network message.
 		/// </summary>
-		byte MessageId {
+		byte MessageId
+		{
 			get;
 		}
 

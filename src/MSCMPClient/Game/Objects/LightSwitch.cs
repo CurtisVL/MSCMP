@@ -1,32 +1,26 @@
 using HutongGames.PlayMaker;
 using UnityEngine;
 
-namespace MSCMP.Game.Objects {
+namespace MSCMP.Game.Objects
+{
 
 	/// <summary>
 	/// Light switch wrapper
 	/// </summary>
-	class LightSwitch {
-		GameObject go = null;
-		public GameObject GameObject { get { return go; } }
+	internal class LightSwitch
+	{
+		private readonly GameObject _go;
+		public GameObject GameObject => _go;
 
-		PlayMakerFSM fsm = null;
+		private readonly PlayMakerFSM _fsm;
 
 		//Get switch status
-		public bool SwitchStatus {
-			get {
-				return fsm.FsmVariables.FindFsmBool("Switch").Value;
-			}
-		}
+		public bool SwitchStatus => _fsm.FsmVariables.FindFsmBool("Switch").Value;
 
 		/// <summary>
 		/// Position of the switch in world.
 		/// </summary>
-		public Vector3 Position {
-			get {
-				return go.transform.position;
-			}
-		}
+		public Vector3 Position => _go.transform.position;
 
 		public delegate void OnLightSwitchUse(GameObject lswitch, bool turnOn);
 
@@ -38,41 +32,48 @@ namespace MSCMP.Game.Objects {
 		/// Constructor.
 		/// </summary>
 		/// <param name="gameObject">Game object of the light switch to represent by this wrapper.</param>
-		public LightSwitch(GameObject gameObject) {
-			go = gameObject;
+		public LightSwitch(GameObject gameObject)
+		{
+			_go = gameObject;
 
-			fsm = Utils.GetPlaymakerScriptByName(go, "Use");
-			if (fsm.Fsm.HasEvent(EVENT_NAME)) {
+			_fsm = Utils.GetPlaymakerScriptByName(_go, "Use");
+			if (_fsm.Fsm.HasEvent(EVENT_NAME))
+			{
 				//Already hooked
-				Logger.Log($"Light switch {go.name} is already hooked!");
+				Logger.Log($"Light switch {_go.name} is already hooked!");
 			}
-			else {
-				FsmEvent mpEventOn = fsm.Fsm.GetEvent(EVENT_NAME);
-				PlayMakerUtils.AddNewGlobalTransition(fsm, mpEventOn, "Switch");
-				PlayMakerUtils.AddNewAction(fsm.Fsm.GetState("Switch"), new OnLightSwitchUseAction(this));
+			else
+			{
+				FsmEvent mpEventOn = _fsm.Fsm.GetEvent(EVENT_NAME);
+				PlayMakerUtils.AddNewGlobalTransition(_fsm, mpEventOn, "Switch");
+				PlayMakerUtils.AddNewAction(_fsm.Fsm.GetState("Switch"), new OnLightSwitchUseAction(this));
 			}
 		}
 
 		/// <summary>
 		/// PlayMaker state action executed when a light switch is used
 		/// </summary>
-		private class OnLightSwitchUseAction : FsmStateAction {
-			private LightSwitch lightSwitch;
+		private class OnLightSwitchUseAction : FsmStateAction
+		{
+			private readonly LightSwitch _lightSwitch;
 
-			public OnLightSwitchUseAction(LightSwitch theLightSwitch) {
-				lightSwitch = theLightSwitch;
+			public OnLightSwitchUseAction(LightSwitch theLightSwitch)
+			{
+				_lightSwitch = theLightSwitch;
 			}
 
-			public override void OnEnter() {
+			public override void OnEnter()
+			{
 				Finish();
-				Logger.Debug($"Light switch set to: {!lightSwitch.SwitchStatus}");
+				Logger.Debug($"Light switch set to: {!_lightSwitch.SwitchStatus}");
 
 				// If use was triggered from our custom event we do not send it.
-				if (State.Fsm.LastTransition.EventName == EVENT_NAME) {
+				if (State.Fsm.LastTransition.EventName == EVENT_NAME)
+				{
 					return;
 				}
 
-				lightSwitch.onLightSwitchUse(lightSwitch.go, !lightSwitch.SwitchStatus);
+				_lightSwitch.onLightSwitchUse(_lightSwitch._go, !_lightSwitch.SwitchStatus);
 			}
 		}
 
@@ -80,10 +81,12 @@ namespace MSCMP.Game.Objects {
 		/// Toggles light switch
 		/// </summary>
 		/// <param name="on">On/Off</param>
-		public void TurnOn(bool on) {
+		public void TurnOn(bool on)
+		{
 			Logger.Debug($"Toggled light switch, on: {on}");
-			if (SwitchStatus != on) {
-				fsm.SendEvent(EVENT_NAME);
+			if (SwitchStatus != on)
+			{
+				_fsm.SendEvent(EVENT_NAME);
 			}
 		}
 	}

@@ -1,251 +1,262 @@
+using HutongGames.PlayMaker;
+using MSCMP.Game.Components;
+using MSCMP.Game.Objects;
+using MSCMP.Game.Places;
 using System.Collections.Generic;
 using UnityEngine;
-using MSCMP.Game.Places;
-using MSCMP.Game.Objects;
-using MSCMP.Game.Components;
-using HutongGames.PlayMaker;
-using System.Text;
 
-namespace MSCMP.Game {
+namespace MSCMP.Game
+{
 
 	/// <summary>
 	/// Object managing state of the game world.
 	/// </summary>
-	class GameWorld : IGameObjectCollector {
-		public static GameWorld Instance = null;
+	internal class GameWorld 
+		: IGameObjectCollector
+	{
+		public static GameWorld Instance;
 
 		/// <summary>
 		/// Event hook.
 		/// </summary>
-		EventHook eventHook = new EventHook();
+		private EventHook _eventHook = new EventHook();
 
 		/// <summary>
 		/// Doors manager.
 		/// </summary>
-		private GameDoorsManager doorsManager = new GameDoorsManager();
+		private readonly GameDoorsManager _doorsManager = new GameDoorsManager();
 
 		/// <summary>
 		/// Game pickupables database.
 		/// </summary>
-		GamePickupableDatabase gamePickupableDatabase = new GamePickupableDatabase();
+		private readonly GamePickupableDatabase _gamePickupableDatabase = new GamePickupableDatabase();
 
 		/// <summary>
 		/// World time managing fsm.
 		/// </summary>
-		PlayMakerFSM worldTimeFsm = null;
+		private PlayMakerFSM _worldTimeFsm;
 
 		/// <summary>
 		/// Light switch manager.
 		/// </summary>
-		LightSwitchManager lightSwitchManager = new LightSwitchManager();
+		private readonly LightSwitchManager _lightSwitchManager = new LightSwitchManager();
 
 		/// <summary>
 		/// Game vehicle database.
 		/// </summary>
-		GameVehicleDatabase gameVehicleDatabase = new GameVehicleDatabase();
+		private readonly GameVehicleDatabase _gameVehicleDatabase = new GameVehicleDatabase();
 
 		/// <summary>
 		/// Object sync manager.
 		/// </summary>
-		ObjectSyncManager objectSyncManager = new ObjectSyncManager();
+		private ObjectSyncManager _objectSyncManager = new ObjectSyncManager();
 
 		/// <summary>
 		/// Traffic manager.
 		/// </summary>
-		TrafficManager trafficManager = new TrafficManager();
+		private readonly TrafficManager _trafficManager = new TrafficManager();
 
 		/// <summary>
 		/// Shop manager.
 		/// </summary>
-		Shop shopManager = new Shop();
+		private readonly Shop _shopManager = new Shop();
 
 		/// <summary>
 		/// Phone manager.
 		/// </summary>
-		PhoneManager phoneManager = new PhoneManager();
+		private readonly PhoneManager _phoneManager = new PhoneManager();
 
 		/// <summary>
 		/// Map manager.
 		/// </summary>
-		MapManager mapManager = new MapManager();
+		private readonly MapManager _mapManager = new MapManager();
 
-		private GamePlayer player = null;
+		private GamePlayer _player;
 
 		/// <summary>
 		/// Get player game object.
 		/// </summary>
-		public GamePlayer Player {
-			get {
-				return player;
-			}
-		}
+		public GamePlayer Player => _player;
 
 		private const string REFRESH_WORLD_TIME_EVENT = "MP_REFRESH_WORLD_TIME";
 
-		float worldTimeCached = 0;
+		private float _worldTimeCached;
 
 		/// <summary>
 		/// Current world time. (hh.mm)
 		/// </summary>
-		public float WorldTime {
-			set {
+		public float WorldTime
+		{
+			set
+			{
 				// Make sure value is reasonable. (0 - 24 range)
 
-				while (value > 24.0f) {
+				while (value > 24.0f)
+				{
 					value -= 24.0f;
 				}
 
 				// Make sure reported time is power of two..
-				worldTimeCached = (float)((int)(value) / 2 * 2);
+				_worldTimeCached = (float)((int)value / 2 * 2);
 
-				if (worldTimeCached <= 2.0f) {
-					worldTimeCached = 2.0f;
+				if (_worldTimeCached <= 2.0f)
+				{
+					_worldTimeCached = 2.0f;
 				}
 
-				if (worldTimeFsm != null) {
-					worldTimeFsm.Fsm.GetFsmInt("Time").Value = (int)worldTimeCached;
-					worldTimeFsm.SendEvent(REFRESH_WORLD_TIME_EVENT);
+				if (_worldTimeFsm != null)
+				{
+					_worldTimeFsm.Fsm.GetFsmInt("Time").Value = (int)_worldTimeCached;
+					_worldTimeFsm.SendEvent(REFRESH_WORLD_TIME_EVENT);
 				}
 			}
 
-			get {
-				if (worldTimeFsm != null) {
-					worldTimeCached = worldTimeFsm.Fsm.GetFsmInt("Time").Value;
+			get
+			{
+				if (_worldTimeFsm != null)
+				{
+					_worldTimeCached = _worldTimeFsm.Fsm.GetFsmInt("Time").Value;
 				}
-				return worldTimeCached;
+				return _worldTimeCached;
 			}
 		}
 
 		/// <summary>
 		/// Current world day.
 		/// </summary>
-		public int WorldDay {
-			get {
-				return PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value;
-			}
+		public int WorldDay
+		{
+			get => PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value;
 
-			set {
-				PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value = value;
-			}
+			set => PlayMakerGlobals.Instance.Variables.GetFsmInt("GlobalDay").Value = value;
 		}
 
 		/// <summary>
 		/// Current Host in game last name.
 		/// </summary>
-		public string PlayerLastName {
-			get {
-				return lastnameTextMesh.text;
-			}
+		public string PlayerLastName
+		{
+			get => _lastnameTextMesh.text;
 
-			set {
-				lastnameFSM.enabled = false;
-				lastnameTextMesh.text = value;
+			set
+			{
+				_lastnameFsm.enabled = false;
+				_lastnameTextMesh.text = value;
 			}
 		}
 
-		private TextMesh lastnameTextMesh = null;
-		private PlayMakerFSM lastnameFSM = null;
+		private TextMesh _lastnameTextMesh;
+		private PlayMakerFSM _lastnameFsm;
 
 		/// <summary>
 		/// Setup red mailbox next to the player's home.
 		/// </summary>
-		public void SetupMailbox(GameObject mailboxGameObject) {
-			lastnameTextMesh = mailboxGameObject.GetComponent<TextMesh>();
-			lastnameFSM = mailboxGameObject.GetComponent<PlayMakerFSM>();
+		public void SetupMailbox(GameObject mailboxGameObject)
+		{
+			_lastnameTextMesh = mailboxGameObject.GetComponent<TextMesh>();
+			_lastnameFsm = mailboxGameObject.GetComponent<PlayMakerFSM>();
 		}
 
 		/// <summary>
 		/// List containing all game objects collectors.
 		/// </summary>
-		List<IGameObjectCollector> gameObjectUsers = new List<IGameObjectCollector>();
+		private readonly List<IGameObjectCollector> _gameObjectUsers = new List<IGameObjectCollector>();
 
-		public GameWorld() {
+		public GameWorld()
+		{
 			Instance = this;
 
 			// Make sure game world will get notified about play maker CreateObject/DestroyObject calls.
 
-			GameCallbacks.onPlayMakerObjectCreate += (GameObject instance, GameObject prefab) => {
+			GameCallbacks.onPlayMakerObjectCreate += (instance, prefab) =>
+			{
 				HandleNewObject(instance);
 			};
-			GameCallbacks.onPlayMakerObjectDestroy += (GameObject instance) => {
-				HandleObjectDestroy(instance);
-			};
+			GameCallbacks.onPlayMakerObjectDestroy += HandleObjectDestroy;
 
 			// Register game objects users.
 
-			gameObjectUsers.Add(this);
-			gameObjectUsers.Add(doorsManager);
-			gameObjectUsers.Add(gamePickupableDatabase);
-			gameObjectUsers.Add(lightSwitchManager);
-			gameObjectUsers.Add(gameVehicleDatabase);
+			_gameObjectUsers.Add(this);
+			_gameObjectUsers.Add(_doorsManager);
+			_gameObjectUsers.Add(_gamePickupableDatabase);
+			_gameObjectUsers.Add(_lightSwitchManager);
+			_gameObjectUsers.Add(_gameVehicleDatabase);
 		}
 
-		~GameWorld() {
+		~GameWorld()
+		{
 			Instance = null;
 		}
 
 		/// <summary>
 		/// The current game world hash.
 		/// </summary>
-		int worldHash = 0;
+		private int _worldHash;
 
 		/// <summary>
 		/// Get unique world hash.
 		/// </summary>
-		public int WorldHash
-		{
-			get { return worldHash; }
-		}
+		public int WorldHash => _worldHash;
 
 		/// <summary>
 		/// Was game world has already generated?
 		/// </summary>
-		bool worldHashGenerated = false;
+		private bool _worldHashGenerated;
 
 		/// <summary>
 		/// Collect given objects.
 		/// </summary>
 		/// <param name="gameObject">The game object to collect.</param>
-		public void CollectGameObject(GameObject gameObject) {
-			if (gameObject.name == "SUN" && worldTimeFsm == null) {
+		public void CollectGameObject(GameObject gameObject)
+		{
+			if (gameObject.name == "SUN" && _worldTimeFsm == null)
+			{
 				// Yep it's called "Color" :>
-				worldTimeFsm = Utils.GetPlaymakerScriptByName(gameObject, "Color");
-				if (worldTimeFsm == null) {
+				_worldTimeFsm = Utils.GetPlaymakerScriptByName(gameObject, "Color");
+				if (_worldTimeFsm == null)
+				{
 					return;
 				}
 
 				// Register refresh world time event.
-				if (!worldTimeFsm.Fsm.HasEvent(REFRESH_WORLD_TIME_EVENT)) {
-					FsmEvent mpRefreshWorldTimeEvent = worldTimeFsm.Fsm.GetEvent(REFRESH_WORLD_TIME_EVENT);
-					PlayMakerUtils.AddNewGlobalTransition(worldTimeFsm, mpRefreshWorldTimeEvent, "State 1");
+				if (!_worldTimeFsm.Fsm.HasEvent(REFRESH_WORLD_TIME_EVENT))
+				{
+					FsmEvent mpRefreshWorldTimeEvent = _worldTimeFsm.Fsm.GetEvent(REFRESH_WORLD_TIME_EVENT);
+					PlayMakerUtils.AddNewGlobalTransition(_worldTimeFsm, mpRefreshWorldTimeEvent, "State 1");
 				}
 
 				// Make sure world time is up-to-date with cache.
-				WorldTime = worldTimeCached;
+				WorldTime = _worldTimeCached;
 			}
-			else if (Utils.IsGameObjectHierarchyMatching(gameObject, "mailbox_bottom_player/Name")) {
+			else if (Utils.IsGameObjectHierarchyMatching(gameObject, "mailbox_bottom_player/Name"))
+			{
 				SetupMailbox(gameObject);
 			}
-			else if (gameObject.name == "TRAFFIC") {
-				trafficManager.Setup(gameObject);
+			else if (gameObject.name == "TRAFFIC")
+			{
+				_trafficManager.Setup(gameObject);
 			}
-			else if (gameObject.name == "STORE") {
-				shopManager.Setup(gameObject);
+			else if (gameObject.name == "STORE")
+			{
+				_shopManager.Setup(gameObject);
 			}
-			else if (gameObject.name == "BOAT") {
+			else if (gameObject.name == "BOAT")
+			{
 				ObjectSyncComponent osc = gameObject.transform.FindChild("GFX/Colliders/Collider").gameObject.AddComponent<ObjectSyncComponent>();
-				osc.Setup(ObjectSyncManager.ObjectTypes.Boat, ObjectSyncManager.AUTOMATIC_ID);
+				osc.Setup(ObjectSyncManager.ObjectTypes.Boat, ObjectSyncManager.AutomaticId);
 			}
 
 			// Garage doors.
-			else if (gameObject.name == "GarageDoors") {
+			else if (gameObject.name == "GarageDoors")
+			{
 				ObjectSyncComponent oscLeft = gameObject.transform.FindChild("DoorLeft/Coll").gameObject.AddComponent<ObjectSyncComponent>();
-				oscLeft.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AUTOMATIC_ID);
+				oscLeft.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AutomaticId);
 				ObjectSyncComponent oscRight = gameObject.transform.FindChild("DoorRight/Coll").gameObject.AddComponent<ObjectSyncComponent>();
-				oscRight.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AUTOMATIC_ID);
+				oscRight.Setup(ObjectSyncManager.ObjectTypes.GarageDoor, ObjectSyncManager.AutomaticId);
 			}
 			// Old car shed doors.
-			else if (gameObject.name == "Doors" && gameObject.transform.parent.name == "Shed") {
+			else if (gameObject.name == "Doors" && gameObject.transform.parent.name == "Shed")
+			{
 				PlayMakerFSM doorLeft = gameObject.transform.FindChild("DoorLeft/Mesh").gameObject.GetComponent<PlayMakerFSM>();
 				EventHook.AddWithSync(doorLeft, "Open door");
 				EventHook.AddWithSync(doorLeft, "Close door");
@@ -255,47 +266,55 @@ namespace MSCMP.Game {
 			}
 
 			// Weather system.
-			else if (gameObject.name == "Clouds" && gameObject.transform.parent.name == "CloudSystem") {
+			else if (gameObject.name == "Clouds" && gameObject.transform.parent.name == "CloudSystem")
+			{
 				ObjectSyncComponent osc = gameObject.AddComponent<ObjectSyncComponent>();
-				osc.Setup(ObjectSyncManager.ObjectTypes.Weather, ObjectSyncManager.AUTOMATIC_ID);
+				osc.Setup(ObjectSyncManager.ObjectTypes.Weather, ObjectSyncManager.AutomaticId);
 			}
 
 			// Sewage well jobs.
-			else if (gameObject.name.StartsWith("HouseShit")) {
+			else if (gameObject.name.StartsWith("HouseShit"))
+			{
 				ObjectSyncComponent osc = gameObject.AddComponent<ObjectSyncComponent>();
-				osc.Setup(ObjectSyncManager.ObjectTypes.SewageWell, ObjectSyncManager.AUTOMATIC_ID);
+				osc.Setup(ObjectSyncManager.ObjectTypes.SewageWell, ObjectSyncManager.AutomaticId);
 			}
 
 			// Phone.
-			else if (gameObject.name == "Ring") {
-				phoneManager.Setup(gameObject);
+			else if (gameObject.name == "Ring")
+			{
+				_phoneManager.Setup(gameObject);
 			}
 			// Map.
-			else if (gameObject.name == "MAP" && gameObject.transform.FindChild("Darts")) {
-				mapManager.Setup(gameObject);
+			else if (gameObject.name == "MAP" && gameObject.transform.FindChild("Darts"))
+			{
+				_mapManager.Setup(gameObject);
 			}
 		}
 
 		/// <summary>
 		/// Handle collected objects destroy.
 		/// </summary>
-		public void DestroyObjects() {
-			worldTimeFsm = null;
-			lastnameTextMesh = null;
-			lastnameFSM = null;
+		public void DestroyObjects()
+		{
+			_worldTimeFsm = null;
+			_lastnameTextMesh = null;
+			_lastnameFsm = null;
 		}
 
 		/// <summary>
 		/// Handle destroy of game object.
 		/// </summary>
 		/// <param name="gameObject">The destroyed game object.</param>
-		public void DestroyObject(GameObject gameObject) {
-			if (worldTimeFsm != null && worldTimeFsm.gameObject == gameObject) {
-				worldTimeFsm = null;
+		public void DestroyObject(GameObject gameObject)
+		{
+			if (_worldTimeFsm != null && _worldTimeFsm.gameObject == gameObject)
+			{
+				_worldTimeFsm = null;
 			}
-			else if (lastnameFSM != null && lastnameFSM.gameObject == gameObject) {
-				lastnameFSM = null;
-				lastnameTextMesh = null;
+			else if (_lastnameFsm != null && _lastnameFsm.gameObject == gameObject)
+			{
+				_lastnameFsm = null;
+				_lastnameTextMesh = null;
 			}
 		}
 
@@ -303,8 +322,10 @@ namespace MSCMP.Game {
 		/// Handle creation/load of new game object.
 		/// </summary>
 		/// <param name="gameObject">The new game object.</param>
-		void HandleNewObject(GameObject gameObject) {
-			foreach (IGameObjectCollector collector in gameObjectUsers) {
+		private void HandleNewObject(GameObject gameObject)
+		{
+			foreach (IGameObjectCollector collector in _gameObjectUsers)
+			{
 				collector.CollectGameObject(gameObject);
 			}
 		}
@@ -313,27 +334,33 @@ namespace MSCMP.Game {
 		/// Handle destroy of the given object.
 		/// </summary>
 		/// <param name="gameObject">Destroyed game object.</param>
-		void HandleObjectDestroy(GameObject gameObject) {
+		private void HandleObjectDestroy(GameObject gameObject)
+		{
 			// Iterate backwards so pickupable users will be notified before the database.
 
-			for (int i = gameObjectUsers.Count; i > 0; --i) {
-				gameObjectUsers[i - 1].DestroyObject(gameObject);
+			for (int i = _gameObjectUsers.Count; i > 0; --i)
+			{
+				_gameObjectUsers[i - 1].DestroyObject(gameObject);
 			}
 		}
 
 		/// <summary>
 		/// Callback called when world is loaded.
 		/// </summary>
-		public void OnLoad() {
+		public void OnLoad()
+		{
 			// Register all game objects.
 
 			GameObject[] gos = Resources.FindObjectsOfTypeAll<GameObject>();
 
-			foreach (GameObject go in gos) {
-				if (!worldHashGenerated) {
+			foreach (GameObject go in gos)
+			{
+				if (!_worldHashGenerated)
+				{
 					Transform transform = go.transform;
-					while (transform != null) {
-						worldHash ^= Utils.StringJenkinsHash(transform.name);
+					while (transform != null)
+					{
+						_worldHash ^= Utils.StringJenkinsHash(transform.name);
 						transform = transform.parent;
 					}
 				}
@@ -341,18 +368,19 @@ namespace MSCMP.Game {
 				HandleNewObject(go);
 			}
 
-			Logger.Log("World hash: " + worldHash);
-			worldHashGenerated = true;
+			Logger.Log("World hash: " + _worldHash);
+			_worldHashGenerated = true;
 
 			// Check mandatory objects.
 
-			Client.Assert(worldTimeFsm != null, "No world time FSM found :(");
-			Client.Assert(lastnameFSM != null, "Mailbox FSM couldn't be found!");
-			Client.Assert(lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
+			Client.Assert(_worldTimeFsm != null, "No world time FSM found :(");
+			Client.Assert(_lastnameFsm != null, "Mailbox FSM couldn't be found!");
+			Client.Assert(_lastnameTextMesh != null, "Mailbox TextMesh couldn't be found!");
 
 			// Notify different parts of the mod about the world load.
 
-			if (GameCallbacks.onWorldLoad != null) {
+			if (GameCallbacks.onWorldLoad != null)
+			{
 				GameCallbacks.onWorldLoad();
 			}
 		}
@@ -360,31 +388,38 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when world gets unloaded.
 		/// </summary>
-		public void OnUnload() {
+		public void OnUnload()
+		{
 			// Iterate backwards so pickupable users will be notified before the database.
 
-			for (int i = gameObjectUsers.Count; i > 0; --i) {
-				gameObjectUsers[i - 1].DestroyObjects();
+			for (int i = _gameObjectUsers.Count; i > 0; --i)
+			{
+				_gameObjectUsers[i - 1].DestroyObjects();
 			}
 
-			if (GameCallbacks.onWorldUnload != null) {
+			if (GameCallbacks.onWorldUnload != null)
+			{
 				GameCallbacks.onWorldUnload();
 			}
 
-			player = null;
+			_player = null;
 		}
 
 		/// <summary>
 		/// Update game world state.
 		/// </summary>
-		public void Update() {
-			if (player == null) {
-				var playerGo = GameObject.Find("PLAYER");
+		public void Update()
+		{
+			if (_player == null)
+			{
+				GameObject playerGo = GameObject.Find("PLAYER");
 
-				if (playerGo != null) {
-					player = new GamePlayer(playerGo);
+				if (playerGo != null)
+				{
+					_player = new GamePlayer(playerGo);
 
-					if (GameCallbacks.onLocalPlayerCreated != null) {
+					if (GameCallbacks.onLocalPlayerCreated != null)
+					{
 						GameCallbacks.onLocalPlayerCreated();
 					}
 				}
@@ -394,12 +429,13 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// List of vehicle gameobject names.
 		/// </summary>
-		static readonly string[] vehicleGoNames = {
+		private static readonly string[] VehicleGoNames = {
 			"JONNEZ ES(Clone)", "HAYOSIKO(1500kg, 250)", "SATSUMA(557kg, 248)",
 			"RCO_RUSCKO12(270)", "KEKMET(350-400psi)", "FLATBED", "FERNDALE(1630kg)", "GIFU(750/450psi)"
 		};
 
-		public void UpdateIMGUI() {
+		public void UpdateImgui()
+		{
 			// noop
 		}
 
@@ -409,10 +445,11 @@ namespace MSCMP.Game {
 		/// <param name="prefabId">Pickupable prefab id.</param>
 		/// <param name="position">The spawn position.</param>
 		/// <param name="rotation">The spawn rotation.</param>
-		/// <param name="objectID">The ObjectID of the object.</param>
+		/// <param name="objectId">The ObjectID of the object.</param>
 		/// <returns>Spawned pickupable game object.</returns>
-		public GameObject SpawnPickupable(int prefabId, Vector3 position, Quaternion rotation, int objectID) {
-			GamePickupableDatabase.PrefabDesc prefabDescriptor = gamePickupableDatabase.GetPickupablePrefab(prefabId);
+		public GameObject SpawnPickupable(int prefabId, Vector3 position, Quaternion rotation, int objectId)
+		{
+			GamePickupableDatabase.PrefabDesc prefabDescriptor = _gamePickupableDatabase.GetPickupablePrefab(prefabId);
 			Client.Assert(prefabDescriptor != null, $"Unable to find pickupable prefab {prefabId}");
 			return prefabDescriptor.Spawn(position, rotation);
 		}

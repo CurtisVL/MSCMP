@@ -1,107 +1,130 @@
-using UnityEngine;
+using HutongGames.PlayMaker;
 using MSCMP.Utilities;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using HutongGames.PlayMaker;
+using UnityEngine;
+using Object = UnityEngine.Object;
 
-namespace MSCMP.Development {
+namespace MSCMP.Development
+{
 	/// <summary>
 	/// HTML world dumper class.
 	/// </summary>
-	class WorldDumper {
+	internal class WorldDumper
+	{
+		private delegate void DumpObjectDelegate(Object obj, HtmlWriter writer, WorldDumper dumper, string folder);
 
-		delegate void DumpObjectDelegate(UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder);
+		private readonly Dictionary<Type, DumpObjectDelegate> _dumpMethods = new Dictionary<Type, DumpObjectDelegate>();
 
-		Dictionary<Type, DumpObjectDelegate> dumpMethods = new Dictionary<Type, DumpObjectDelegate>();
-
-		static string BuildFileName(UnityEngine.Object obj) {
-			var invalids = System.IO.Path.GetInvalidFileNameChars();
-			var santitizedName = String.Join("_", obj.name.Split(invalids, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+		private static string BuildFileName(Object obj)
+		{
+			char[] invalids = Path.GetInvalidFileNameChars();
+			string santitizedName = string.Join("_", obj.name.Split(invalids, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
 			return $"{santitizedName}-{obj.GetInstanceID()}.html";
 		}
 
-		private static string DumpOwnerDefault(FsmOwnerDefault ownerDefault) {
+		private static string DumpOwnerDefault(FsmOwnerDefault ownerDefault)
+		{
 			string ownerObjectName = "(null)";
-			if ((ownerDefault.GameObject != null) && (ownerDefault.GameObject.Value != null)) {
+			if (ownerDefault.GameObject != null && ownerDefault.GameObject.Value != null)
+			{
 				ownerObjectName = ownerDefault.GameObject.Value.ToString();
 			}
 
 			return $" Owner - {ownerDefault.OwnerOption} - {ownerObjectName}";
 		}
 
-
-		private static void PrintValue(object obj, object value, HTMLWriter writer) {
-			if (value == null) {
+		private static void PrintValue(object obj, object value, HtmlWriter writer)
+		{
+			if (value == null)
+			{
 				writer.WriteValue("null");
 				return;
 			}
 
-			if (value is FsmEvent && obj is FsmStateAction) {
-				var fsmEvent = ((FsmEvent)value);
-				var action = (FsmStateAction)obj;
-				var state = action.State;
-				var fsm = action.Fsm;
+			if (value is FsmEvent && obj is FsmStateAction)
+			{
+				FsmEvent fsmEvent = (FsmEvent)value;
+				FsmStateAction action = (FsmStateAction)obj;
+				FsmState state = action.State;
+				Fsm fsm = action.Fsm;
 
-				writer.WriteValue(fsmEvent.Name+" ");
+				writer.WriteValue(fsmEvent.Name + " ");
 
-				foreach (var transition in fsm.GlobalTransitions) {
-					if (transition.FsmEvent == fsmEvent) {
+				foreach (FsmTransition transition in fsm.GlobalTransitions)
+				{
+					if (transition.FsmEvent == fsmEvent)
+					{
 						writer.Link($"#{transition.ToState}", $"({transition.ToState})");
 					}
 				}
 
-				foreach (var transition in state.Transitions) {
-					if (transition.FsmEvent == fsmEvent) {
+				foreach (FsmTransition transition in state.Transitions)
+				{
+					if (transition.FsmEvent == fsmEvent)
+					{
 						writer.Link($"#{transition.ToState}", $"({transition.ToState})");
 					}
 				}
 			}
-			else {
+			else
+			{
 				writer.WriteValue(value.ToString());
 			}
 
-			if (value is NamedVariable) {
+			if (value is NamedVariable)
+			{
 				string variableName = ((NamedVariable)value).Name;
-				if (variableName.Length > 0) {
+				if (variableName.Length > 0)
+				{
 					writer.WriteValue($" <div class=\"variable_ref\">{variableName}</div>");
 				}
 			}
-			if (value is FsmProperty) {
+			if (value is FsmProperty)
+			{
 				string propertyName = ((FsmProperty)value).PropertyName;
-				if (propertyName.Length > 0) {
+				if (propertyName.Length > 0)
+				{
 					writer.WriteValue($" <div class=\"variable_ref\">{propertyName}</div>");
 				}
 			}
 
-			if (value is FsmOwnerDefault) {
-				var val = (FsmOwnerDefault)value;
+			if (value is FsmOwnerDefault)
+			{
+				FsmOwnerDefault val = (FsmOwnerDefault)value;
 				writer.WriteValue(DumpOwnerDefault(val));
 			}
 
-			if (value is FsmEventTarget) {
-				var val = (FsmEventTarget)value;
+			if (value is FsmEventTarget)
+			{
+				FsmEventTarget val = (FsmEventTarget)value;
 
-				string eventTargetInfo = val.target.ToString() + " ";
+				string eventTargetInfo = val.target + " ";
 
-				if (val.excludeSelf.Value) {
+				if (val.excludeSelf.Value)
+				{
 					eventTargetInfo += "(excludeSelf) ";
 				}
 
-				if (val.fsmComponent != null) {
+				if (val.fsmComponent != null)
+				{
 					eventTargetInfo += $"(fsmComponent: {val.fsmComponent.name}) ";
 				}
 
-				if (val.fsmName != null) {
+				if (val.fsmName != null)
+				{
 					eventTargetInfo += $"(fsmName: {val.fsmName.Value}) ";
 				}
 
-				if (val.gameObject != null) {
+				if (val.gameObject != null)
+				{
 					eventTargetInfo += "(" + DumpOwnerDefault(val.gameObject) + ") ";
 				}
 
-				if (val.sendToChildren.Value) {
+				if (val.sendToChildren.Value)
+				{
 					eventTargetInfo += "(sendToChildren) ";
 				}
 
@@ -109,8 +132,10 @@ namespace MSCMP.Development {
 			}
 		}
 
-		private static void PrintObjectFields(object obj, HTMLWriter writer) {
-			if (obj == null) {
+		private static void PrintObjectFields(object obj, HtmlWriter writer)
+		{
+			if (obj == null)
+			{
 				return;
 			}
 
@@ -119,10 +144,11 @@ namespace MSCMP.Development {
 			Type type = obj.GetType();
 			FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
 
-			foreach (var fi in fields) {
+			foreach (FieldInfo fi in fields)
+			{
 				writer.StartTag("tr");
 				{
-					var fieldType = fi.FieldType;
+					Type fieldType = fi.FieldType;
 
 					writer.StartTag("td", "width=\"50px\"");
 					{
@@ -142,7 +168,7 @@ namespace MSCMP.Development {
 					{
 						writer.StartTag("div", "class=\"field_value\"");
 						{
-							var value = fi.GetValue(obj);
+							object value = fi.GetValue(obj);
 							PrintValue(obj, value, writer);
 						}
 						writer.EndTag();
@@ -154,21 +180,23 @@ namespace MSCMP.Development {
 			writer.EndTag();
 		}
 
-		static string GetComponentName(Component component) {
-			if (component is PlayMakerFSM) {
-				Fsm fsm = ((PlayMakerFSM)component).Fsm;
-				if (fsm != null) {
-					return fsm.Name;
-				}
+		private static string GetComponentName(Component component)
+		{
+			Fsm fsm = (component as PlayMakerFSM)?.Fsm;
+			if (fsm != null)
+			{
+				return fsm.Name;
 			}
 			return component.name;
 		}
 
-		static string cssStylePath = "";
+		private static string _cssStylePath = "";
 
 
-		public WorldDumper() {
-			RegisterNewDumper<TextAsset>((UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder) => {
+		public WorldDumper()
+		{
+			RegisterNewDumper<TextAsset>((obj, writer, dumper, folder) =>
+			{
 				TextAsset textAsset = (TextAsset)obj;
 
 				writer.OneLiner("h2", $"Bytes ({textAsset.bytes.Length}):");
@@ -181,15 +209,18 @@ namespace MSCMP.Development {
 				writer.OneLiner("textarea", textAsset.text, "rows=\"20\" cols=\"100\" disabled");
 			});
 
-			RegisterNewDumper<UnityEngine.Object>((UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder) => {
+			RegisterNewDumper<Object>((obj, writer, dumper, folder) =>
+			{
 				writer.WriteValue($"THIS IS JUST UnityEngine.Object DUMP! The object type is - {obj.GetType().FullName}");
 			});
 
-			RegisterNewDumper<PlayMakerFSM>((UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder) => {
+			RegisterNewDumper<PlayMakerFSM>((obj, writer, dumper, folder) =>
+			{
 				PlayMakerFSM component = (PlayMakerFSM)obj;
 
-				var fsm = component.Fsm;
-				if (fsm == null) {
+				Fsm fsm = component.Fsm;
+				if (fsm == null)
+				{
 					writer.WriteValue("FSM IS INVALID!");
 					return;
 				}
@@ -205,28 +236,33 @@ namespace MSCMP.Development {
 
 
 				writer.WriteValue("<b>Global transitions:</b>");
-				if (fsm.GlobalTransitions.Length > 0) {
+				if (fsm.GlobalTransitions.Length > 0)
+				{
 					writer.WriteValue("<br/>");
 					writer.StartTag("ol");
-					foreach (var globalTransition in fsm.GlobalTransitions) {
+					foreach (FsmTransition globalTransition in fsm.GlobalTransitions)
+					{
 						writer.StartTag("li");
-							writer.WriteValue($"{globalTransition.EventName} > ");
-							writer.Link($"#{globalTransition.ToState}", globalTransition.ToState);
+						writer.WriteValue($"{globalTransition.EventName} > ");
+						writer.Link($"#{globalTransition.ToState}", globalTransition.ToState);
 						writer.EndTag();
 					}
 					writer.EndTag();
 				}
-				else {
+				else
+				{
 					writer.WriteValue(" None");
 				}
 
-				foreach (var state in fsm.States) {
-					writer.StartTag("div", "class=\"fsm_state " + ((fsm.ActiveState == state) ? "fsm_active_state" : "") + $"\" id=\"{state.Name}\"");
+				foreach (FsmState state in fsm.States)
+				{
+					writer.StartTag("div", "class=\"fsm_state " + (fsm.ActiveState == state ? "fsm_active_state" : "") + $"\" id=\"{state.Name}\"");
 					{
 						writer.OneLiner("div", state.Name, "class=\"fsm_state_name\"");
 
 						FsmTransition finishedTransition = null;
-						if (state.Transitions.Length > 0) {
+						if (state.Transitions.Length > 0)
+						{
 							writer.OneLiner("b", "Transitions:");
 
 							writer.StartTag("table", "class=\"transition_table\"");
@@ -238,7 +274,8 @@ namespace MSCMP.Development {
 							writer.EndTag();
 
 
-							foreach (var transition in state.Transitions) {
+							foreach (FsmTransition transition in state.Transitions)
+							{
 								writer.StartTag("tr");
 								{
 									writer.OneLiner("td", transition.EventName);
@@ -248,7 +285,8 @@ namespace MSCMP.Development {
 								}
 								writer.EndTag();
 
-								if (transition.EventName == "FINISHED") {
+								if (transition.EventName == "FINISHED")
+								{
 									finishedTransition = transition;
 								}
 							}
@@ -260,8 +298,10 @@ namespace MSCMP.Development {
 						writer.EndTag();
 
 						writer.OneLiner("div", "", "class=\"arrow down center_arrow\"");
-						foreach (var action in state.Actions) {
-							if (action == null) {
+						foreach (FsmStateAction action in state.Actions)
+						{
+							if (action == null)
+							{
 								writer.OneLiner("div", "NULL ACTION!", "class=\"error\"");
 								writer.OneLiner("div", "", "class=\"arrow down center_arrow\"");
 								continue;
@@ -279,7 +319,8 @@ namespace MSCMP.Development {
 
 						writer.StartTag("div", "class=\"state_phase\"");
 						writer.WriteValue("END");
-						if (finishedTransition != null) {
+						if (finishedTransition != null)
+						{
 							writer.WriteValue(" - Jump to: ");
 							writer.Link($"#{finishedTransition.ToState}", finishedTransition.ToState);
 						}
@@ -289,13 +330,15 @@ namespace MSCMP.Development {
 				}
 			});
 
-			RegisterNewDumper<Component>((UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder) => {
+			RegisterNewDumper<Component>((obj, writer, dumper, folder) =>
+			{
 				Component component = (Component)obj;
 
 				writer.WriteValue("COMPONENT!");
 			});
 
-			RegisterNewDumper<GameObject>((UnityEngine.Object obj, HTMLWriter writer, WorldDumper dumper, string folder) => {
+			RegisterNewDumper<GameObject>((obj, writer, dumper, folder) =>
+			{
 				GameObject go = (GameObject)obj;
 
 				Component[] components = go.GetComponents<Component>();
@@ -305,7 +348,8 @@ namespace MSCMP.Development {
 				writer.EndTag();
 
 				writer.StartTag("ol");
-				foreach (var component in components) {
+				foreach (Component component in components)
+				{
 					writer.StartTag("li");
 					{
 						string componentFile = dumper.DumpObject(component, $"{folder}/{go.name}/Components", writer.FileName);
@@ -322,7 +366,8 @@ namespace MSCMP.Development {
 
 				writer.StartTag("ol");
 
-				for (int i = 0; i < go.transform.childCount; ++i) {
+				for (int i = 0; i < go.transform.childCount; ++i)
+				{
 					GameObject childrenGo = go.transform.GetChild(i).gameObject;
 					writer.StartTag("li");
 					{
@@ -335,8 +380,9 @@ namespace MSCMP.Development {
 			});
 		}
 
-		void RegisterNewDumper<T>(DumpObjectDelegate dumpDelegate) where T : UnityEngine.Object {
-			dumpMethods.Add(typeof(T), dumpDelegate);
+		private void RegisterNewDumper<T>(DumpObjectDelegate dumpDelegate) where T : Object
+		{
+			_dumpMethods.Add(typeof(T), dumpDelegate);
 		}
 
 
@@ -344,13 +390,15 @@ namespace MSCMP.Development {
 		/// Dump world to the given folder.
 		/// </summary>
 		/// <param name="folder">The folder without trailing slash to dump world to - must exists.</param>
-		public void Dump(string folder) {
-			UnityEngine.Object[] objects = Resources.FindObjectsOfTypeAll<UnityEngine.Object>();
+		public void Dump(string folder)
+		{
+			Object[] objects = Resources.FindObjectsOfTypeAll<Object>();
 
-			cssStylePath = $"{folder}/style.css";
+			_cssStylePath = $"{folder}/style.css";
 			WriteStyles();
 
-			HTMLWriter.WriteDocument($"{folder}/index.html", "INDEX", cssStylePath, (HTMLWriter writer) => {
+			HtmlWriter.WriteDocument($"{folder}/index.html", "INDEX", _cssStylePath, writer =>
+			{
 
 				writer.StartTag("table");
 				writer.StartTag("tr");
@@ -362,8 +410,10 @@ namespace MSCMP.Development {
 				writer.EndTag();
 
 				int index = 1;
-				foreach (var obj in objects) {
-					if (CanSkipObject(obj)) {
+				foreach (Object obj in objects)
+				{
+					if (CanSkipObject(obj))
+					{
 						continue;
 					}
 
@@ -375,7 +425,7 @@ namespace MSCMP.Development {
 
 						writer.StartTag("td");
 						{
-							writer.Link(objectFile, ((obj.name.Trim().Length > 0) ? obj.name : "NO NAME"));
+							writer.Link(objectFile, obj.name.Trim().Length > 0 ? obj.name : "NO NAME");
 						}
 						writer.EndTag();
 
@@ -388,14 +438,16 @@ namespace MSCMP.Development {
 					writer.EndTag();
 					++index;
 
-					System.GC.Collect();
+					GC.Collect();
 				}
 				writer.EndTag();
 			});
 		}
 
-		static void WriteStyles() {
-			using (var streamWriter = new StreamWriter(cssStylePath, false, System.Text.Encoding.UTF8)) {
+		private static void WriteStyles()
+		{
+			using (StreamWriter streamWriter = new StreamWriter(_cssStylePath, false, System.Text.Encoding.UTF8))
+			{
 				streamWriter.WriteLine("body { background: #202020; color: #b3b3b3;  font-family: sans-serif; }");
 				streamWriter.WriteLine("a { color: #9e9e9e; }");
 				streamWriter.WriteLine(".field_type { background: #418dff; color: #000; text-align: center; border: 1px solid #203e6b; padding: 3px; }");
@@ -427,15 +479,19 @@ namespace MSCMP.Development {
 		}
 
 
-		bool CanSkipObject(UnityEngine.Object obj) {
+		private bool CanSkipObject(Object obj)
+		{
 			/*if (obj is Transform) {
 				if (((Transform)obj).parent != null) {
 					return true;
 				}
 				return false;
 			}
-			else*/ if (obj is GameObject) {
-				if (((GameObject)obj).transform.parent != null) {
+			else*/
+			if (obj is GameObject)
+			{
+				if (((GameObject)obj).transform.parent != null)
+				{
 					return true;
 				}
 				return false;
@@ -444,27 +500,33 @@ namespace MSCMP.Development {
 			// Skip rest of the objects.
 			return true;
 		}
-
-
-		string DumpObject(UnityEngine.Object obj, string folder, string previousFile = "") {
+		
+		private string DumpObject(Object obj, string folder, string previousFile = "")
+		{
 			Directory.CreateDirectory(folder);
 			DumpObjectDelegate bestDumpDelegate = null;
 
-			foreach (var kv in dumpMethods) {
-				if (kv.Key.GetHashCode() == obj.GetType().GetHashCode()) {
+			foreach (KeyValuePair<Type, DumpObjectDelegate> kv in _dumpMethods)
+			{
+				if (kv.Key.GetHashCode() == obj.GetType().GetHashCode())
+				{
 					bestDumpDelegate = kv.Value;
 					break;
 				}
 
-				if (obj.GetType().IsSubclassOf(kv.Key)) {
+				if (obj.GetType().IsSubclassOf(kv.Key))
+				{
 					bestDumpDelegate = kv.Value;
 				}
 			}
 
-			try {
-				if (bestDumpDelegate != null) {
+			try
+			{
+				if (bestDumpDelegate != null)
+				{
 					string fileName = $"{folder}/{BuildFileName(obj)}";
-					HTMLWriter.WriteDocument(fileName, $"{obj.name} - {obj.GetType().FullName}", cssStylePath, (HTMLWriter writer) => {
+					HtmlWriter.WriteDocument(fileName, $"{obj.name} - {obj.GetType().FullName}", _cssStylePath, writer =>
+					{
 						writer.Link(previousFile, "< GO BACK");
 						writer.NewLine();
 						writer.OneLiner("h1", obj.name);
@@ -476,7 +538,8 @@ namespace MSCMP.Development {
 					return fileName;
 				}
 			}
-			catch (Exception e) {
+			catch (Exception e)
+			{
 				Logger.Error("Failed to dump object!");
 				Logger.Error(e.Message);
 				Logger.Error(e.StackTrace);

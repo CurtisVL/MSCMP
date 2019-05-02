@@ -1,20 +1,18 @@
-﻿using System;
-using UnityEngine;
-using HutongGames.PlayMaker;
+﻿using UnityEngine;
 
 /// <summary>
 /// Hooks events for food purchased in the pub.
 /// </summary>
 namespace MSCMP.Game.Objects.PickupableTypes {
-	class PubFood {
-		GameObject FoodGO;
+	internal class PubFood {
+		private readonly GameObject _foodGo;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go"></param>
 		public PubFood(GameObject go) {
-			FoodGO = go;
+			_foodGo = go;
 
 			HookEvents();
 		}
@@ -22,9 +20,9 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 		/// <summary>
 		/// Hook events for pub food.
 		/// </summary>
-		void HookEvents() {
-			PlayMakerFSM foodFSM = Utils.GetPlaymakerScriptByName(FoodGO, "Use");
-			EventHook.AddWithSync(foodFSM, "State 2");
+		private void HookEvents() {
+			PlayMakerFSM foodFsm = Utils.GetPlaymakerScriptByName(_foodGo, "Use");
+			EventHook.AddWithSync(foodFsm, "State 2");
 		}
 	}
 }

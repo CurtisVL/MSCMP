@@ -1,10 +1,12 @@
 using UnityEngine;
 
-namespace MSCMP.Game {
+namespace MSCMP.Game
+{
 	/// <summary>
 	/// Various callbacks called on game actions.
 	/// </summary>
-	static class GameCallbacks {
+	internal static class GameCallbacks
+	{
 		/// <summary>
 		/// Delegate of callback called when local player pickups object.
 		/// </summary>
@@ -14,7 +16,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when local player pickups object.
 		/// </summary>
-		static public OnObjectPickup onObjectPickup;
+		public static OnObjectPickup onObjectPickup;
 
 		/// <summary>
 		/// Delegate of callback called when local player pickups object.
@@ -25,7 +27,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when local player releases object.
 		/// </summary>
-		static public OnObjectRelease onObjectRelease;
+		public static OnObjectRelease onObjectRelease;
 
 		public delegate void OnLocalPlayerCreated();
 
@@ -33,7 +35,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when local player spawns.
 		/// </summary>
-		static public OnLocalPlayerCreated onLocalPlayerCreated;
+		public static OnLocalPlayerCreated onLocalPlayerCreated;
 #pragma warning restore CS0649
 
 		public delegate void OnWorldLoad();
@@ -41,14 +43,14 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when game world gets loaded.
 		/// </summary>
-		static public OnWorldLoad onWorldLoad;
+		public static OnWorldLoad onWorldLoad;
 
 		public delegate void OnWorldUnload();
 
 		/// <summary>
 		/// Callback called when game world gets unloaded.
 		/// </summary>
-		static public OnWorldUnload onWorldUnload;
+		public static OnWorldUnload onWorldUnload;
 
 		/// <summary>
 		/// Delegate of the callback called when PlayMaker creates new object.
@@ -60,7 +62,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when PlayMaker creates new object.
 		/// </summary>
-		static public OnPlayMakerObjectCreate onPlayMakerObjectCreate = null;
+		public static OnPlayMakerObjectCreate onPlayMakerObjectCreate = null;
 
 		/// <summary>
 		/// Delegate of the callback called when PlayMaker destroys object.
@@ -71,7 +73,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when PlayMaker destroys object.
 		/// </summary>
-		static public OnPlayMakerObjectDestroy onPlayMakerObjectDestroy = null;
+		public static OnPlayMakerObjectDestroy onPlayMakerObjectDestroy = null;
 
 		/// <summary>
 		/// Delegate of the callback called when PlayMaker activates game object.
@@ -83,7 +85,7 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when PlayMaker activates object.
 		/// </summary>
-		static public OnPlayMakerObjectActivate onPlayMakerObjectActivate = null;
+		public static OnPlayMakerObjectActivate onPlayMakerObjectActivate = null;
 
 
 		/// <summary>
@@ -97,6 +99,6 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Callback called when PlayMaker sets position of an object.
 		/// </summary>
-		static public OnPlayMakerSetPosition onPlayMakerSetPosition = null;
+		public static OnPlayMakerSetPosition onPlayMakerSetPosition = null;
 	}
 }

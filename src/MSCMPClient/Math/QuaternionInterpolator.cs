@@ -1,31 +1,31 @@
 ﻿using UnityEngine;
 
-namespace MSCMP.Math {
-	class QuaternionInterpolator {
+namespace MSCMP.Math
+{
+	internal class QuaternionInterpolator
+	{
+		private Quaternion _current;
+		private Quaternion _source;
+		private Quaternion _target;
 
-		Quaternion current = new Quaternion();
-		Quaternion source = new Quaternion();
-		Quaternion target = new Quaternion();
+		public Quaternion Current => _current;
 
-		public Quaternion Current {
-			get {
-				return current;
-			}
-		}
-
-		public void SetTarget(Quaternion quat) {
-			source = current;
-			target = quat;
+		public void SetTarget(Quaternion quat)
+		{
+			_source = _current;
+			_target = quat;
 			Evaluate(0.0f);
 		}
 
-		public void Teleport(Quaternion quat) {
-			current = source = target = quat;
+		public void Teleport(Quaternion quat)
+		{
+			_current = _source = _target = quat;
 		}
 
-		public Quaternion Evaluate(float alpha) {
-			current = Quaternion.Slerp(source, target, alpha);
-			return current;
+		public Quaternion Evaluate(float alpha)
+		{
+			_current = Quaternion.Slerp(_source, _target, alpha);
+			return _current;
 		}
 	}
 }

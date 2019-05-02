@@ -1,93 +1,100 @@
-using UnityEngine;
 using MSCMP.Utilities;
+using UnityEngine;
 
-namespace MSCMP.Network {
+namespace MSCMP.Network
+{
 	/// <summary>
 	/// Handles network statistics.
 	/// </summary>
-	class NetStatistics {
+	internal class NetStatistics
+	{
+		private const int HISTORY_SIZE = 100;
+		private readonly long[] _bytesReceivedHistory = new long[HISTORY_SIZE];
+		private readonly long[] _bytesSentHistory = new long[HISTORY_SIZE];
+		private long _maxBytesReceivedInHistory;
+		private long _maxBytesSentInHistory;
 
-		const int HISTORY_SIZE = 100;
-		long[] bytesReceivedHistory = new long[HISTORY_SIZE];
-		long[] bytesSentHistory = new long[HISTORY_SIZE];
-		long maxBytesReceivedInHistory = 0;
-		long maxBytesSentInHistory = 0;
+		private int _packetsSendTotal;
+		private int _packetsReceivedTotal;
 
-		int packetsSendTotal = 0;
-		int packetsReceivedTotal = 0;
+		private int _packetsSendLastFrame;
+		private int _packetsReceivedLastFrame;
 
-		int packetsSendLastFrame = 0;
-		int packetsReceivedLastFrame = 0;
+		private int _packetsSendCurrentFrame;
+		private int _packetsReceivedCurrentFrame;
 
-		int packetsSendCurrentFrame = 0;
-		int packetsReceivedCurrentFrame = 0;
+		private long _bytesSentTotal;
+		private long _bytesReceivedTotal;
 
-		long bytesSentTotal = 0;
-		long bytesReceivedTotal = 0;
+		private long _bytesSentLastFrame;
+		private long _bytesReceivedLastFrame;
 
-		long bytesSentLastFrame = 0;
-		long bytesReceivedLastFrame = 0;
-
-		long bytesSentCurrentFrame = 0;
-		long bytesReceivedCurrentFrame = 0;
+		private long _bytesSentCurrentFrame;
+		private long _bytesReceivedCurrentFrame;
 
 		/// <summary>
 		/// Network manager owning this object.
 		/// </summary>
-		NetManager netManager = null;
+		private readonly NetManager _netManager;
 
 		/// <summary>
 		/// Line material used to draw the graph.
 		/// </summary>
-		Material lineMaterial = null;
+		private Material _lineMaterial;
 
 
-		public NetStatistics(NetManager netManager) {
-			this.netManager = netManager;
+		public NetStatistics(NetManager netManager)
+		{
+			_netManager = netManager;
 		}
 
-		void SetupLineMaterial() {
-			if (lineMaterial != null) { return; }
+		private void SetupLineMaterial()
+		{
+			if (_lineMaterial != null) { return; }
 
 			// Setup graph lines material.
 
 			Shader shader = Shader.Find("GUI/Text Shader"); // Text shader is sufficient for this case.
 			Client.Assert(shader != null, "Shader not found!");
-			lineMaterial = new Material(shader);
-			Client.Assert(lineMaterial != null, "Failed to setup material!");
+			_lineMaterial = new Material(shader);
+			Client.Assert(_lineMaterial != null, "Failed to setup material!");
 		}
 
 		/// <summary>
 		/// Resets all frame statistics.
 		/// </summary>
-		public void NewFrame() {
-			packetsSendLastFrame = packetsSendCurrentFrame;
-			packetsReceivedLastFrame = packetsReceivedCurrentFrame;
+		public void NewFrame()
+		{
+			_packetsSendLastFrame = _packetsSendCurrentFrame;
+			_packetsReceivedLastFrame = _packetsReceivedCurrentFrame;
 
-			packetsSendCurrentFrame = 0;
-			packetsReceivedCurrentFrame = 0;
+			_packetsSendCurrentFrame = 0;
+			_packetsReceivedCurrentFrame = 0;
 
-			bytesSentLastFrame = bytesSentCurrentFrame;
-			bytesReceivedLastFrame = bytesReceivedCurrentFrame;
+			_bytesSentLastFrame = _bytesSentCurrentFrame;
+			_bytesReceivedLastFrame = _bytesReceivedCurrentFrame;
 
-			maxBytesReceivedInHistory = bytesSentCurrentFrame;
-			maxBytesSentInHistory = bytesReceivedCurrentFrame;
-			for (int i = 0; i < HISTORY_SIZE - 1; ++i) {
-				bytesSentHistory[i] = bytesSentHistory[i + 1];
-				if (maxBytesSentInHistory < bytesSentHistory[i]) {
-					maxBytesSentInHistory = bytesSentHistory[i];
+			_maxBytesReceivedInHistory = _bytesSentCurrentFrame;
+			_maxBytesSentInHistory = _bytesReceivedCurrentFrame;
+			for (int i = 0; i < HISTORY_SIZE - 1; ++i)
+			{
+				_bytesSentHistory[i] = _bytesSentHistory[i + 1];
+				if (_maxBytesSentInHistory < _bytesSentHistory[i])
+				{
+					_maxBytesSentInHistory = _bytesSentHistory[i];
 				}
-				bytesReceivedHistory[i] = bytesReceivedHistory[i + 1];
-				if (maxBytesReceivedInHistory < bytesReceivedHistory[i]) {
-					maxBytesReceivedInHistory = bytesReceivedHistory[i];
+				_bytesReceivedHistory[i] = _bytesReceivedHistory[i + 1];
+				if (_maxBytesReceivedInHistory < _bytesReceivedHistory[i])
+				{
+					_maxBytesReceivedInHistory = _bytesReceivedHistory[i];
 				}
 			}
 
-			bytesSentHistory[HISTORY_SIZE - 1] = bytesSentCurrentFrame;
-			bytesReceivedHistory[HISTORY_SIZE - 1] = bytesReceivedCurrentFrame;
+			_bytesSentHistory[HISTORY_SIZE - 1] = _bytesSentCurrentFrame;
+			_bytesReceivedHistory[HISTORY_SIZE - 1] = _bytesReceivedCurrentFrame;
 
-			bytesSentCurrentFrame = 0;
-			bytesReceivedCurrentFrame = 0;
+			_bytesSentCurrentFrame = 0;
+			_bytesReceivedCurrentFrame = 0;
 		}
 
 		/// <summary>
@@ -95,12 +102,13 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="messageId">The received message id.</param>
 		/// <param name="bytes">Received bytes.</param>
-		public void RecordSendMessage(int messageId, long bytes) {
-			bytesSentCurrentFrame += bytes;
-			bytesSentTotal += bytes;
+		public void RecordSendMessage(int messageId, long bytes)
+		{
+			_bytesSentCurrentFrame += bytes;
+			_bytesSentTotal += bytes;
 
-			packetsSendCurrentFrame++;
-			packetsSendTotal++;
+			_packetsSendCurrentFrame++;
+			_packetsSendTotal++;
 		}
 
 		/// <summary>
@@ -108,12 +116,13 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="messageId">The received message id.</param>
 		/// <param name="bytes">Received bytes.</param>
-		public void RecordReceivedMessage(int messageId, long bytes) {
-			bytesReceivedCurrentFrame += bytes;
-			bytesReceivedTotal += bytes;
+		public void RecordReceivedMessage(int messageId, long bytes)
+		{
+			_bytesReceivedCurrentFrame += bytes;
+			_bytesReceivedTotal += bytes;
 
-			packetsReceivedCurrentFrame++;
-			packetsReceivedTotal++;
+			_packetsReceivedCurrentFrame++;
+			_packetsReceivedTotal++;
 		}
 
 		/// <summary>
@@ -124,18 +133,21 @@ namespace MSCMP.Network {
 		/// <param name="value">The statistic value.</param>
 		/// <param name="critical">The critical statistic value to highlight. (if -1 there is no critical value)</param>
 		/// <param name="bytes">Is the stat representing bytes?</param>
-		void DrawStatHelper(ref Rect rct, string name, long value, int critical = -1, bool bytes = false) {
+		private void DrawStatHelper(ref Rect rct, string name, long value, int critical = -1, bool bytes = false)
+		{
 			GUI.color = Color.white;
 			GUI.Label(rct, name);
 
-			bool isCriticalValue = (critical != -1 && value >= critical);
+			bool isCriticalValue = critical != -1 && value >= critical;
 			GUI.color = isCriticalValue ? Color.red : Color.white;
 
 			rct.x += rct.width;
-			if (bytes) {
+			if (bytes)
+			{
 				GUI.Label(rct, FormatBytes(value));
 			}
-			else {
+			else
+			{
 				GUI.Label(rct, value.ToString());
 			}
 
@@ -149,7 +161,8 @@ namespace MSCMP.Network {
 		/// <remarks>GUI color after this call may not be white!</remarks>
 		/// <param name="name">Name of the statistic.</param>
 		/// <param name="text">The text value.</param>
-		void DrawTextHelper(ref Rect rct, string name, string text) {
+		private void DrawTextHelper(ref Rect rct, string name, string text)
+		{
 			GUI.color = Color.white;
 			GUI.Label(rct, name);
 			rct.x += rct.width;
@@ -165,7 +178,8 @@ namespace MSCMP.Network {
 		/// <param name="start">Line start position.</param>
 		/// <param name="end">Line end position.</param>
 		/// <param name="color">Line color.</param>
-		void DrawLineHelper(Vector2 start, Vector2 end, Color color) {
+		private void DrawLineHelper(Vector2 start, Vector2 end, Color color)
+		{
 			GL.Color(color);
 			GL.Vertex3(start.x, Screen.height - start.y, 0.0f);
 			GL.Vertex3(end.x, Screen.height - end.y, 0.0f);
@@ -175,10 +189,11 @@ namespace MSCMP.Network {
 		/// Draw network graph.
 		/// </summary>
 		/// <param name="drawRect">Rectangle where graph should drawn.</param>
-		void DrawGraph(Rect drawRect) {
+		private void DrawGraph(Rect drawRect)
+		{
 			SetupLineMaterial();
 
-			lineMaterial.SetPass(0);
+			_lineMaterial.SetPass(0);
 			GL.PushMatrix();
 			GL.LoadPixelMatrix();
 			GL.Begin(GL.LINES);
@@ -192,22 +207,23 @@ namespace MSCMP.Network {
 
 			float stepWidth = drawRect.width / HISTORY_SIZE;
 
-			for (int i = 0; i < HISTORY_SIZE; ++i) {
+			for (int i = 0; i < HISTORY_SIZE; ++i)
+			{
 				// draw send
 
-				long previousHistoryValue = i > 0 ? bytesSentHistory[i - 1] : 0;
-				float previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - ((float)previousHistoryValue / Mathf.Max(1, maxBytesSentInHistory)));
-				var start = new Vector2(drawRect.x + stepWidth * Mathf.Max(i - 1, 0), previousY);
-				float currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - ((float)bytesSentHistory[i] / Mathf.Max(1, maxBytesSentInHistory)));
-				var end = new Vector2(drawRect.x + stepWidth * i, currentY);
+				long previousHistoryValue = i > 0 ? _bytesSentHistory[i - 1] : 0;
+				float previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)previousHistoryValue / Mathf.Max(1, _maxBytesSentInHistory));
+				Vector2 start = new Vector2(drawRect.x + stepWidth * Mathf.Max(i - 1, 0), previousY);
+				float currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)_bytesSentHistory[i] / Mathf.Max(1, _maxBytesSentInHistory));
+				Vector2 end = new Vector2(drawRect.x + stepWidth * i, currentY);
 				DrawLineHelper(start, end, Color.red);
 
 				// draw receive
 
-				previousHistoryValue = i > 0 ? bytesReceivedHistory[i - 1] : 0;
-				previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - ((float)previousHistoryValue / Mathf.Max(1, maxBytesReceivedInHistory)));
+				previousHistoryValue = i > 0 ? _bytesReceivedHistory[i - 1] : 0;
+				previousY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)previousHistoryValue / Mathf.Max(1, _maxBytesReceivedInHistory));
 				start = new Vector2(drawRect.x + stepWidth * Mathf.Max(i - 1, 0), previousY);
-				currentY = drawRect.y + drawRect.height *  Mathf.Clamp01(1.0f - ((float)bytesReceivedHistory[i] / Mathf.Max(1, maxBytesReceivedInHistory)));
+				currentY = drawRect.y + drawRect.height * Mathf.Clamp01(1.0f - (float)_bytesReceivedHistory[i] / Mathf.Max(1, _maxBytesReceivedInHistory));
 				end = new Vector2(drawRect.x + stepWidth * i, currentY);
 				DrawLineHelper(start, end, Color.green);
 			}
@@ -221,40 +237,46 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="bytes">The bytes.</param>
 		/// <returns>Formatted bytes string.</returns>
-		string FormatBytes(long bytes) {
-			if (bytes >= 1024 * 1024) {
-				float mb = ((float)bytes / (1024 * 1024));
+		private string FormatBytes(long bytes)
+		{
+			if (bytes >= 1024 * 1024)
+			{
+				float mb = (float)bytes / (1024 * 1024);
 				return mb.ToString("0.00") + " MB";
 			}
-			else if (bytes >= 1024) {
-				float kb = ((float)bytes / 1024);
+
+			if (bytes >= 1024)
+			{
+				float kb = (float)bytes / 1024;
 				return kb.ToString("0.00") + " KB";
 			}
-			return bytes.ToString() + " B";
+			return bytes + " B";
 		}
 
 		/// <summary>
 		/// Draw network statistics.
 		/// </summary>
-		public void Draw() {
+		public void Draw()
+		{
 			GUI.color = Color.white;
-			const int WINDOW_WIDTH = 300;
-			const int WINDOW_HEIGHT = 600;
-			Rect statsWindowRect = new Rect(Screen.width - WINDOW_WIDTH - 10, Screen.height - WINDOW_HEIGHT - 10, WINDOW_WIDTH, WINDOW_HEIGHT);
-			GUI.Window(666, statsWindowRect, (int window) => {
+			const int windowWidth = 300;
+			const int windowHeight = 600;
+			Rect statsWindowRect = new Rect(Screen.width - windowWidth - 10, Screen.height - windowHeight - 10, windowWidth, windowHeight);
+			GUI.Window(666, statsWindowRect, window =>
+			{
 
 				// Draw traffic graph title.
 
-				var rct = new Rect(10, 20, 200, 25);
+				Rect rct = new Rect(10, 20, 200, 25);
 				GUI.Label(rct, $"Traffic graph (last {HISTORY_SIZE} frames):");
 				rct.y += 25;
 
-				var graphRect = new Rect(rct.x, rct.y, WINDOW_WIDTH - 20, 100);
+				Rect graphRect = new Rect(rct.x, rct.y, windowWidth - 20, 100);
 
 				// Draw graph background.
 
 				GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.35f);
-				IMGUIUtils.DrawPlainColorRect(graphRect);
+				ImguiUtils.DrawPlainColorRect(graphRect);
 
 				// Draw the graph itself.
 
@@ -265,10 +287,10 @@ namespace MSCMP.Network {
 				GUI.color = Color.white;
 				rct.y += 5;
 				rct.x += 5;
-				IMGUIUtils.DrawSmallLabel($"{FormatBytes(maxBytesSentInHistory)} sent/frame", rct, Color.red, true);
+				ImguiUtils.DrawSmallLabel($"{FormatBytes(_maxBytesSentInHistory)} sent/frame", rct, Color.red, true);
 				rct.y += 12;
 
-				IMGUIUtils.DrawSmallLabel($"{FormatBytes(maxBytesReceivedInHistory)} recv/frame", rct, Color.green, true);
+				ImguiUtils.DrawSmallLabel($"{FormatBytes(_maxBytesReceivedInHistory)} recv/frame", rct, Color.green, true);
 				rct.y -= 12 - 5;
 				rct.x -= 5;
 
@@ -279,34 +301,34 @@ namespace MSCMP.Network {
 				// Draw separator
 
 				GUI.color = Color.black;
-				IMGUIUtils.DrawPlainColorRect(new Rect(0, rct.y, WINDOW_WIDTH, 2));
+				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, 2));
 				rct.y += 2;
 
 				// Draw stats background
 
 				GUI.color = new Color(0.0f, 0.0f, 0.0f, 0.5f);
-				IMGUIUtils.DrawPlainColorRect(new Rect(0, rct.y, WINDOW_WIDTH, WINDOW_HEIGHT - rct.y));
+				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, windowHeight - rct.y));
 
 				// Draw statistics
 
-				DrawStatHelper(ref rct, "packetsSendTotal", packetsSendTotal);
-				DrawStatHelper(ref rct, "packetsReceivedTotal", packetsReceivedTotal);
-				DrawStatHelper(ref rct, "packetsSendLastFrame", packetsSendLastFrame, 1000);
-				DrawStatHelper(ref rct, "packetsReceivedLastFrame", packetsReceivedLastFrame, 1000);
-				DrawStatHelper(ref rct, "packetsSendCurrentFrame", packetsSendCurrentFrame, 1000);
-				DrawStatHelper(ref rct, "packetsReceivedCurrentFrame", packetsReceivedCurrentFrame, 1000);
-				DrawStatHelper(ref rct, "bytesSendTotal", bytesSentTotal, -1, true);
-				DrawStatHelper(ref rct, "bytesReceivedTotal", bytesReceivedTotal, -1, true);
-				DrawStatHelper(ref rct, "bytesSendLastFrame", bytesSentLastFrame, 1000, true);
-				DrawStatHelper(ref rct, "bytesReceivedLastFrame", bytesReceivedLastFrame, 1000, true);
-				DrawStatHelper(ref rct, "bytesSendCurrentFrame", bytesSentCurrentFrame, 1000, true);
-				DrawStatHelper(ref rct, "bytesReceivedCurrentFrame", bytesReceivedCurrentFrame, 1000, true);
+				DrawStatHelper(ref rct, "packetsSendTotal", _packetsSendTotal);
+				DrawStatHelper(ref rct, "packetsReceivedTotal", _packetsReceivedTotal);
+				DrawStatHelper(ref rct, "packetsSendLastFrame", _packetsSendLastFrame, 1000);
+				DrawStatHelper(ref rct, "packetsReceivedLastFrame", _packetsReceivedLastFrame, 1000);
+				DrawStatHelper(ref rct, "packetsSendCurrentFrame", _packetsSendCurrentFrame, 1000);
+				DrawStatHelper(ref rct, "packetsReceivedCurrentFrame", _packetsReceivedCurrentFrame, 1000);
+				DrawStatHelper(ref rct, "bytesSendTotal", _bytesSentTotal, -1, true);
+				DrawStatHelper(ref rct, "bytesReceivedTotal", _bytesReceivedTotal, -1, true);
+				DrawStatHelper(ref rct, "bytesSendLastFrame", _bytesSentLastFrame, 1000, true);
+				DrawStatHelper(ref rct, "bytesReceivedLastFrame", _bytesReceivedLastFrame, 1000, true);
+				DrawStatHelper(ref rct, "bytesSendCurrentFrame", _bytesSentCurrentFrame, 1000, true);
+				DrawStatHelper(ref rct, "bytesReceivedCurrentFrame", _bytesReceivedCurrentFrame, 1000, true);
 
 				// Draw separator
 
 				rct.y += 2;
 				GUI.color = Color.black;
-				IMGUIUtils.DrawPlainColorRect(new Rect(0, rct.y, WINDOW_WIDTH, 2));
+				ImguiUtils.DrawPlainColorRect(new Rect(0, rct.y, windowWidth, 2));
 				rct.y += 2;
 
 				// Draw P2P session state.
@@ -314,7 +336,8 @@ namespace MSCMP.Network {
 				DrawTextHelper(ref rct, "Steam session state:", "");
 
 				Steamworks.P2PSessionState_t sessionState = new Steamworks.P2PSessionState_t();
-				if (netManager.GetP2PSessionState(out sessionState)) {
+				if (_netManager.GetP2PSessionState(out sessionState))
+				{
 					DrawTextHelper(ref rct, "Is Connecting", sessionState.m_bConnecting.ToString());
 					DrawTextHelper(ref rct, "Is connection active", sessionState.m_bConnectionActive == 0 ? "no" : "yes");
 					DrawTextHelper(ref rct, "Using relay?", sessionState.m_bConnectionActive == 0 ? "no" : "yes");
@@ -322,11 +345,12 @@ namespace MSCMP.Network {
 					DrawTextHelper(ref rct, "Bytes queued for send", FormatBytes(sessionState.m_nBytesQueuedForSend));
 					DrawTextHelper(ref rct, "Packets queued for send", sessionState.m_nPacketsQueuedForSend.ToString());
 					uint uip = sessionState.m_nRemoteIP;
-					string ip = string.Format("{0}.{1}.{2}.{3}", (uip>>24)&0xff, (uip>>16)&0xff, (uip>>8)&0xff, uip&0xff);
+					string ip = $"{(uip >> 24) & 0xff}.{(uip >> 16) & 0xff}.{(uip >> 8) & 0xff}.{uip & 0xff}";
 					DrawTextHelper(ref rct, "Remote ip", ip);
 					DrawTextHelper(ref rct, "Remote port", sessionState.m_nRemotePort.ToString());
 				}
-				else {
+				else
+				{
 					DrawTextHelper(ref rct, "Session inactive.", "");
 				}
 			}, "Network statistics");

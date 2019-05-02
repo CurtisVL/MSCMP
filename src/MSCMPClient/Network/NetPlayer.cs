@@ -1,56 +1,58 @@
 using System;
+using MSCMP.Network.Messages;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-namespace MSCMP.Network {
-
+namespace MSCMP.Network
+{
 	/// <summary>
 	/// Class representing network player.
 	/// </summary>
-	class NetPlayer : IDisposable {
+	internal class NetPlayer 
+		: IDisposable
+	{
 
-		private Steamworks.CSteamID steamId = Steamworks.CSteamID.Nil;
+		private readonly Steamworks.CSteamID _steamId;
 
 		/// <summary>
 		/// Offset for the character model.
 		/// </summary>
-		private Vector3 CHARACTER_OFFSET = new Vector3(0.0f, 0.60f, 0.0f);
+		private readonly Vector3 _characterOffset = new Vector3(0.0f, 0.60f, 0.0f);
 
 		/// <summary>
 		/// Steam id of the player.
 		/// </summary>
-		public Steamworks.CSteamID SteamId {
-			get { return steamId; }
-		}
+		public Steamworks.CSteamID SteamId => _steamId;
 
 		/// <summary>
 		/// The network manager managing connection with this player.
 		/// </summary>
-		protected NetManager netManager = null;
+		protected NetManager NetManager;
 
 		/// <summary>
 		/// The anim manager managing connection with this player.
 		/// </summary>
-		public PlayerAnimManager AnimManager = null;
+		public PlayerAnimManager AnimManager;
 
 		/// <summary>
 		/// The game object representing character.
 		/// </summary>
-		private GameObject characterGameObject = null;
+		private GameObject _characterGameObject;
 
 		/// <summary>
 		/// Did this player handshake with us during this session?
 		/// </summary>
-		public bool hasHandshake = false;
+		public bool HasHandshake = false;
 
 		/// <summary>
 		/// Character interpolator.
 		/// </summary>
-		Math.TransformInterpolator interpolator = new Math.TransformInterpolator();
+		private readonly Math.TransformInterpolator _interpolator = new Math.TransformInterpolator();
 
 		/// <summary>
 		/// Picked up object interpolator.
 		/// </summary>
-		Math.TransformInterpolator pickedUpObjectInterpolator = new Math.TransformInterpolator();
+		private readonly Math.TransformInterpolator _pickedUpObjectInterpolator = new Math.TransformInterpolator();
 
 		/// <summary>
 		/// Interpolation time in miliseconds.
@@ -60,7 +62,7 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Network time when sync packet was received.
 		/// </summary>
-		private ulong syncReceiveTime = 0;
+		private ulong _syncReceiveTime;
 
 		/// <summary>
 		/// Name of the game object we use as prefab for characters.
@@ -70,7 +72,8 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Current player state.
 		/// </summary>
-		protected enum State {
+		protected enum State
+		{
 			OnFoot,
 			DrivingVehicle,
 			Passenger
@@ -84,27 +87,27 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// The current vehicle player is inside.
 		/// </summary>
-		protected Game.Components.ObjectSyncComponent currentVehicle = null;
+		protected Game.Components.ObjectSyncComponent CurrentVehicle;
 
 		/// <summary>
 		/// Network world this player is spawned in.
 		/// </summary>
-		protected NetWorld netWorld = null;
+		protected NetWorld NetWorld;
 
 		/// <summary>
 		/// The object the player has picked up.
 		/// </summary>
-		private GameObject pickedUpObject = null;
+		private GameObject _pickedUpObject;
 
 		/// <summary>
 		/// The network id of object the player has picked up.
 		/// </summary>
-		private ushort pickedUpObjectNetId = NetPickupable.INVALID_ID;
+		private ushort _pickedUpObjectNetId = NetPickupable.INVALID_ID;
 
 		/// <summary>
 		/// The old layer of the pickupable. Used to restore layer after releasing object.
 		/// </summary>
-		private int oldPickupableLayer = 0;
+		private int _oldPickupableLayer;
 
 		/// <summary>
 		/// Is this player spawned?
@@ -112,9 +115,7 @@ namespace MSCMP.Network {
 		/// <remarks>
 		/// This state is valid only for remote players.
 		/// </remarks>
-		public bool IsSpawned {
-			get { return characterGameObject != null; }
-		}
+		public bool IsSpawned => _characterGameObject != null;
 
 		/// <summary>
 		/// Constructor.
@@ -122,18 +123,20 @@ namespace MSCMP.Network {
 		/// <param name="netManager">Network manager managing connection to the player.</param>
 		/// <param name="netWorld">Network world owning this player.</param>
 		/// <param name="steamId">Player's steam id.</param>
-		public NetPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId) {
-			this.netManager = netManager;
-			this.netWorld = netWorld;
-			this.steamId = steamId;
+		public NetPlayer(NetManager netManager, NetWorld netWorld, Steamworks.CSteamID steamId)
+		{
+			NetManager = netManager;
+			NetWorld = netWorld;
+			_steamId = steamId;
 		}
 
 		/// <summary>
 		/// Spawns character object in world.
 		/// </summary>
-		public void Spawn() {
+		public void Spawn()
+		{
 			GameObject loadedModel = Client.LoadAsset<GameObject>(CHARACTER_PREFAB_NAME);
-			characterGameObject = (GameObject)GameObject.Instantiate((GameObject)loadedModel, interpolator.CurrentPosition, interpolator.CurrentRotation);
+			_characterGameObject = (GameObject)Object.Instantiate((GameObject)loadedModel, _interpolator.CurrentPosition, _interpolator.CurrentRotation);
 
 			// If character will disappear we uncomment this
 			// GameObject.DontDestroyOnLoad(go);
@@ -141,13 +144,15 @@ namespace MSCMP.Network {
 			//Getting the Animation component of the model, and setting the priority layers of each animation
 			if (AnimManager == null) { AnimManager = new PlayerAnimManager(); Logger.Debug("AnimManager: JUST CREATED MORE!"); }
 			else Logger.Debug("AnimManager: We had already (from NetLocal) our animManager");
-			AnimManager.SetupAnimations(characterGameObject);
+			AnimManager.SetupAnimations(_characterGameObject);
 
-			if (pickedUpObjectNetId != NetPickupable.INVALID_ID) {
+			if (_pickedUpObjectNetId != NetPickupable.INVALID_ID)
+			{
 				UpdatePickedUpObject(true, false);
 			}
 
-			if (currentVehicle != null) {
+			if (CurrentVehicle != null)
+			{
 				SitInCurrentVehicle();
 			}
 		}
@@ -155,17 +160,19 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Cleanup all objects before destroying the player.
 		/// </summary>
-		public void Dispose() {
-
-			if (currentVehicle != null) {
+		public void Dispose()
+		{
+			if (CurrentVehicle != null)
+			{
 				LeaveVehicle();
 			}
 
 			// Destroy player model on disconnect/timeout.
 
-			if (characterGameObject != null) {
-				GameObject.Destroy(characterGameObject);
-				characterGameObject = null;
+			if (_characterGameObject != null)
+			{
+				Object.Destroy(_characterGameObject);
+				_characterGameObject = null;
 			}
 		}
 
@@ -176,59 +183,65 @@ namespace MSCMP.Network {
 		/// <param name="sendType">Type of the send.</param>
 		/// <param name="channel">The channel to send message.</param>
 		/// <returns>true if packet was sent, false otherwise</returns>
-		public bool SendPacket(byte[] data, Steamworks.EP2PSend sendType, int channel = 0) {
-			return Steamworks.SteamNetworking.SendP2PPacket(this.steamId, data, (uint)data.Length, sendType, channel);
+		public bool SendPacket(byte[] data, Steamworks.EP2PSend sendType, int channel = 0)
+		{
+			return Steamworks.SteamNetworking.SendP2PPacket(_steamId, data, (uint)data.Length, sendType, channel);
 		}
 
 		/// <summary>
 		/// Updates state of the player.
 		/// </summary>
-		public virtual void Update() {
-
+		public virtual void Update()
+		{
 			// Some naive interpolation.
 
-			if (characterGameObject && syncReceiveTime > 0) {
-				float progress = (float)(netManager.GetNetworkClock() - syncReceiveTime) / INTERPOLATION_TIME;
+			if (_characterGameObject && _syncReceiveTime > 0)
+			{
+				float progress = (float)(NetManager.GetNetworkClock() - _syncReceiveTime) / INTERPOLATION_TIME;
 
 				float speed = 0.0f;
-				if (progress <= 2.0f) {
-					Vector3 oldPos = interpolator.CurrentPosition;
+				if (progress <= 2.0f)
+				{
+					Vector3 oldPos = _interpolator.CurrentPosition;
 					Vector3 currentPos = Vector3.zero;
 					Quaternion currentRot = Quaternion.identity;
-					interpolator.Evaluate(ref currentPos, ref currentRot, progress);
-					Vector3 delta = (currentPos - oldPos);
+					_interpolator.Evaluate(ref currentPos, ref currentRot, progress);
+					Vector3 delta = currentPos - oldPos;
 					delta.y = 0.0f;
 					speed = delta.magnitude;
 
 					UpdateCharacterPosition();
 
-					pickedUpObjectInterpolator.Evaluate(progress);
+					_pickedUpObjectInterpolator.Evaluate(progress);
 					UpdatePickedupPosition();
 				}
 
-				if (AnimManager != null) {
+				if (AnimManager != null)
+				{
 					AnimManager.HandleOnFootMovementAnimations(speed);
 					AnimManager.CheckBlendedOutAnimationStates();
-					AnimManager.SyncVerticalHeadLook(characterGameObject, progress);
+					AnimManager.SyncVerticalHeadLook(_characterGameObject, progress);
 				}
 			}
-
 		}
 
 		/// <summary>
 		/// Draw this player name tag.
 		/// </summary>
-		/// <param name="playerID">Player ID of player.</param>
-		public void DrawNametag(int playerID) {
-			if (characterGameObject != null) {
-				Vector3 spos = Camera.main.WorldToScreenPoint(characterGameObject.transform.position + Vector3.up * 2.0f);
-				if (spos.z > 0.0f) {
+		/// <param name="playerId">Player ID of player.</param>
+		public void DrawNametag(int playerId)
+		{
+			if (_characterGameObject != null)
+			{
+				Vector3 spos = Camera.main.WorldToScreenPoint(_characterGameObject.transform.position + Vector3.up * 2.0f);
+				if (spos.z > 0.0f)
+				{
 					float width = 100.0f;
 					spos.x -= width / 2.0f;
 					GUI.color = Color.black;
-					GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName() + " (" + playerID + ")");
+					GUI.Label(new Rect(spos.x + 1, Screen.height - spos.y + 1, width, 20), GetName() + " (" + playerId + ")");
 					GUI.color = Color.cyan;
-					GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName() + " (" + playerID + ")");
+					GUI.Label(new Rect(spos.x, Screen.height - spos.y, width, 20), GetName() + " (" + playerId + ")");
 					GUI.color = Color.white;
 				}
 			}
@@ -238,21 +251,24 @@ namespace MSCMP.Network {
 		/// Handle received synchronization message.
 		/// </summary>
 		/// <param name="msg">The received synchronization message.</param>
-		public void HandleSynchronize(Messages.PlayerSyncMessage msg) {
+		public void HandleSynchronize(PlayerSyncMessage msg)
+		{
 			Client.Assert(state == State.OnFoot, "Received on foot update but player is not on foot.");
 
 			Vector3 targetPos = Utils.NetVec3ToGame(msg.position);
 			Quaternion targetRot = Utils.NetQuatToGame(msg.rotation);
 
-			interpolator.SetTarget(targetPos, targetRot);
-			syncReceiveTime = netManager.GetNetworkClock();
+			_interpolator.SetTarget(targetPos, targetRot);
+			_syncReceiveTime = NetManager.GetNetworkClock();
 
-			if (msg.HasPickedUpData) {
-				var pickedUpData = msg.PickedUpData;
-				pickedUpObjectInterpolator.SetTarget(Utils.NetVec3ToGame(pickedUpData.position), Utils.NetQuatToGame(pickedUpData.rotation));
+			if (msg.HasPickedUpData)
+			{
+				PickedUpSync pickedUpData = msg.PickedUpData;
+				_pickedUpObjectInterpolator.SetTarget(Utils.NetVec3ToGame(pickedUpData.position), Utils.NetQuatToGame(pickedUpData.rotation));
 			}
 
-			if (!IsSpawned) {
+			if (!IsSpawned)
+			{
 				Teleport(targetPos, targetRot);
 				return;
 			}
@@ -262,30 +278,35 @@ namespace MSCMP.Network {
 		/// Handle received animation synchronization message.
 		/// </summary>
 		/// <param name="msg">The received synchronization message.</param>
-		public void HandleAnimSynchronize(Messages.AnimSyncMessage msg) {
-			if (AnimManager != null) AnimManager.HandleAnimations(msg);
+		public void HandleAnimSynchronize(AnimSyncMessage msg)
+		{
+			AnimManager?.HandleAnimations(msg);
 		}
 
 		/// <summary>
 		/// Sit in current vehicle.
 		/// </summary>
-		private void SitInCurrentVehicle() {
-			if (currentVehicle != null) {
-
+		private void SitInCurrentVehicle()
+		{
+			if (CurrentVehicle != null)
+			{
 				// Make sure player character is attached as we will not update it's position until he leaves vehicle.
 
-				if (IsSpawned) {
-					Game.Objects.PlayerVehicle vehicleGameObject = currentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
-					if (state == State.DrivingVehicle) {
+				if (IsSpawned)
+				{
+					Game.Objects.PlayerVehicle vehicleGameObject = CurrentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
+					if (state == State.DrivingVehicle)
+					{
 						Transform seatTransform = vehicleGameObject.SeatTransform;
 						Teleport(seatTransform.position, seatTransform.rotation);
 					}
-					else if (state == State.Passenger) {
+					else if (state == State.Passenger)
+					{
 						Transform passangerSeatTransform = vehicleGameObject.PassengerSeatTransform;
 						Teleport(passangerSeatTransform.position, passangerSeatTransform.rotation);
 					}
 
-					characterGameObject.transform.SetParent(vehicleGameObject.ParentGameObject.transform, false);
+					_characterGameObject.transform.SetParent(vehicleGameObject.ParentGameObject.transform, false);
 				}
 			}
 		}
@@ -295,18 +316,21 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="vehicle">The vehicle to enter.</param>
 		/// <param name="passenger">Is player entering vehicle as passenger?</param>
-		public virtual void EnterVehicle(Game.Components.ObjectSyncComponent vehicle, bool passenger) {
-			Client.Assert(currentVehicle == null, "Entered vehicle but player is already in vehicle.");
+		public virtual void EnterVehicle(Game.Components.ObjectSyncComponent vehicle, bool passenger)
+		{
+			Client.Assert(CurrentVehicle == null, "Entered vehicle but player is already in vehicle.");
 			Client.Assert(state == State.OnFoot, "Entered vehicle but player is not on foot.");
 
-			currentVehicle = vehicle;
+			CurrentVehicle = vehicle;
 
-			Game.Objects.PlayerVehicle vehicleSubtype = currentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
-			if (!passenger) {
+			Game.Objects.PlayerVehicle vehicleSubtype = CurrentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
+			if (!passenger)
+			{
 				// Remote player is now driver.
 				vehicleSubtype.CurrentDrivingState = Game.Objects.PlayerVehicle.DrivingStates.Driver;
 			}
-			else {
+			else
+			{
 				vehicleSubtype.CurrentDrivingState = Game.Objects.PlayerVehicle.DrivingStates.Passenger;
 			}
 
@@ -319,15 +343,17 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Leave vehicle player is currently sitting in.
 		/// </summary>
-		public virtual void LeaveVehicle() {
-			Client.Assert(currentVehicle != null && state != State.OnFoot, "Player is leaving vehicle but he is not in vehicle.");
+		public virtual void LeaveVehicle()
+		{
+			Client.Assert(CurrentVehicle != null && state != State.OnFoot, "Player is leaving vehicle but he is not in vehicle.");
 
 			// Detach character game object from vehicle.
 
-			if (IsSpawned) {
-				characterGameObject.transform.SetParent(null);
+			if (IsSpawned)
+			{
+				_characterGameObject.transform.SetParent(null);
 
-				Game.Objects.PlayerVehicle vehicleGameObject = currentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
+				Game.Objects.PlayerVehicle vehicleGameObject = CurrentVehicle.GetObjectSubtype() as Game.Objects.PlayerVehicle;
 				Transform seatTransform = vehicleGameObject.SeatTransform;
 				Teleport(seatTransform.position, seatTransform.rotation);
 
@@ -335,7 +361,7 @@ namespace MSCMP.Network {
 				vehicleGameObject.CurrentDrivingState = Game.Objects.PlayerVehicle.DrivingStates.None;
 			}
 
-			currentVehicle = null;
+			CurrentVehicle = null;
 
 			// Set state of the player.
 			SwitchState(State.OnFoot);
@@ -345,7 +371,8 @@ namespace MSCMP.Network {
 		/// Switches state of this player.
 		/// </summary>
 		/// <param name="newState">The state to switch to.</param>
-		protected virtual void SwitchState(State newState) {
+		protected virtual void SwitchState(State newState)
+		{
 			state = newState;
 		}
 
@@ -354,69 +381,79 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="pos">The position to teleport to.</param>
 		/// <param name="rot">The rotation to teleport to.</param>
-		public virtual void Teleport(Vector3 pos, Quaternion rot) {
-			interpolator.Teleport(pos, rot);
+		public virtual void Teleport(Vector3 pos, Quaternion rot)
+		{
+			_interpolator.Teleport(pos, rot);
 			UpdateCharacterPosition();
 		}
 
 		/// <summary>
 		/// Update character position from interpolator.
 		/// </summary>
-		private void UpdateCharacterPosition() {
-			if (characterGameObject != null) {
-				characterGameObject.transform.position = interpolator.CurrentPosition + CHARACTER_OFFSET;
-				characterGameObject.transform.rotation = interpolator.CurrentRotation;
+		private void UpdateCharacterPosition()
+		{
+			if (_characterGameObject != null)
+			{
+				_characterGameObject.transform.position = _interpolator.CurrentPosition + _characterOffset;
+				_characterGameObject.transform.rotation = _interpolator.CurrentRotation;
 			}
 		}
 
 		/// <summary>
 		/// Update position of the picked up object.
 		/// </summary>
-		private void UpdatePickedupPosition() {
-			if (pickedUpObject == null) {
+		private void UpdatePickedupPosition()
+		{
+			if (_pickedUpObject == null)
+			{
 				return;
 			}
 
-			pickedUpObject.transform.position = pickedUpObjectInterpolator.CurrentPosition;
-			pickedUpObject.transform.rotation = pickedUpObjectInterpolator.CurrentRotation;
+			_pickedUpObject.transform.position = _pickedUpObjectInterpolator.CurrentPosition;
+			_pickedUpObject.transform.rotation = _pickedUpObjectInterpolator.CurrentRotation;
 		}
 
 		/// <summary>
 		/// Get world position of the character.
 		/// </summary>
 		/// <returns>World position of the player character.</returns>
-		public virtual Vector3 GetPosition() {
-			return interpolator.CurrentPosition;
+		public virtual Vector3 GetPosition()
+		{
+			return _interpolator.CurrentPosition;
 		}
 
 		/// <summary>
 		/// Get world rotation of the character.
 		/// </summary>
 		/// <returns>World rotation of the player character.</returns>
-		public virtual Quaternion GetRotation() {
-			return interpolator.CurrentRotation;
+		public virtual Quaternion GetRotation()
+		{
+			return _interpolator.CurrentRotation;
 		}
 
 		/// <summary>
 		/// Get steam name of the player.
 		/// </summary>
 		/// <returns>Steam name of the player.</returns>
-		public virtual string GetName() {
-			return Steamworks.SteamFriends.GetFriendPersonaName(steamId);
+		public virtual string GetName()
+		{
+			return Steamworks.SteamFriends.GetFriendPersonaName(_steamId);
 		}
 
 		/// <summary>
 		/// Pickup the object.
 		/// </summary>
 		/// <param name="netId">netId of the object to pickup</param>
-		public void PickupObject(ushort netId) {
-			pickedUpObjectNetId = netId;
+		public void PickupObject(ushort netId)
+		{
+			_pickedUpObjectNetId = netId;
 
 			// Teleport picked up object position to perform much nicer transition
 			// of object interpolation. Previously the object was interpolated from last frame.
 
-			pickedUpObjectInterpolator.Teleport(interpolator.CurrentPosition, interpolator.CurrentRotation);
-			if (IsSpawned) {
+			_pickedUpObjectInterpolator.Teleport(_interpolator.CurrentPosition, _interpolator.CurrentRotation);
+			if (IsSpawned)
+			{
 				UpdatePickedUpObject(true, false);
 			}
 		}
@@ -425,11 +462,13 @@ namespace MSCMP.Network {
 		/// Release the object.
 		/// </summary>
 		/// <param name="drop">Is it drop or throw?</param>
-		public void ReleaseObject(bool drop) {
-			if (IsSpawned) {
+		public void ReleaseObject(bool drop)
+		{
+			if (IsSpawned)
+			{
 				UpdatePickedUpObject(false, drop);
 			}
-			pickedUpObjectNetId = NetPickupable.INVALID_ID;
+			_pickedUpObjectNetId = NetPickupable.INVALID_ID;
 		}
 
 		/// <summary>
@@ -437,23 +476,27 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="pickup">Is this pickup action?</param>
 		/// <param name="drop">If not pickup is it drop or throw?</param>
-		private void UpdatePickedUpObject(bool pickup, bool drop) {
-			if (pickup) {
-				pickedUpObject = netWorld.GetPickupableGameObject(pickedUpObjectNetId);
-				Client.Assert(pickedUpObject != null, "Player tried to pickup object that does not exists in world. Net id: " + pickedUpObjectNetId);
-				oldPickupableLayer = pickedUpObject.layer;
-				pickedUpObject.layer = Utils.LAYER_IGNORE_RAYCAST;
-				pickedUpObject.GetComponent<Rigidbody>().isKinematic = true;
+		private void UpdatePickedUpObject(bool pickup, bool drop)
+		{
+			if (pickup)
+			{
+				_pickedUpObject = NetWorld.GetPickupableGameObject(_pickedUpObjectNetId);
+				Client.Assert(_pickedUpObject != null, "Player tried to pickup object that does not exists in world. Net id: " + _pickedUpObjectNetId);
+				_oldPickupableLayer = _pickedUpObject.layer;
+				_pickedUpObject.layer = Utils.LAYER_IGNORE_RAYCAST;
+				_pickedUpObject.GetComponent<Rigidbody>().isKinematic = true;
 			}
-			else {
-				Client.Assert(pickedUpObject != null, "Tried to drop item however player has no item in hands.");
-				pickedUpObject.layer = oldPickupableLayer;
-				pickedUpObject.GetComponent<Rigidbody>().isKinematic = false;
-				if (!drop) {
+			else
+			{
+				Client.Assert(_pickedUpObject != null, "Tried to drop item however player has no item in hands.");
+				_pickedUpObject.layer = _oldPickupableLayer;
+				_pickedUpObject.GetComponent<Rigidbody>().isKinematic = false;
+				if (!drop)
+				{
 					float thrust = 50;
-					pickedUpObject.GetComponent<Rigidbody>().AddForce(pickedUpObject.transform.forward * thrust, ForceMode.Impulse);
+					_pickedUpObject.GetComponent<Rigidbody>().AddForce(_pickedUpObject.transform.forward * thrust, ForceMode.Impulse);
 				}
-				pickedUpObject = null;
+				_pickedUpObject = null;
 			}
 		}
 	}

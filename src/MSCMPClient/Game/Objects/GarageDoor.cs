@@ -1,25 +1,28 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
-/// <summary>
-/// Handles sync for the garage doors.
-/// </summary>
-namespace MSCMP.Game.Objects {
-	class GarageDoor : ISyncedObject {
-		GameObject gameObject;
-		Rigidbody rigidbody;
-		HingeJoint hinge;
+namespace MSCMP.Game.Objects
+{
+	/// <summary>
+	/// Handles sync for the garage doors.
+	/// </summary>
+	internal class GarageDoor
+		: ISyncedObject
+	{
+		private readonly GameObject _gameObject;
+		private Rigidbody _rigidbody;
+		private readonly HingeJoint _hinge;
 
-		float lastRotation;
+		private float _lastRotation;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		public GarageDoor(GameObject go) {
-			gameObject = go.transform.parent.gameObject;
-			hinge = gameObject.GetComponent<HingeJoint>();
-			lastRotation = hinge.angle;
-			rigidbody = gameObject.GetComponent<Rigidbody>();
+		public GarageDoor(GameObject go)
+		{
+			_gameObject = go.transform.parent.gameObject;
+			_hinge = _gameObject.GetComponent<HingeJoint>();
+			_lastRotation = _hinge.angle;
+			_rigidbody = _gameObject.GetComponent<Rigidbody>();
 
 			HookEvents(go);
 		}
@@ -28,38 +31,44 @@ namespace MSCMP.Game.Objects {
 		/// Specifics for syncing this object.
 		/// </summary>
 		/// <returns>What should be synced for this object.</returns>
-		public ObjectSyncManager.Flags flags() {
+		public ObjectSyncManager.Flags Flags()
+		{
 			return ObjectSyncManager.Flags.Full;
 		}
 
 		/// <summary>
 		/// Hook events.
 		/// </summary>
-		void HookEvents(GameObject go) {
-			PlayMakerFSM doorFSM = go.GetComponent<PlayMakerFSM>();
-			EventHook.Add(doorFSM, "Open", new Func<bool>(() => {
+		private void HookEvents(GameObject go)
+		{
+			PlayMakerFSM doorFsm = go.GetComponent<PlayMakerFSM>();
+			EventHook.Add(doorFsm, "Open", () =>
+			{
 				go.GetComponent<Components.ObjectSyncComponent>().TakeSyncControl();
 				return false;
-			}));
-			EventHook.Add(doorFSM, "Close", new Func<bool>(() => {
+			});
+			EventHook.Add(doorFsm, "Close", () =>
+			{
 				go.GetComponent<Components.ObjectSyncComponent>().TakeSyncControl();
 				return false;
-			}));
+			});
 		}
 
 		/// <summary>
 		/// Get object's Transform.
 		/// </summary>
 		/// <returns>Object's Transform.</returns>
-		public Transform ObjectTransform() {
-			return gameObject.transform;
+		public Transform ObjectTransform()
+		{
+			return _gameObject.transform;
 		}
 
 		/// <summary>
 		/// Check is periodic sync of the object is enabled.
 		/// </summary>
 		/// <returns>Periodic sync enabled or disabled.</returns>
-		public bool PeriodicSyncEnabled() {
+		public bool PeriodicSyncEnabled()
+		{
 			return false;
 		}
 
@@ -67,21 +76,23 @@ namespace MSCMP.Game.Objects {
 		/// Determines if the object should be synced.
 		/// </summary>
 		/// <returns>True if object should be synced, false if it shouldn't.</returns>
-		public bool CanSync() {
-			if ((lastRotation - hinge.angle) > 0.1 || (lastRotation - hinge.angle) < -0.1) {
-				lastRotation = hinge.angle;
+		public bool CanSync()
+		{
+			if (_lastRotation - _hinge.angle > 0.1 || _lastRotation - _hinge.angle < -0.1)
+			{
+				_lastRotation = _hinge.angle;
 				return true;
 			}
-			else {
-				return false;
-			}
+
+			return false;
 		}
 
 		/// <summary>
 		/// Called when a player enters range of an object.
 		/// </summary>
 		/// <returns>True if the player should try to take ownership of the object.</returns>
-		public bool ShouldTakeOwnership() {
+		public bool ShouldTakeOwnership()
+		{
 			return true;
 		}
 
@@ -89,35 +100,40 @@ namespace MSCMP.Game.Objects {
 		/// Returns variables to be sent to the remote client.
 		/// </summary>
 		/// <returns>Variables to be sent to the remote client.</returns>
-		public float[] ReturnSyncedVariables(bool sendAllVariables) {
+		public float[] ReturnSyncedVariables(bool sendAllVariables)
+		{
 			return null;
 		}
 
 		/// <summary>
 		/// Handle variables sent from the remote client.
 		/// </summary>
-		public void HandleSyncedVariables(float[] variables) {
+		public void HandleSyncedVariables(float[] variables)
+		{
 
 		}
 
 		/// <summary>
 		/// Called when owner is set to the remote client.
 		/// </summary>
-		public void OwnerSetToRemote() {
+		public void OwnerSetToRemote()
+		{
 
 		}
 
 		/// <summary>
 		/// Called when owner is removed.
 		/// </summary>
-		public void OwnerRemoved() {
+		public void OwnerRemoved()
+		{
 
 		}
 
 		/// <summary>
 		/// Called when sync control is taken by force.
 		/// </summary>
-		public void SyncTakenByForce() {
+		public void SyncTakenByForce()
+		{
 
 		}
 
@@ -125,7 +141,8 @@ namespace MSCMP.Game.Objects {
 		/// Called when an object is constantly syncing. (Usually when a pickupable is picked up, or when a vehicle is being driven)
 		/// </summary>
 		/// <param name="newValue">If object is being constantly synced.</param>
-		public void ConstantSyncChanged(bool newValue) {
+		public void ConstantSyncChanged(bool newValue)
+		{
 
 		}
 	}

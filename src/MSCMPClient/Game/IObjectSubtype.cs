@@ -1,7 +1,7 @@
-using UnityEngine;
-
-namespace MSCMP.Game {
-	interface IObjectSubtype {
+namespace MSCMP.Game
+{
+	internal interface IObjectSubtype
+	{
 
 		/// <summary>
 		/// Return variables to be included in the object sync.

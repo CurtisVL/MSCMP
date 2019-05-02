@@ -6,111 +6,126 @@ namespace MSCMP.Game
 	/// <summary>
 	/// Manages various events for the phone.
 	/// </summary>
-	class PhoneManager
+	internal class PhoneManager
 	{
-		GameObject gameObject;
-		PlayMakerFSM ringFSM;
+		private GameObject _gameObject;
+		private PlayMakerFSM _ringFsm;
 		public static PhoneManager Instance;
 
-		bool callWaiting = false;
-		int timer = 0;
-		int cooldown = 0;
+		private bool _callWaiting;
+		private int _timer;
+		private int _cooldown;
 
-		bool answeredPhone = false;
+		private bool _answeredPhone;
 
 		/// <summary>
 		/// Setup the phone manager.
 		/// </summary>
 		/// <param name="go">Phone GameObject.</param>
-		public void Setup(GameObject go) {
+		public void Setup(GameObject go)
+		{
 			Instance = this;
-			gameObject = go;
+			_gameObject = go;
 			HookEvents();
 		}
 
 		/// <summary>
 		/// Called once per frame.
 		/// </summary>
-		public void OnUpdate() {
-			if (Input.GetKeyDown(KeyCode.K)) {
+		public void OnUpdate()
+		{
+			if (Input.GetKeyDown(KeyCode.K))
+			{
 				Logger.Log("Phone call triggered!");
 				PhoneCall("SHIT1", 10);
 			}
 
 			// Timer to allow the FSM to start up before sending phone call.
-			if (callWaiting) {
-				if (timer >= 5) {
-					timer = 0;
-					callWaiting = false;
-					ringFSM.SendEvent("MP_State 4");
+			if (_callWaiting)
+			{
+				if (_timer >= 5)
+				{
+					_timer = 0;
+					_callWaiting = false;
+					_ringFsm.SendEvent("MP_State 4");
 				}
-				else {
-					timer++;
+				else
+				{
+					_timer++;
 				}
 			}
 
 			// Detect when phone call has been answered.
-			if (gameObject.activeSelf) {
-				if (ringFSM.Fsm.GetFsmBool("Answer").Value && !answeredPhone) {
+			if (_gameObject.activeSelf)
+			{
+				if (_ringFsm.Fsm.GetFsmBool("Answer").Value && !_answeredPhone)
+				{
 					AnsweredPhoneCall();
-					answeredPhone = true;
+					_answeredPhone = true;
 				}
 			}
-			else if (answeredPhone) {
-				answeredPhone = false;
+			else if (_answeredPhone)
+			{
+				_answeredPhone = false;
 			}
 		}
 
 		/// <summary>
 		/// Hook phone related events.
 		/// </summary>
-		void HookEvents() {
-			gameObject.SetActive(true);
+		private void HookEvents()
+		{
+			_gameObject.SetActive(true);
 
-			ringFSM = Utils.GetPlaymakerScriptByName(gameObject, "Ring");
-			EventHook.Add(ringFSM, "State 4", new Func<bool>(() => {
-				if (Network.NetManager.Instance.IsHost) {
+			_ringFsm = Utils.GetPlaymakerScriptByName(_gameObject, "Ring");
+			EventHook.Add(_ringFsm, "State 4", () =>
+			{
+				if (Network.NetManager.Instance.IsHost)
+				{
 					WritePhoneCall();
 				}
 				return false;
-			}));
+			});
 
-			EventHook.Add(ringFSM, "Disable phone", new Func<bool>(() => {
-				return false;
-			}));
+			EventHook.Add(_ringFsm, "Disable phone", () => false);
 
-			EventHook.AddWithSync(ringFSM, "Thunder calls");
+			EventHook.AddWithSync(_ringFsm, "Thunder calls");
 
-			gameObject.SetActive(false);
+			_gameObject.SetActive(false);
 		}
 
 		/// <summary>
 		/// Send phone call sync to other clients.
 		/// </summary>
-		void WritePhoneCall() {
+		private void WritePhoneCall()
+		{
 			// Cooldown required to stop event running multiple times causing pointless messages.
-			if (cooldown == 0) {
-				cooldown++;
+			if (_cooldown == 0)
+			{
+				_cooldown++;
 				Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage();
-				msg.topic = ringFSM.Fsm.GetFsmString("Topic").Value;
-				msg.timesToRing = ringFSM.Fsm.GetFsmInt("RandomTimes").Value;
+				msg.topic = _ringFsm.Fsm.GetFsmString("Topic").Value;
+				msg.timesToRing = _ringFsm.Fsm.GetFsmInt("RandomTimes").Value;
 				Network.NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			}
-			else if (cooldown != 0) {
-				cooldown++;
+			else if (_cooldown != 0)
+			{
+				_cooldown++;
 			}
-			else if (cooldown > 10) {
-				cooldown = 0;
+			else if (_cooldown > 10)
+			{
+				_cooldown = 0;
 			}
 		}
 
 		/// <summary>
 		/// Called when a phone call is answered.
 		/// </summary>
-		void AnsweredPhoneCall() {
+		private void AnsweredPhoneCall()
+		{
 			Logger.Debug("Phone call answered!");
 			Network.Messages.PhoneMessage msg = new Network.Messages.PhoneMessage();
-			msg.topic = ringFSM.Fsm.GetFsmString("Topic").Value;
+			msg.topic = _ringFsm.Fsm.GetFsmString("Topic").Value;
 			msg.timesToRing = -1;
 			Network.NetManager.Instance.BroadcastMessage(msg, Steamworks.EP2PSend.k_EP2PSendReliable);
 			MapManager.Instance.SyncDarts();
@@ -121,20 +136,23 @@ namespace MSCMP.Game
 		/// </summary>
 		/// <param name="topic">Topic of the call.</param>
 		/// <param name="timesToRing">Amount of times the phone should ring.</param>
-		public void PhoneCall(string topic, int timesToRing) {
+		public void PhoneCall(string topic, int timesToRing)
+		{
 			// Cancel call as it has been answered remotely.
-			if (timesToRing == -1) {
-				ringFSM.SendEvent("MP_Disable phone");
+			if (timesToRing == -1)
+			{
+				_ringFsm.SendEvent("MP_Disable phone");
 				//gameObject.SetActive(false);
 				Logger.Debug("Disabling phone as remote client has answered it!");
 			}
 
 			// Start phone ringing.
-			if (!gameObject.activeSelf) {
-				gameObject.SetActive(true);
-				ringFSM.Fsm.GetFsmString("Topic").Value = topic;
-				ringFSM.Fsm.GetFsmInt("RandomTimes").Value = timesToRing;
-				callWaiting = true;
+			if (!_gameObject.activeSelf)
+			{
+				_gameObject.SetActive(true);
+				_ringFsm.Fsm.GetFsmString("Topic").Value = topic;
+				_ringFsm.Fsm.GetFsmInt("RandomTimes").Value = timesToRing;
+				_callWaiting = true;
 			}
 		}
 	}

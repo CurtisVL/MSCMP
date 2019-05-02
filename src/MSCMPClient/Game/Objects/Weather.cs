@@ -1,18 +1,18 @@
-﻿using System;
+﻿using MSCMP.Game.Components;
+using System;
 using UnityEngine;
-using MSCMP.Game.Components;
 
 namespace MSCMP.Game.Objects
 {
-	class Weather : ISyncedObject
+	internal class Weather 
+		: ISyncedObject
 	{
-		GameObject gameObject;
-		ObjectSyncComponent osc;
-		PlayMakerFSM weatherFSM;
+		private readonly GameObject _gameObject;
+		private readonly PlayMakerFSM _weatherFsm;
 
 		// Update rate for weather in frames.
-		float syncInterval = 150;
-		float currentFrame = 0;
+		private readonly float _syncInterval = 150;
+		private float _currentFrame;
 
 		public enum WeatherStates
 		{
@@ -20,18 +20,20 @@ namespace MSCMP.Game.Objects
 			Rain,
 			Thunder
 		}
-		WeatherStates currentWeather = WeatherStates.NoWeather;
+
+		private WeatherStates _currentWeather = WeatherStates.NoWeather;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		public Weather(GameObject go, ObjectSyncComponent syncComponent) {
-			gameObject = go;
-			osc = syncComponent;
-			weatherFSM = gameObject.GetComponent<PlayMakerFSM>();
+		public Weather(GameObject go, ObjectSyncComponent syncComponent)
+		{
+			_gameObject = go;
+			_weatherFsm = _gameObject.GetComponent<PlayMakerFSM>();
 
-			if (Network.NetManager.Instance.IsHost) {
-				osc.TakeSyncControl();
+			if (Network.NetManager.Instance.IsHost)
+			{
+				syncComponent.TakeSyncControl();
 			}
 
 			HookEvents();
@@ -41,7 +43,8 @@ namespace MSCMP.Game.Objects
 		/// Specifics for syncing this object.
 		/// </summary>
 		/// <returns>What should be synced for this object.</returns>
-		public ObjectSyncManager.Flags flags() {
+		public ObjectSyncManager.Flags Flags()
+		{
 			return ObjectSyncManager.Flags.Full;
 		}
 
@@ -49,8 +52,9 @@ namespace MSCMP.Game.Objects
 		/// Get object's Transform.
 		/// </summary>
 		/// <returns>Object's Transform.</returns>
-		public Transform ObjectTransform() {
-			return gameObject.transform;
+		public Transform ObjectTransform()
+		{
+			return _gameObject.transform;
 		}
 
 		/// <summary>
@@ -58,82 +62,91 @@ namespace MSCMP.Game.Objects
 		/// </summary>
 		/// <param name="pos">Position.</param>
 		/// <param name="rot">Rotation.</param>
-		public void SetPosAndRot(Vector3 pos, Quaternion rot) {
-			weatherFSM.FsmVariables.GetFsmFloat("PosX").Value = pos.x;
-			weatherFSM.FsmVariables.GetFsmFloat("PosZ").Value = pos.z;
-			weatherFSM.FsmVariables.GetFsmFloat("Rotation").Value = rot.y;
-			gameObject.transform.localRotation = rot;
+		public void SetPosAndRot(Vector3 pos, Quaternion rot)
+		{
+			_weatherFsm.FsmVariables.GetFsmFloat("PosX").Value = pos.x;
+			_weatherFsm.FsmVariables.GetFsmFloat("PosZ").Value = pos.z;
+			_weatherFsm.FsmVariables.GetFsmFloat("Rotation").Value = rot.y;
+			_gameObject.transform.localRotation = rot;
 		}
 
 		/// <summary>
 		/// Check is periodic sync of the object is enabled.
 		/// </summary>
 		/// <returns>Periodic sync enabled or disabled.</returns>
-		public bool PeriodicSyncEnabled() {
+		public bool PeriodicSyncEnabled()
+		{
 			return true;
 		}
 
 		/// <summary>
 		/// Hook vehicle door related events.
 		/// </summary>
-		void HookEvents() {
-			EventHook.Add(weatherFSM, "Rain", new Func<bool>(() => {
-				currentWeather = WeatherStates.Rain;
+		private void HookEvents()
+		{
+			EventHook.Add(_weatherFsm, "Rain", () =>
+			{
+				_currentWeather = WeatherStates.Rain;
 				return false;
-			}));
-			EventHook.Add(weatherFSM, "Thunder", new Func<bool>(() => {
-				currentWeather = WeatherStates.Thunder;
+			});
+			EventHook.Add(_weatherFsm, "Thunder", () =>
+			{
+				_currentWeather = WeatherStates.Thunder;
 				return false;
-			}));
-			EventHook.Add(weatherFSM, "No weather", new Func<bool>(() => {
-				currentWeather = WeatherStates.NoWeather;
+			});
+			EventHook.Add(_weatherFsm, "No weather", () =>
+			{
+				_currentWeather = WeatherStates.NoWeather;
 				return false;
-			}));
+			});
 		}
 
 		/// <summary>
 		/// Determines if the object should be synced.
 		/// </summary>
 		/// <returns>True if object should be synced, false if it shouldn't.</returns>
-		public bool CanSync() {
+		public bool CanSync()
+		{
 			// Only sync weather as the host.
-			if (Network.NetManager.Instance.IsHost) {
-				if (currentFrame >= syncInterval) {
-					currentFrame = 0;
+			if (Network.NetManager.Instance.IsHost)
+			{
+				if (_currentFrame >= _syncInterval)
+				{
+					_currentFrame = 0;
 					return true;
 				}
-				else {
-					currentFrame++;
-					return false;
-				}
-			}
-			else {
+
+				_currentFrame++;
 				return false;
 			}
+
+			return false;
 		}
 
 		/// <summary>
 		/// Called when a player enters range of an object.
 		/// </summary>
 		/// <returns>True if the player should try to take ownership of the object.</returns>
-		public bool ShouldTakeOwnership() {
-			if (Network.NetManager.Instance.IsHost) {
+		public bool ShouldTakeOwnership()
+		{
+			if (Network.NetManager.Instance.IsHost)
+			{
 				return true;
 			}
-			else {
-				return false;
-			}
+
+			return false;
 		}
 
 		/// <summary>
 		/// Returns variables to be sent to the remote client.
 		/// </summary>
 		/// <returns>Variables to be sent to the remote client.</returns>
-		public float[] ReturnSyncedVariables(bool sendAllVariables) {
+		public float[] ReturnSyncedVariables(bool sendAllVariables)
+		{
 			float[] variables = {
-				weatherFSM.FsmVariables.GetFsmFloat("Offset").Value,
-				weatherFSM.FsmVariables.GetFsmInt("WeatherType").Value,
-				(float)currentWeather
+				_weatherFsm.FsmVariables.GetFsmFloat("Offset").Value,
+				_weatherFsm.FsmVariables.GetFsmInt("WeatherType").Value,
+				(float)_currentWeather
 			};
 			return variables;
 		}
@@ -141,23 +154,26 @@ namespace MSCMP.Game.Objects
 		/// <summary>
 		/// Handle variables sent from the remote client.
 		/// </summary>
-		public void HandleSyncedVariables(float[] variables) {
-			weatherFSM.FsmVariables.GetFsmFloat("Offset").Value = variables[0];
-			weatherFSM.FsmVariables.GetFsmInt("WeatherType").Value = Convert.ToInt32(variables[1]);
+		public void HandleSyncedVariables(float[] variables)
+		{
+			_weatherFsm.FsmVariables.GetFsmFloat("Offset").Value = variables[0];
+			_weatherFsm.FsmVariables.GetFsmInt("WeatherType").Value = Convert.ToInt32(variables[1]);
 			WeatherStates newState = (WeatherStates)variables[2];
-			if (newState != currentWeather) {
-				switch (newState) {
+			if (newState != _currentWeather)
+			{
+				switch (newState)
+				{
 					case WeatherStates.NoWeather:
-						weatherFSM.SendEvent("MP_NoWeather");
-						currentWeather = WeatherStates.NoWeather;
+						_weatherFsm.SendEvent("MP_NoWeather");
+						_currentWeather = WeatherStates.NoWeather;
 						break;
 					case WeatherStates.Rain:
-						weatherFSM.SendEvent("MP_Rain");
-						currentWeather = WeatherStates.Rain;
+						_weatherFsm.SendEvent("MP_Rain");
+						_currentWeather = WeatherStates.Rain;
 						break;
 					case WeatherStates.Thunder:
-						weatherFSM.SendEvent("MP_Thunder");
-						currentWeather = WeatherStates.Thunder;
+						_weatherFsm.SendEvent("MP_Thunder");
+						_currentWeather = WeatherStates.Thunder;
 						break;
 				}
 			}
@@ -166,21 +182,24 @@ namespace MSCMP.Game.Objects
 		/// <summary>
 		/// Called when owner is set to the remote client.
 		/// </summary>
-		public void OwnerSetToRemote() {
+		public void OwnerSetToRemote()
+		{
 
 		}
 
 		/// <summary>
 		/// Called when owner is removed.
 		/// </summary>
-		public void OwnerRemoved() {
+		public void OwnerRemoved()
+		{
 
 		}
 
 		/// <summary>
 		/// Called when sync control is taken by force.
 		/// </summary>
-		public void SyncTakenByForce() {
+		public void SyncTakenByForce()
+		{
 
 		}
 
@@ -188,7 +207,8 @@ namespace MSCMP.Game.Objects
 		/// Called when an object is constantly syncing. (Usually when a pickupable is picked up, or when a vehicle is being driven)
 		/// </summary>
 		/// <param name="newValue">If object is being constantly synced.</param>
-		public void ConstantSyncChanged(bool newValue) {
+		public void ConstantSyncChanged(bool newValue)
+		{
 
 		}
 	}

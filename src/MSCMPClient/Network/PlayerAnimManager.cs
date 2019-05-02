@@ -1,37 +1,40 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MSCMP.Network {
+namespace MSCMP.Network
+{
 	/// <summary>
 	/// Class managing the animations of the player.
 	/// </summary>
-	class PlayerAnimManager {
-		List<AnimState> states = new List<AnimState>();
+	internal class PlayerAnimManager
+	{
+		private readonly List<AnimState> _states = new List<AnimState>();
 
-		GameObject characterGameObject = null;
-		Animation characterAnimationComponent = null;
+		private GameObject _characterGameObject;
+		private Animation _characterAnimationComponent;
 
 		/// <summary>
 		/// Currently played animation id.
 		/// </summary>
-		public AnimationId currentAnim = AnimationId.Standing;
-		public AnimationState activeAnimationState = null;
+		public AnimationId CurrentAnim = AnimationId.Standing;
+		public AnimationState ActiveAnimationState;
 
 		/// <summary>
 		/// The amount of movement packets needed left to send animation sync packet
 		/// </summary>
-		public int PACKETS_LEFT_TO_SYNC = 0;
+		public int PacketsLeftToSync = 0;
 
 		/// <summary>
 		/// The total amount of movement packets we need
 		/// </summary>
-		public int PACKETS_TOTAL_FOR_SYNC = 2;
+		public int PacketsTotalForSync = 2;
 
 		#region Animations
 		/// <summary>
 		/// The animation ids.
 		/// </summary>
-		public enum AnimationId {
+		public enum AnimationId
+		{
 			Walk,
 			Standing,
 			Jumping,
@@ -49,7 +52,7 @@ namespace MSCMP.Network {
 			Drinking
 		}
 
-		private string[] AnimationNames = new string[] {
+		private readonly string[] _animationNames = {
 			"Walk",
 			"Idle",
 			"Jump",
@@ -72,12 +75,14 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="animation">The id of the animation.</param>
 		/// <returns>Name of the animation.</returns>
-		private string GetAnimationName(AnimationId animation) {
-			return AnimationNames[(int)animation];
+		private string GetAnimationName(AnimationId animation)
+		{
+			return _animationNames[(int)animation];
 		}
 		#endregion
 		#region Stances (Stand/Crouch/Crouch Low)
-		private enum StanceId {
+		private enum StanceId
+		{
 			Standing,
 			Crouching,
 			CrouchingLow
@@ -89,8 +94,10 @@ namespace MSCMP.Network {
 		/// <param name="stance">The id of the stance.</param>
 		/// <param name="standingAnim">True if it's standing, or else moving.</param>
 		/// <returns>Id of the animation.</returns>
-		private AnimationId GetAnimationFromStance(StanceId stance, bool standingAnim = true) {
-			switch (stance) {
+		private AnimationId GetAnimationFromStance(StanceId stance, bool standingAnim = true)
+		{
+			switch (stance)
+			{
 				case StanceId.Crouching:
 					if (standingAnim) return AnimationId.Crouching;
 					else return AnimationId.CrouchingWalk;
@@ -108,7 +115,8 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// The hand state ids.
 		/// </summary>
-		public enum HandStateId {
+		public enum HandStateId
+		{
 			MiddleFingering,
 			Lifting,
 			Hitting,
@@ -119,7 +127,7 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// The hand state GameObject names.
 		/// </summary>
-		private string[] HandStateNames = new string[] {
+		private readonly string[] _handStateNames = {
 			"MiddleFinger",
 			"Lift",
 			"Fist",
@@ -132,7 +140,8 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="handState">The id of the hand state.</param>
 		/// <returns>Name of the hand state.</returns>
-		public HandStateId GetHandState(byte handState) {
+		public HandStateId GetHandState(byte handState)
+		{
 			return (HandStateId)handState;
 		}
 
@@ -141,27 +150,30 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="gameObject">The object to get it from.</param>
 		/// <returns>The ID of the active state or else 255 if none.</returns>
-		public byte GetActiveHandState(GameObject gameObject) {
-			GameObject HandHandleObject = gameObject.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera").gameObject;
+		public byte GetActiveHandState(GameObject gameObject)
+		{
+			GameObject handHandleObject = gameObject.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera").gameObject;
 
-			for (byte i = 0; i < HandStateNames.Length; i++) {
-				string HandStateName = HandStateNames[i];
-				GameObject HandStateObject = HandHandleObject.transform.FindChild(HandStateName).gameObject;
+			for (byte i = 0; i < _handStateNames.Length; i++)
+			{
+				string handStateName = _handStateNames[i];
+				GameObject handStateObject = handHandleObject.transform.FindChild(handStateName).gameObject;
 
-				if (HandStateObject.activeInHierarchy) return i;
+				if (handStateObject.activeInHierarchy) return i;
 			}
 
 			return 255;
 		}
 		#endregion
 		#region Drink States
-		static List<GameObject> Drinks = new List<GameObject>();
-		GameObject ourDrinkObject = null;
+
+		private static readonly List<GameObject> _drinks = new List<GameObject>();
+		private GameObject _ourDrinkObject;
 
 		/// <summary>
 		/// The drink GameObject names.
 		/// </summary>
-		private string[] DrinkObjectNames = new string[] {
+		private readonly string[] _drinkObjectNames = {
 			"HandJuice",
 			"HandMilk",
 			"HandSpray",
@@ -173,7 +185,7 @@ namespace MSCMP.Network {
 			"MilkGlass"
 		};
 
-		private float[,] DrinkOffsets = new float[,] {
+		private readonly float[,] _drinkOffsets = {
 			{ -0.008f, -0.016f, 0.005f },
 			{ -0.025f, -0.02f, 0.015f },
 			{ -0.01f, 0.0f, 0.01f },
@@ -185,7 +197,7 @@ namespace MSCMP.Network {
 			{ -0.02f, 0.005f, 0.012f }
 		};
 
-		private float[,] DrinkRotations = new float[,] {
+		private readonly float[,] _drinkRotations = {
 			{ 5, 140, 295 },
 			{ 5, 140, 295 },
 			{ 350, 190, 210 },
@@ -197,19 +209,21 @@ namespace MSCMP.Network {
 			{ 310, 150, 273 }
 		};
 
-		public bool AreDrinksPreloaded() { return Drinks.Count != 0; }
+		public bool AreDrinksPreloaded() { return _drinks.Count != 0; }
 
 		/// <summary>
 		/// Preloads the drink game objects of the game player to use them later while drinking
 		/// </summary>
 		/// <param name="character">The player object to get the drink objects from</param>
-		public void PreloadDrinkObjects(GameObject character) {
-			GameObject HandHandleObject = character.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera/Drink/Hand").gameObject;
+		public void PreloadDrinkObjects(GameObject character)
+		{
+			GameObject handHandleObject = character.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera/Drink/Hand").gameObject;
 
-			for (byte i = 0; i < DrinkObjectNames.Length; i++) {
-				GameObject DrinkObject = HandHandleObject.transform.FindChild(DrinkObjectNames[i]).gameObject;
-				Client.Assert(DrinkObject, "Unable to find drink object - " + DrinkObjectNames[i]);
-				Drinks.Add(DrinkObject);
+			for (byte i = 0; i < _drinkObjectNames.Length; i++)
+			{
+				GameObject drinkObject = handHandleObject.transform.FindChild(_drinkObjectNames[i]).gameObject;
+				Client.Assert(drinkObject, "Unable to find drink object - " + _drinkObjectNames[i]);
+				_drinks.Add(drinkObject);
 			}
 		}
 
@@ -218,12 +232,14 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="character">The player object to get the drink object from</param>
 		/// <returns>255 if player is not drinking, or else its ID</returns>
-		public byte GetDrinkingObject(GameObject character) {
-			GameObject HandHandleObject = character.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera/Drink/Hand").gameObject;
+		public byte GetDrinkingObject(GameObject character)
+		{
+			GameObject handHandleObject = character.transform.FindChild("Pivot/Camera/FPSCamera/FPSCamera/Drink/Hand").gameObject;
 
-			for (byte i = 0; i < DrinkObjectNames.Length; i++) {
-				GameObject DrinkObject = HandHandleObject.transform.FindChild(DrinkObjectNames[i]).gameObject;
-				if (DrinkObject.activeInHierarchy) return i;
+			for (byte i = 0; i < _drinkObjectNames.Length; i++)
+			{
+				GameObject drinkObject = handHandleObject.transform.FindChild(_drinkObjectNames[i]).gameObject;
+				if (drinkObject.activeInHierarchy) return i;
 			}
 
 			return 255;
@@ -234,45 +250,51 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <param name="character">The player object to set the drink object</param>
 		/// /// <param name="drinkingObjectId">The id of the drink object</param>
-		public void SetDrinkingObject(byte drinkingObjectId) {
-			if (drinkingObjectId == 255) {
+		public void SetDrinkingObject(byte drinkingObjectId)
+		{
+			if (drinkingObjectId == 255)
+			{
 				PlayActionAnim(AnimationId.Drinking, false);
 
-				if (ourDrinkObject != null) {
-					GameObject.DestroyObject(ourDrinkObject);
-					ourDrinkObject = null;
+				if (_ourDrinkObject != null)
+				{
+					Object.DestroyObject(_ourDrinkObject);
+					_ourDrinkObject = null;
 				}
 				return;
 			}
 
-			string drinkObjectName = DrinkObjectNames[(int)drinkingObjectId];
+			string drinkObjectName = _drinkObjectNames[(int)drinkingObjectId];
 
 			GameObject ourDrinkObjectToSpawn = null;
-			foreach (GameObject drink in Drinks) {
+			foreach (GameObject drink in _drinks)
+			{
 				if (drink.name == drinkObjectName) ourDrinkObjectToSpawn = drink;
 			}
 
-			if (ourDrinkObject != null) GameObject.DestroyObject(ourDrinkObject);
-			ourDrinkObject = GameObject.Instantiate(ourDrinkObjectToSpawn);
+			if (_ourDrinkObject != null) Object.DestroyObject(_ourDrinkObject);
+			_ourDrinkObject = Object.Instantiate(ourDrinkObjectToSpawn);
 
-			ourDrinkObject.SetActive(true);
+			_ourDrinkObject.SetActive(true);
 
-			Transform playerFingers = characterGameObject.transform.FindChild("pelvis/spine_mid/shoulders/collar_left/shoulder(leftx)/arm(leftx)/hand_left/finger_left");
-			ourDrinkObject.transform.SetParent(playerFingers);
+			Transform playerFingers = _characterGameObject.transform.FindChild("pelvis/spine_mid/shoulders/collar_left/shoulder(leftx)/arm(leftx)/hand_left/finger_left");
+			_ourDrinkObject.transform.SetParent(playerFingers);
 
-			ourDrinkObject.transform.localPosition = new Vector3(DrinkOffsets[drinkingObjectId, 0], DrinkOffsets[drinkingObjectId, 1], DrinkOffsets[drinkingObjectId, 2]);
-			ourDrinkObject.transform.localEulerAngles = new Vector3(DrinkRotations[drinkingObjectId, 0], DrinkRotations[drinkingObjectId, 1], DrinkRotations[drinkingObjectId, 2]);
-			ourDrinkObject.layer = 0;
+			_ourDrinkObject.transform.localPosition = new Vector3(_drinkOffsets[drinkingObjectId, 0], _drinkOffsets[drinkingObjectId, 1], _drinkOffsets[drinkingObjectId, 2]);
+			_ourDrinkObject.transform.localEulerAngles = new Vector3(_drinkRotations[drinkingObjectId, 0], _drinkRotations[drinkingObjectId, 1], _drinkRotations[drinkingObjectId, 2]);
+			_ourDrinkObject.layer = 0;
 
-			if (ourDrinkObject.transform.childCount != 0) {
-				if (ourDrinkObject.name.StartsWith("Hand")) {
-					ourDrinkObject.transform.GetChild(2).gameObject.layer = 0;
-					ourDrinkObject.transform.GetChild(2).localPosition = new Vector3(0, 0, 0);
+			if (_ourDrinkObject.transform.childCount != 0)
+			{
+				if (_ourDrinkObject.name.StartsWith("Hand"))
+				{
+					_ourDrinkObject.transform.GetChild(2).gameObject.layer = 0;
+					_ourDrinkObject.transform.GetChild(2).localPosition = new Vector3(0, 0, 0);
 
-					GameObject.DestroyObject(ourDrinkObject.transform.GetChild(0).gameObject); //Destroying 'Armature'
-					GameObject.DestroyObject(ourDrinkObject.transform.GetChild(1).gameObject); //Destroying 'hand_rigged'
+					Object.DestroyObject(_ourDrinkObject.transform.GetChild(0).gameObject); //Destroying 'Armature'
+					Object.DestroyObject(_ourDrinkObject.transform.GetChild(1).gameObject); //Destroying 'hand_rigged'
 				}
-				else ourDrinkObject.transform.GetChild(0).gameObject.layer = 0;
+				else _ourDrinkObject.transform.GetChild(0).gameObject.layer = 0;
 			}
 
 			PlayActionAnim(AnimationId.Drinking, true);
@@ -282,26 +304,27 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Sets up the animation component and the layers for each animation. Also registers the animation states.
 		/// </summary>
-		/// <param name="animComponent">The animation component of the player.</param>
-		public void SetupAnimations(GameObject character) {
-			characterGameObject = character;
-			characterAnimationComponent = characterGameObject.GetComponentInChildren<Animation>();
+		/// <param name="character"></param>
+		public void SetupAnimations(GameObject character)
+		{
+			_characterGameObject = character;
+			_characterAnimationComponent = _characterGameObject.GetComponentInChildren<Animation>();
 
-			characterAnimationComponent["Jump"].layer = 1;
-			characterAnimationComponent["Drunk"].layer = 2;
-			characterAnimationComponent["Drunk"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Lean"].layer = 3;
-			characterAnimationComponent["Lean"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Finger"].layer = 3;
-			characterAnimationComponent["Finger"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Hitchhike"].layer = 3;
-			characterAnimationComponent["Hitchhike"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Hit"].layer = 3;
-			characterAnimationComponent["Hit"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Push"].layer = 3;
-			characterAnimationComponent["Push"].blendMode = AnimationBlendMode.Additive;
-			characterAnimationComponent["Drink"].layer = 3;
-			characterAnimationComponent["Drink"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Jump"].layer = 1;
+			_characterAnimationComponent["Drunk"].layer = 2;
+			_characterAnimationComponent["Drunk"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Lean"].layer = 3;
+			_characterAnimationComponent["Lean"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Finger"].layer = 3;
+			_characterAnimationComponent["Finger"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Hitchhike"].layer = 3;
+			_characterAnimationComponent["Hitchhike"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Hit"].layer = 3;
+			_characterAnimationComponent["Hit"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Push"].layer = 3;
+			_characterAnimationComponent["Push"].blendMode = AnimationBlendMode.Additive;
+			_characterAnimationComponent["Drink"].layer = 3;
+			_characterAnimationComponent["Drink"].blendMode = AnimationBlendMode.Additive;
 
 			RegisterAnimStates();
 		}
@@ -312,18 +335,20 @@ namespace MSCMP.Network {
 		/// <param name="animation">The id of the animation.</param>
 		/// <param name="force">If it should be forced, or just crossfaded</param>
 		/// <param name="mainLayer">If it's into the main movement layer, or an action to be played simultaneously</param>
-		public void PlayAnimation(AnimationId animation, bool force = false, bool mainLayer = true) {
-			if (characterAnimationComponent == null) return;
-			if (!force && currentAnim == animation && mainLayer) return;
+		public void PlayAnimation(AnimationId animation, bool force = false, bool mainLayer = true)
+		{
+			if (_characterAnimationComponent == null) return;
+			if (!force && CurrentAnim == animation && mainLayer) return;
 
 			string animName = GetAnimationName(animation);
 
-			if (force) characterAnimationComponent.Play(animName);
-			else characterAnimationComponent.CrossFade(animName);
+			if (force) _characterAnimationComponent.Play(animName);
+			else _characterAnimationComponent.CrossFade(animName);
 
-			if (mainLayer) {
-				currentAnim = animation;
-				activeAnimationState = characterAnimationComponent[animName];
+			if (mainLayer)
+			{
+				CurrentAnim = animation;
+				ActiveAnimationState = _characterAnimationComponent[animName];
 			}
 		}
 
@@ -331,151 +356,176 @@ namespace MSCMP.Network {
 		/// Blends out an animation smoothly (it's not getting disabled that way. That's why we use 'CheckBlendedOutAnimationStates' function to disable it there)
 		/// </summary>
 		/// <param name="animation">The name of the animation</param>
-		private void BlendOutAnimation(AnimationId animation) {
-			if (characterAnimationComponent == null) return;
-			characterAnimationComponent.Blend(GetAnimationName(animation), 0);
+		private void BlendOutAnimation(AnimationId animation)
+		{
+			if (_characterAnimationComponent == null) return;
+			_characterAnimationComponent.Blend(GetAnimationName(animation), 0);
 		}
 
 		/// <summary>
 		/// Plays an Action Animation from start to end, or the opposite
 		/// </summary>
-		/// <param name="animName">The name of the animation</param>
+		/// <param name="animation">The name of the animation</param>
 		/// <param name="play">Start or Stop the animation</param>
-		private void PlayActionAnim(AnimationId animation, bool play) {
-			if (characterAnimationComponent == null) return;
+		private void PlayActionAnim(AnimationId animation, bool play)
+		{
+			if (_characterAnimationComponent == null) return;
 			string animName = GetAnimationName(animation);
 
-			if (play) {
-				characterAnimationComponent[animName].wrapMode = WrapMode.ClampForever;
-				characterAnimationComponent[animName].speed = 1;
-				characterAnimationComponent[animName].enabled = true;
-				characterAnimationComponent[animName].weight = 1.0f;
+			if (play)
+			{
+				_characterAnimationComponent[animName].wrapMode = WrapMode.ClampForever;
+				_characterAnimationComponent[animName].speed = 1;
+				_characterAnimationComponent[animName].enabled = true;
+				_characterAnimationComponent[animName].weight = 1.0f;
 			}
-			else {
-				characterAnimationComponent[animName].wrapMode = WrapMode.Once;
-				if (characterAnimationComponent[animName].time > characterAnimationComponent[animName].length) {
-					characterAnimationComponent[animName].time = characterAnimationComponent[animName].length;
+			else
+			{
+				_characterAnimationComponent[animName].wrapMode = WrapMode.Once;
+				if (_characterAnimationComponent[animName].time > _characterAnimationComponent[animName].length)
+				{
+					_characterAnimationComponent[animName].time = _characterAnimationComponent[animName].length;
 				}
-				characterAnimationComponent[animName].speed = -1;
-				characterAnimationComponent[animName].weight = 1.0f;
+				_characterAnimationComponent[animName].speed = -1;
+				_characterAnimationComponent[animName].weight = 1.0f;
 			}
 		}
 
 		/// <summary>
 		/// Check if an animation has been blended with 0 weight and disables it
 		/// </summary>
-		public void CheckBlendedOutAnimationStates() {
-			if (characterAnimationComponent == null) return;
+		public void CheckBlendedOutAnimationStates()
+		{
+			if (_characterAnimationComponent == null) return;
 
-			if (characterAnimationComponent["Jump"].time != 0.0f && characterAnimationComponent["Jump"].weight == 0.0f) {
-				characterAnimationComponent["Jump"].enabled = false;
-				characterAnimationComponent["Jump"].time = 0;
+			if (_characterAnimationComponent["Jump"].time != 0.0f && _characterAnimationComponent["Jump"].weight == 0.0f)
+			{
+				_characterAnimationComponent["Jump"].enabled = false;
+				_characterAnimationComponent["Jump"].time = 0;
 			}
 
-			if (characterAnimationComponent["Drunk"].time != 0.0f && characterAnimationComponent["Drunk"].weight == 0.0f) {
-				characterAnimationComponent["Drunk"].enabled = false;
-				characterAnimationComponent["Drunk"].time = 0;
+			if (_characterAnimationComponent["Drunk"].time != 0.0f && _characterAnimationComponent["Drunk"].weight == 0.0f)
+			{
+				_characterAnimationComponent["Drunk"].enabled = false;
+				_characterAnimationComponent["Drunk"].time = 0;
 			}
 		}
 
-		private class AnimState : PlayerAnimManager {
-			bool isActive = false;
+		private class AnimState : PlayerAnimManager
+		{
+			private bool _isActive;
 
-			public virtual bool CanActivate(Messages.AnimSyncMessage msg) {
+			public virtual bool CanActivate(Messages.AnimSyncMessage msg)
+			{
 				// condition if this state can be activated (must also return true if state is active)
 				return false;
 			}
 
-			public virtual void Activate() {
+			public virtual void Activate()
+			{
 				// start anim here
 			}
 
-			public virtual void Deactivate() {
+			public virtual void Deactivate()
+			{
 				// stop anim here
 			}
 
-			public void TryActivate(Messages.AnimSyncMessage msg) {
+			public void TryActivate(Messages.AnimSyncMessage msg)
+			{
 				bool canActivate = CanActivate(msg);
-				if (!isActive && canActivate) {
+				if (!_isActive && canActivate)
+				{
 					Activate();
-					isActive = true;
+					_isActive = true;
 				}
-				else if (isActive && !canActivate) {
+				else if (_isActive && !canActivate)
+				{
 					Deactivate();
-					isActive = false;
+					_isActive = false;
 				}
 			}
 		}
 
-		private class LeaningState : AnimState {
+		private class LeaningState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return msg.isLeaning; }
 			public override void Activate() { PlayActionAnim(AnimationId.Leaning, true); }
 			public override void Deactivate() { PlayActionAnim(AnimationId.Leaning, false); }
 		}
 
-		private class JumpState : AnimState {
+		private class JumpState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return !msg.isGrounded; }
 			public override void Activate() { PlayAnimation(AnimationId.Jumping, false, false); }
 			public override void Deactivate() { BlendOutAnimation(AnimationId.Jumping); }
 		}
 
-		private class FingerState : AnimState {
+		private class FingerState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return GetHandState(msg.activeHandState) == HandStateId.MiddleFingering; }
 			public override void Activate() { PlayActionAnim(AnimationId.Finger, true); }
 			public override void Deactivate() { PlayActionAnim(AnimationId.Finger, false); }
 		}
 
-		private class HitchhikeState : AnimState {
+		private class HitchhikeState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return GetHandState(msg.activeHandState) == HandStateId.Lifting; }
 			public override void Activate() { PlayActionAnim(AnimationId.Hitchhike, true); }
 			public override void Deactivate() { PlayActionAnim(AnimationId.Hitchhike, false); }
 		}
 
-		private class DrunkState : AnimState {
+		private class DrunkState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return msg.isDrunk; }
 			public override void Activate() { PlayAnimation(AnimationId.Drunk, false, false); }
 			public override void Deactivate() { BlendOutAnimation(AnimationId.Drunk); }
 		}
 
-		private class HitState : AnimState {
+		private class HitState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return GetHandState(msg.activeHandState) == HandStateId.Hitting; }
 			public override void Activate() { PlayActionAnim(AnimationId.Hitting, true); }
 			public override void Deactivate() { PlayActionAnim(AnimationId.Hitting, false); }
 		}
 
-		private class PushState : AnimState {
+		private class PushState : AnimState
+		{
 			public override bool CanActivate(Messages.AnimSyncMessage msg) { return GetHandState(msg.activeHandState) == HandStateId.Pushing; }
 			public override void Activate() { PlayActionAnim(AnimationId.Pushing, true); }
 			public override void Deactivate() { PlayActionAnim(AnimationId.Pushing, false); }
 		}
 
-		private void RegisterAnimStates() {
-			states.Add(new LeaningState());
-			states.Add(new JumpState());
-			states.Add(new FingerState());
-			states.Add(new HitchhikeState());
-			states.Add(new DrunkState());
-			states.Add(new HitState());
-			states.Add(new PushState());
+		private void RegisterAnimStates()
+		{
+			_states.Add(new LeaningState());
+			_states.Add(new JumpState());
+			_states.Add(new FingerState());
+			_states.Add(new HitchhikeState());
+			_states.Add(new DrunkState());
+			_states.Add(new HitState());
+			_states.Add(new PushState());
 		}
 
 		//Animation Variables
-		bool isRunning = false;
-		float aimRot = 0.0f;
-		StanceId currentStance = StanceId.Standing;
-		byte currentDrinkId = 255;
+		private bool _isRunning;
+		private float _aimRot;
+		private StanceId _currentStance = StanceId.Standing;
+		private byte _currentDrinkId = 255;
 
 		/// <summary>
 		/// Handles the Action Animations
 		/// </summary>
-		public void HandleAnimations(Messages.AnimSyncMessage msg) {
-			isRunning = msg.isRunning;
-			aimRot = msg.aimRot;
+		public void HandleAnimations(Messages.AnimSyncMessage msg)
+		{
+			_isRunning = msg.isRunning;
+			_aimRot = msg.aimRot;
 			HandleCrouchStates(msg.crouchPosition);
 			HandleDrinking(msg.drinkId);
 			HandleSwearing(msg.swearId);
 
-			foreach (AnimState state in states) {
+			foreach (AnimState state in _states)
+			{
 				state.TryActivate(msg);
 			}
 		}
@@ -483,59 +533,67 @@ namespace MSCMP.Network {
 		/// <summary>
 		/// Handles the Foot Movement Animations
 		/// </summary>
-		public void HandleOnFootMovementAnimations(float speed) {
-			if (speed > 0.001f) { //Moving
-				if (isRunning) PlayAnimation(AnimationId.Running); //Running
-				else PlayAnimation(GetAnimationFromStance(currentStance, false)); //Walking
+		public void HandleOnFootMovementAnimations(float speed)
+		{
+			if (speed > 0.001f)
+			{ //Moving
+				if (_isRunning) PlayAnimation(AnimationId.Running); //Running
+				else PlayAnimation(GetAnimationFromStance(_currentStance, false)); //Walking
 			}
-			else PlayAnimation(GetAnimationFromStance(currentStance)); //Standing
+			else PlayAnimation(GetAnimationFromStance(_currentStance)); //Standing
 		}
 
 		/// <summary>
 		/// Moves the head according to the vertical look position
 		/// </summary>
-		public void SyncVerticalHeadLook(GameObject characterGameObject, float progress) {
+		public void SyncVerticalHeadLook(GameObject characterGameObject, float progress)
+		{
 			Transform head = characterGameObject.transform.FindChild("pelvis/spine_mid/shoulders/head");
 			//float newAimRot = Mathf.LerpAngle(head.rotation.eulerAngles.z, aimRot, progress); COMMENTED OUT CAUSE IT DOESNT WORK! NEED NEW INTERPOLATION
-			head.rotation *= Quaternion.Euler(0, 0, -aimRot);
+			head.rotation *= Quaternion.Euler(0, 0, -_aimRot);
 		}
 
 		/// <summary>
 		/// Takes care of crouch states
 		/// </summary>
-		private void HandleCrouchStates(float crouchRotation) {
-			if (crouchRotation < 0.85f) currentStance = StanceId.CrouchingLow;
-			else if (crouchRotation < 1.4f) currentStance = StanceId.Crouching;
-			else currentStance = StanceId.Standing;
+		private void HandleCrouchStates(float crouchRotation)
+		{
+			if (crouchRotation < 0.85f) _currentStance = StanceId.CrouchingLow;
+			else if (crouchRotation < 1.4f) _currentStance = StanceId.Crouching;
+			else _currentStance = StanceId.Standing;
 		}
 
 		/// <summary>
 		/// Takes care of drinking objects and animation
 		/// </summary>
-		private void HandleDrinking(byte DrinkID) {
-			byte oldDrinkingId = currentDrinkId;
-			currentDrinkId = DrinkID;
+		private void HandleDrinking(byte drinkId)
+		{
+			byte oldDrinkingId = _currentDrinkId;
+			_currentDrinkId = drinkId;
 
-			if (oldDrinkingId != currentDrinkId) SetDrinkingObject(currentDrinkId);
+			if (oldDrinkingId != _currentDrinkId) SetDrinkingObject(_currentDrinkId);
 		}
 
 		/// <summary>
 		/// Takes care of Finger Swearing/Swearing/Saying 'Yes'/Drunk Speaking
 		/// </summary>
-		/// <param name="SwearID"></param>
-		private void HandleSwearing(int SwearID) {
-			if (SwearID != int.MaxValue && SwearID != currentSwearId) {
-				if (SwearID >= DrunkSpeaking_Offset) MasterAudio.PlaySound3DFollowTransformAndForget("Drunk", characterGameObject.transform, 1, 1, 0, SwearID.ToString());
-				else if (SwearID >= Agreeing_Offset) MasterAudio.PlaySound3DFollowTransformAndForget("Yes", characterGameObject.transform, 8, 1, 0, SwearID.ToString());
-				else if (SwearID >= Swears_Offset) MasterAudio.PlaySound3DFollowTransformAndForget("Swearing", characterGameObject.transform, 1, 1, 0, SwearID.ToString());
-				else MasterAudio.PlaySound3DFollowTransformAndForget("Fuck", characterGameObject.transform, 1, 1, 0, SwearID.ToString());
+		/// <param name="swearId"></param>
+		private void HandleSwearing(int swearId)
+		{
+			if (swearId != int.MaxValue && swearId != _currentSwearId)
+			{
+				if (swearId >= DrunkSpeakingOffset) MasterAudio.PlaySound3DFollowTransformAndForget("Drunk", _characterGameObject.transform, 1, 1, 0, swearId.ToString());
+				else if (swearId >= AgreeingOffset) MasterAudio.PlaySound3DFollowTransformAndForget("Yes", _characterGameObject.transform, 8, 1, 0, swearId.ToString());
+				else if (swearId >= SwearsOffset) MasterAudio.PlaySound3DFollowTransformAndForget("Swearing", _characterGameObject.transform, 1, 1, 0, swearId.ToString());
+				else MasterAudio.PlaySound3DFollowTransformAndForget("Fuck", _characterGameObject.transform, 1, 1, 0, swearId.ToString());
 			}
-			currentSwearId = SwearID;
+			_currentSwearId = swearId;
 		}
-		int currentSwearId = int.MaxValue;
 
-		public int Swears_Offset = 100;
-		public int Agreeing_Offset = 200;
-		public int DrunkSpeaking_Offset = 300;
+		private int _currentSwearId = int.MaxValue;
+
+		public int SwearsOffset = 100;
+		public int AgreeingOffset = 200;
+		public int DrunkSpeakingOffset = 300;
 	}
 }

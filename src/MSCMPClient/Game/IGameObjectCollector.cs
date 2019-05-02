@@ -1,7 +1,9 @@
 using UnityEngine;
 
-namespace MSCMP.Game {
-	interface IGameObjectCollector {
+namespace MSCMP.Game
+{
+	internal interface IGameObjectCollector
+	{
 
 		/// <summary>
 		/// Called when there is a new game object that can be collected.

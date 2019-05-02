@@ -1,53 +1,49 @@
 ﻿using System;
 using UnityEngine;
-using HutongGames.PlayMaker;
+using Object = UnityEngine.Object;
 
 /// <summary>
 /// Hooks events related to beercases.
 /// </summary>
 namespace MSCMP.Game.Objects.PickupableTypes {
-	class BeerCase {
-		GameObject beerCaseGO;
-		Game.Components.ObjectSyncComponent osc;
-		PlayMakerFSM beerCaseFSM;
+	internal class BeerCase {
+		private readonly GameObject _beerCaseGo;
+		private readonly Components.ObjectSyncComponent _osc;
+		private readonly PlayMakerFSM _beerCaseFsm;
 
 		//Get used bottles
 		public int UsedBottles {
-			get {
-				return beerCaseFSM.FsmVariables.FindFsmInt("DestroyedBottles").Value;
-			}
-			set {
-				beerCaseFSM.FsmVariables.FindFsmInt("DestroyedBottles").Value = value;
-			}
+			get => _beerCaseFsm.FsmVariables.FindFsmInt("DestroyedBottles").Value;
+			set => _beerCaseFsm.FsmVariables.FindFsmInt("DestroyedBottles").Value = value;
 		}
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		public BeerCase(GameObject go) {
-			beerCaseGO = go;
-			osc = beerCaseGO.GetComponent<Components.ObjectSyncComponent>();
+			_beerCaseGo = go;
+			_osc = _beerCaseGo.GetComponent<Components.ObjectSyncComponent>();
 
-			Client.Assert(beerCaseFSM = Utils.GetPlaymakerScriptByName(go, "Use"), "Beer case FSM not found!");
+			Client.Assert(_beerCaseFsm = Utils.GetPlaymakerScriptByName(go, "Use"), "Beer case FSM not found!");
 			HookEvents();
 		}
 
 		/// <summary>
 		/// Hook events.
 		/// </summary>
-		void HookEvents() {
-			EventHook.AddWithSync(beerCaseFSM, "Remove bottle", new Func<bool>(() => {
-				if (beerCaseFSM.Fsm.LastTransition.EventName == "MP_Remove bottle") {
+		private void HookEvents() {
+			EventHook.AddWithSync(_beerCaseFsm, "Remove bottle", () =>
+			{
+				if (_beerCaseFsm.Fsm.LastTransition.EventName == "MP_Remove bottle") {
 					return true;
 				}
-				else {
-					return false;
-				}
-			}));
+
+				return false;
+			});
 
 			// Sync beer case bottle count with host.
 			if (Network.NetManager.Instance.IsOnline && !Network.NetManager.Instance.IsHost) {
-				osc.RequestObjectSync();
+				_osc.RequestObjectSync();
 			}
 		}
 
@@ -59,10 +55,10 @@ namespace MSCMP.Game.Objects.PickupableTypes {
 			int i = 0;
 			while (count > UsedBottles) {
 				if (UsedBottles != 23) {
-					GameObject bottle = beerCaseGO.transform.GetChild(i).gameObject;
+					GameObject bottle = _beerCaseGo.transform.GetChild(i).gameObject;
 					i++;
 					if (bottle != null) {
-						GameObject.Destroy(bottle);
+						Object.Destroy(bottle);
 						UsedBottles++;
 					}
 					else {

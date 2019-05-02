@@ -3,28 +3,31 @@ using MSCMP.Network;
 using System.Collections.Concurrent;
 using UnityEngine;
 
-namespace MSCMP.Game {
+namespace MSCMP.Game
+{
 	/// <summary>
 	/// Class managing sync of objects.
 	/// </summary>
-	class ObjectSyncManager {
+	internal class ObjectSyncManager
+	{
 		/// <summary>
 		/// Instance.
 		/// </summary>
-		public static ObjectSyncManager Instance = null;
+		public static ObjectSyncManager Instance;
 
 		/// <summary>
 		/// Dictionary of ObjectIDs.
 		/// </summary>
-		public ConcurrentDictionary<int, ObjectSyncComponent> ObjectIDs = new ConcurrentDictionary<int, ObjectSyncComponent>();
+		public readonly ConcurrentDictionary<int, ObjectSyncComponent> ObjectIDs = new ConcurrentDictionary<int, ObjectSyncComponent>();
 
 		/// <summary>
 		/// Type of objects.
 		/// </summary>
-		public enum ObjectTypes {
+		public enum ObjectTypes
+		{
 			Pickupable,
 			PlayerVehicle,
-			AIVehicle,
+			AiVehicle,
 			Boat,
 			GarageDoor,
 			VehicleDoor,
@@ -35,7 +38,8 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Sync types.
 		/// </summary>
-		public enum SyncTypes {
+		public enum SyncTypes
+		{
 			GenericSync,
 			SetOwner,
 			RemoveOwner,
@@ -57,17 +61,18 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Used when adding an ObjectSyncComponent for an ObjectID to be automatically assigned.
 		/// </summary>
-		public static int AUTOMATIC_ID = -1;
+		public static int AutomaticId = -1;
 
 		/// <summary>
 		/// Local player's Steam ID.
 		/// </summary>
-		public Steamworks.CSteamID steamID;
+		public Steamworks.CSteamID SteamId;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
-		public ObjectSyncManager() {
+		public ObjectSyncManager()
+		{
 			Instance = this;
 		}
 
@@ -75,45 +80,55 @@ namespace MSCMP.Game {
 		/// Adds new object to the ObjectIDs Dictionary.
 		/// </summary>
 		/// <param name="osc">Object to add.</param>
-		/// <param name="objectID">Object ID to assign to object.</param>
+		/// <param name="objectId">Object ID to assign to object.</param>
 		/// <returns>ObjectID of object.</returns>
-		public int AddNewObject(ObjectSyncComponent osc, int objectID) {
+		public int AddNewObject(ObjectSyncComponent osc, int objectId)
+		{
 			// Assign ObjectID automatically.
-			if (objectID == AUTOMATIC_ID) {
-				if (steamID.m_SteamID == 0) {
-					steamID = Steamworks.SteamUser.GetSteamID();
+			if (objectId == AutomaticId)
+			{
+				if (SteamId.m_SteamID == 0)
+				{
+					SteamId = Steamworks.SteamUser.GetSteamID();
 				}
-				if (Network.NetWorld.DisplayObjectRegisteringDebug) {
+				if (NetWorld.DisplayObjectRegisteringDebug)
+				{
 					Logger.Debug($"Added new ObjectID at: {ObjectIDs.Count + 1} Object type: {osc.ObjectType}");
 				}
 				ObjectIDs.GetOrAdd(ObjectIDs.Count + 1, osc);
 				return ObjectIDs.Count;
 			}
 			// Assign object a specific ObjectID.
-			else {
-				if (Network.NetWorld.DisplayObjectRegisteringDebug) {
-					Logger.Debug($"Force adding new ObjectID at: {objectID}");
-				}
-				if (ObjectIDs.ContainsKey(objectID)) {
-					ObjectIDs[objectID] = osc;
-				}
-				else {
-					ObjectIDs.GetOrAdd(objectID, osc);
-				}
-				return objectID;
+
+			if (NetWorld.DisplayObjectRegisteringDebug)
+			{
+				Logger.Debug($"Force adding new ObjectID at: {objectId}");
 			}
+			if (ObjectIDs.ContainsKey(objectId))
+			{
+				ObjectIDs[objectId] = osc;
+			}
+			else
+			{
+				ObjectIDs.GetOrAdd(objectId, osc);
+			}
+			return objectId;
 		}
 
 		/// <summary>
 		/// Check if a periodic object sync should be performed.
 		/// </summary>
 		/// <returns>True if object periodic sync should be sent.</returns>
-		public bool ShouldPeriodicSync(Network.NetPlayer owner, bool syncEnabled) {
-			if (!Network.NetManager.Instance.IsNetworkPlayerConnected()) {
+		public bool ShouldPeriodicSync(NetPlayer owner, bool syncEnabled)
+		{
+			if (!NetManager.Instance.IsNetworkPlayerConnected())
+			{
 				return false;
 			}
-			if (Network.NetManager.Instance.TicksSinceConnectionStarted % 500 == 0) {
-				if (syncEnabled || owner == null && Network.NetManager.Instance.IsHost) {
+			if (NetManager.Instance.TicksSinceConnectionStarted % 500 == 0)
+			{
+				if (syncEnabled || owner == null && NetManager.Instance.IsHost)
+				{
 					return true;
 				}
 			}
@@ -123,38 +138,42 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Returns the GameObject assigned the specified ID or null if object couldn't be found.
 		/// </summary>
-		/// <param name="ObjectID">Object ID.</param>
+		/// <param name="objectId">Object ID.</param>
 		/// <returns>GameObject at specified ID.</returns>
-		public static GameObject GetObjectByID(int ObjectID) {
-			if (ObjectSyncManager.Instance.ObjectIDs.ContainsKey(ObjectID)) {
-				return ObjectSyncManager.Instance.ObjectIDs[ObjectID].GetGameObject();
+		public static GameObject GetObjectById(int objectId)
+		{
+			if (Instance.ObjectIDs.ContainsKey(objectId))
+			{
+				return Instance.ObjectIDs[objectId].GetGameObject();
 			}
-			else {
-				return null;
-			}
+
+			return null;
 		}
 
 		/// <summary>
 		/// Returns tghe ObjectSyncComponent assigned the specified ID or null if the component couldn't be found.
 		/// </summary>
-		/// <param name="ObjectID">Object ID.</param>
+		/// <param name="objectId">Object ID.</param>
 		/// <returns>ObjectSyncComponent at specified ID.</returns>
-		public static ObjectSyncComponent GetSyncComponentByID(int ObjectID) {
-			if (ObjectSyncManager.Instance.ObjectIDs.ContainsKey(ObjectID)) {
-				return ObjectSyncManager.Instance.ObjectIDs[ObjectID];
+		public static ObjectSyncComponent GetSyncComponentById(int objectId)
+		{
+			if (Instance.ObjectIDs.ContainsKey(objectId))
+			{
+				return Instance.ObjectIDs[objectId];
 			}
-			else {
-				return null;
-			}
+
+			return null;
 		}
 
 		/// <summary>
 		/// Handle set owner messages on the host.
 		/// </summary>
-		public static void SetOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
+		public static void SetOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender)
+		{
 			NetPlayer player = NetManager.Instance.GetPlayer(sender);
 			// No one owns the object, accept ownership request.
-			if (osc.Owner == null || osc.Owner == player) {
+			if (osc.Owner == null || osc.Owner == player)
+			{
 				osc.Owner = player;
 				osc.OwnerSetToRemote(NetManager.Instance.GetPlayer(sender));
 				SendSyncResponse(player, msg.objectID, true);
@@ -162,12 +181,13 @@ namespace MSCMP.Game {
 				// Send updated ownership info to other clients.
 				Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
 				msgBroadcast.objectID = msg.objectID;
-				msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+				msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIdBySteamId(sender);
 				msgBroadcast.SyncType = (int)SyncTypes.SetOwner;
 				NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
 			}
 			// Someone else owns the object, deny ownership request.
-			else {
+			else
+			{
 				SendSyncResponse(player, msg.objectID, false);
 			}
 		}
@@ -175,14 +195,15 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Handles remove owner messages on the host.
 		/// </summary>
-		public static void RemoveOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
+		public static void RemoveOwnerHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender)
+		{
 			osc.Owner = null;
 			osc.OwnerRemoved();
-			
+
 			// Send updated ownership info to other clients.
 			Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
 			msgBroadcast.objectID = msg.objectID;
-			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIdBySteamId(sender);
 			msgBroadcast.SyncType = (int)SyncTypes.RemoveOwner;
 			NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
@@ -190,21 +211,24 @@ namespace MSCMP.Game {
 		/// <summary>
 		/// Handles sync taken by force messages on the host.
 		/// </summary>
-		public static void SyncTakenByForceHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender) {
-			if (osc.Owner == NetManager.Instance.GetLocalPlayer()) {
+		public static void SyncTakenByForceHandler(Network.Messages.ObjectSyncMessage msg, ObjectSyncComponent osc, Steamworks.CSteamID sender)
+		{
+			if (osc.Owner == NetManager.Instance.GetLocalPlayer())
+			{
 				osc.SyncTakenByForce();
 				osc.SyncEnabled = false;
 			}
 			osc.Owner = NetManager.Instance.GetPlayer(sender);
 
-			if (osc.Owner == NetManager.Instance.GetLocalPlayer()) {
+			if (osc.Owner == NetManager.Instance.GetLocalPlayer())
+			{
 				osc.SyncEnabled = true;
 			}
 
 			// Send updated ownership info to other clients.
 			Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
 			msgBroadcast.objectID = msg.objectID;
-			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIDBySteamID(sender);
+			msgBroadcast.OwnerPlayerID = NetManager.Instance.GetPlayerIdBySteamId(sender);
 			msgBroadcast.SyncType = (int)SyncTypes.ForceSetOwner;
 			NetManager.Instance.BroadcastMessage(msgBroadcast, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}
@@ -213,10 +237,12 @@ namespace MSCMP.Game {
 		/// Send sync response to clients.
 		/// </summary>
 		/// <param name="player">Player to send message to.</param>
+		/// <param name="objectId"></param>
 		/// <param name="accepted">If the request was approved.</param>
-		public static void SendSyncResponse(NetPlayer player, int objectID, bool accepted) {
+		public static void SendSyncResponse(NetPlayer player, int objectId, bool accepted)
+		{
 			Network.Messages.ObjectSyncResponseMessage msgResponse = new Network.Messages.ObjectSyncResponseMessage();
-			msgResponse.objectID = objectID;
+			msgResponse.objectID = objectId;
 			msgResponse.accepted = accepted;
 			NetManager.Instance.SendMessage(player, msgResponse, Steamworks.EP2PSend.k_EP2PSendReliable);
 		}

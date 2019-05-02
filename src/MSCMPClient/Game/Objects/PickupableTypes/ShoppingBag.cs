@@ -1,27 +1,25 @@
-﻿using System;
-using UnityEngine;
-using HutongGames.PlayMaker;
+﻿using UnityEngine;
 
 namespace MSCMP.Game.Objects.PickupableTypes {
-	class ShoppingBag {
-		GameObject ShoppingBagGO;
+	internal class ShoppingBag {
+		private readonly GameObject _shoppingBagGo;
 
 		/// <summary>
 		/// Constructor.
 		/// </summary>
 		/// <param name="go"></param>
 		public ShoppingBag(GameObject go) {
-			ShoppingBagGO = go;
+			_shoppingBagGo = go;
 			HookEvents();
 		}
 
 		/// <summary>
 		/// Hook events for shopping bag.
 		/// </summary>
-		void HookEvents() {
+		private void HookEvents() {
 			// Shopping bag.
-			PlayMakerFSM bagFSM = Utils.GetPlaymakerScriptByName(ShoppingBagGO, "Open");
-			EventHook.AddWithSync(bagFSM, "Play anim");
+			PlayMakerFSM bagFsm = Utils.GetPlaymakerScriptByName(_shoppingBagGo, "Open");
+			EventHook.AddWithSync(bagFsm, "Play anim");
 			// This class also handles the fireworks bag.
 		}
 	}
