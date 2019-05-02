@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +8,7 @@ namespace MSCMP.Game.Objects {
 	class GarageDoor : ISyncedObject {
 		GameObject gameObject;
 		Rigidbody rigidbody;
+		HingeJoint hinge;
 
 		float lastRotation;
 
@@ -16,8 +17,9 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		public GarageDoor(GameObject go) {
 			gameObject = go.transform.parent.gameObject;
+			hinge = gameObject.GetComponent<HingeJoint>();
+			lastRotation = hinge.angle;
 			rigidbody = gameObject.GetComponent<Rigidbody>();
-			lastRotation = gameObject.transform.localRotation.z;
 
 			HookEvents(go);
 		}
@@ -34,7 +36,7 @@ namespace MSCMP.Game.Objects {
 		/// Hook events.
 		/// </summary>
 		void HookEvents(GameObject go) {
-			PlayMakerFSM doorFSM = Utils.GetPlaymakerScriptByName(go, "Use");
+			PlayMakerFSM doorFSM = go.GetComponent<PlayMakerFSM>();
 			EventHook.Add(doorFSM, "Open", new Func<bool>(() => {
 				go.GetComponent<Components.ObjectSyncComponent>().TakeSyncControl();
 				return false;
@@ -66,8 +68,8 @@ namespace MSCMP.Game.Objects {
 		/// </summary>
 		/// <returns>True if object should be synced, false if it shouldn't.</returns>
 		public bool CanSync() {
-			if ((lastRotation - gameObject.transform.localRotation.z) > 0.005 || (lastRotation - gameObject.transform.localRotation.z) < -0.005) {
-				lastRotation = gameObject.transform.localRotation.z;
+			if ((lastRotation - hinge.angle) > 0.1 || (lastRotation - hinge.angle) < -0.1) {
+				lastRotation = hinge.angle;
 				return true;
 			}
 			else {
