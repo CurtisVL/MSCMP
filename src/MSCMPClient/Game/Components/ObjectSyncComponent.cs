@@ -367,6 +367,7 @@ namespace MSCMP.Game.Components {
 		/// </summary>
 		public void SendObjectSyncHost(int objectID, Vector3 pos, Quaternion rot, ObjectSyncManager.SyncTypes syncType, float[] syncedVariables, ObjectSyncManager.Flags flags) {
 			Network.Messages.ObjectSyncMessage msg = new Network.Messages.ObjectSyncMessage();
+
 			msg.objectID = objectID;
 			msg.SyncType = (int)syncType;
 			if (syncedVariables != null) {
@@ -390,7 +391,6 @@ namespace MSCMP.Game.Components {
 				Network.Messages.ObjectSyncMessage msgBroadcast = new Network.Messages.ObjectSyncMessage();
 				// Set owner as host.
 				if (syncType == ObjectSyncManager.SyncTypes.SetOwner) {
-					Logger.Log("Host is taking ownership of this object! - " + gameObject.name);
 					if (Owner == null) {
 						Owner = NetManager.Instance.GetLocalPlayer();
 						SyncEnabled = true;
@@ -405,8 +405,8 @@ namespace MSCMP.Game.Components {
 				}
 				// Force take sync control as host.
 				else if (syncType == ObjectSyncManager.SyncTypes.ForceSetOwner) {
-					Logger.Log("Host is force taking ownership of this object! - " + gameObject.name);
 					SyncEnabled = true;
+					msgBroadcast.SyncType = (int)ObjectSyncManager.SyncTypes.ForceSetOwner;
 				}
 
 				// Send updated ownership info to other clients.
