@@ -391,14 +391,6 @@ namespace MSCMP.Game {
 			}
 		}
 
-		/// <summary>
-		/// List of vehicle gameobject names.
-		/// </summary>
-		static readonly string[] vehicleGoNames = {
-			"JONNEZ ES(Clone)", "HAYOSIKO(1500kg, 250)", "SATSUMA(557kg, 248)",
-			"RCO_RUSCKO12(270)", "KEKMET(350-400psi)", "FLATBED", "FERNDALE(1630kg)", "GIFU(750/450psi)"
-		};
-
 		public void UpdateIMGUI() {
 			// noop
 		}

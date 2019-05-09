@@ -767,7 +767,7 @@ namespace MSCMP.Game.Objects {
 					syncComponent.TakeSyncControl();
 					DriverIsLocal = true;
 					SetRemoteSteering(false);
-					Network.NetLocalPlayer.Instance.EnterVehicle(syncComponent, false);
+					NetLocalPlayer.Instance.EnterVehicle(syncComponent, false);
 					return false;
 				}
 			}));
