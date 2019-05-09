@@ -412,7 +412,7 @@ namespace MSCMP.Game.Objects {
 			PlayMakerFSM[] fsms = ParentGameObject.GetComponentsInChildren<PlayMakerFSM>();
 
 			foreach (var fsm in fsms) {
-				if (fsm.FsmName == "PlayerTrigger") {
+				if (fsm.FsmName == "PlayerTrigger" && fsm.gameObject.name == "DriveTrigger") {
 					PlayerEventHooks(fsm);
 				}
 
@@ -759,7 +759,7 @@ namespace MSCMP.Game.Objects {
 			// Temp - use player trigger. (No idea what this comment meant, it's now many months later. :P)
 			// It's now 6+ months later, no idea what this means at all now. :p -Curtis
 			EventHook.Add(fsm, "Player in car", new Func<bool>(() => {
-				if (CurrentDrivingState == DrivingStates.Driver && !DriverIsLocal) {
+				if (CurrentDrivingState == DrivingStates.Driver && !DriverIsLocal || DriverIsLocal) {
 					return true;
 				}
 				else {
