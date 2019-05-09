@@ -377,6 +377,10 @@ namespace MSCMP.Network {
 				// Set ownership info on clients.
 				else {
 					NetPlayer player = netManager.GetPlayerByPlayerID(msg.OwnerPlayerID);
+					// Check if player exists.
+					if (player == null) {
+						return;
+					}
 					// Set owner.
 					if (type == ObjectSyncManager.SyncTypes.SetOwner) {
 						if (osc.Owner != netManager.GetLocalPlayer()) {

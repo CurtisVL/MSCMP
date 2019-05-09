@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using MSCMP.UI;
 
@@ -575,11 +576,12 @@ namespace MSCMP.Network {
 				return;
 			}
 
-			foreach (var player in players) {
+			int[] connectPlayerIDs = players.Keys.ToArray();
+			foreach (var player in connectPlayerIDs) {
 				timeSinceLastHeartbeat += Time.deltaTime;
 
 				if (timeSinceLastHeartbeat >= TIMEOUT_TIME) {
-					HandleDisconnect(player.Key, true);
+					HandleDisconnect(player, true);
 				}
 				else {
 					timeToSendHeartbeat -= Time.deltaTime;
@@ -944,7 +946,12 @@ namespace MSCMP.Network {
 		/// </summary>
 		/// <returns>NetPlayer of player.</returns>
 		public NetPlayer GetPlayerByPlayerID(int playerID) {
-			return players[playerID];
+			try {
+				return players[playerID];
+			}
+			catch {
+				return null;
+			}
 		}
 	}
 }
