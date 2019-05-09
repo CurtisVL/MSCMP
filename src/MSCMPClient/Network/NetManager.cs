@@ -162,7 +162,7 @@ namespace MSCMP.Network {
 			// Hopefully this will fix people playing with different mod versions!
 			string versionFull = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 			int buildNumber = Convert.ToInt32(versionFull.Substring(versionFull.LastIndexOf('.') + 1));
-			PROTOCOL_VERSION = 1;
+			PROTOCOL_VERSION = buildNumber;
 
 			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create(OnP2PSessionRequest);
 			p2pConnectFailCallback = Steamworks.Callback<Steamworks.P2PSessionConnectFail_t>.Create(OnP2PConnectFail);
