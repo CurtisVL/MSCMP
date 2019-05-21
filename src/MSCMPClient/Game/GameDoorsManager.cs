@@ -92,6 +92,16 @@ namespace MSCMP.Game {
 				}
 			}
 
+			foreach (var b in playMakerFsm.FsmVariables.BoolVariables) {
+				if (b.Name == "DoorOpen") {
+					isValid = true;
+					break;
+				}
+				else {
+					isValid = false;
+				}
+			}
+
 			return isValid;
 		}
 
