@@ -164,6 +164,7 @@ namespace MSCMP.Network {
 			string versionFull = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 			int buildNumber = Convert.ToInt32(versionFull.Substring(versionFull.LastIndexOf('.') + 1));
 			PROTOCOL_VERSION = buildNumber;
+			Logger.Log("Build version is: " + PROTOCOL_VERSION);
 
 			p2pSessionRequestCallback = Steamworks.Callback<Steamworks.P2PSessionRequest_t>.Create(OnP2PSessionRequest);
 			p2pConnectFailCallback = Steamworks.Callback<Steamworks.P2PSessionConnectFail_t>.Create(OnP2PConnectFail);
