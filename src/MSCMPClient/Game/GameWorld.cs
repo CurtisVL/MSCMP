@@ -35,38 +35,18 @@ namespace MSCMP.Game {
 		PlayMakerFSM worldTimeFsm = null;
 
 		/// <summary>
-		/// Light switch manager.
-		/// </summary>
-		LightSwitchManager lightSwitchManager = new LightSwitchManager();
-
-		/// <summary>
 		/// Game vehicle database.
 		/// </summary>
 		GameVehicleDatabase gameVehicleDatabase = new GameVehicleDatabase();
 
 		/// <summary>
-		/// Object sync manager.
+		/// Managers for syncing various gameplay features.
 		/// </summary>
+		LightSwitchManager lightSwitchManager = new LightSwitchManager();
 		ObjectSyncManager objectSyncManager = new ObjectSyncManager();
-
-		/// <summary>
-		/// Traffic manager.
-		/// </summary>
 		TrafficManager trafficManager = new TrafficManager();
-
-		/// <summary>
-		/// Shop manager.
-		/// </summary>
 		Shop shopManager = new Shop();
-
-		/// <summary>
-		/// Phone manager.
-		/// </summary>
 		PhoneManager phoneManager = new PhoneManager();
-
-		/// <summary>
-		/// Map manager.
-		/// </summary>
 		MapManager mapManager = new MapManager();
 
 		private GamePlayer player = null;
