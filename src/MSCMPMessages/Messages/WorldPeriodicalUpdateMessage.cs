@@ -16,5 +16,12 @@ namespace MSCMPMessages.Messages {
 		/// Current world day of the week.
 		/// </summary>
 		Byte worldDay;
+
+		/// <summary>
+		/// Uncle states.
+		/// </summary>
+		int uncleStage;
+		float uncleTime;
+		bool uncleHome;
 	}
 }

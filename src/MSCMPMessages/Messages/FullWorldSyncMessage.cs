@@ -21,6 +21,10 @@
 		LightSwitchMessage[]		lights;
 		ConnectedPlayersMessage		connectedPlayers;
 		ObjectOwnerSync[]			objectOwners;
+		int[]						playerKeys;
+		int							uncleStage;
+		float						uncleTime;
+		bool						uncleHome;
 
 		// Informations about player we have connected to.
 

@@ -225,6 +225,10 @@ namespace MSCMP.Network {
 				// Game reports 'next hour' - we want to have transition so correct it.
 				GameWorld.Instance.WorldTime = (float)msg.sunClock - 2.0f;
 				GameWorld.Instance.WorldDay = (int)msg.worldDay;
+
+				UncleManager.Instance.UncleStage = msg.uncleStage;
+				UncleManager.Instance.UncleTime = msg.uncleTime;
+				UncleManager.Instance.UncleHome = msg.uncleHome;
 			});
 
 			netMessageHandler.BindMessageHandler((Steamworks.CSteamID sender, Messages.PlayerSyncMessage msg) => {
@@ -476,6 +480,9 @@ namespace MSCMP.Network {
 				var message = new Messages.WorldPeriodicalUpdateMessage();
 				message.sunClock = (Byte)GameWorld.Instance.WorldTime;
 				message.worldDay = (Byte)GameWorld.Instance.WorldDay;
+				message.uncleStage = UncleManager.Instance.UncleStage;
+				message.uncleTime = UncleManager.Instance.UncleTime;
+				message.uncleHome = UncleManager.Instance.UncleHome;
 				netManager.BroadcastMessage(message, Steamworks.EP2PSend.k_EP2PSendReliable);
 
 				timeToSendPeriodicalUpdate = PERIODICAL_UPDATE_INTERVAL;
@@ -642,6 +649,24 @@ namespace MSCMP.Network {
 
 			watch.Stop();
 			Logger.Debug("World state has been written. Took " + watch.ElapsedMilliseconds + "ms");
+
+			// Write player keys.
+
+			int[] keys = {
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyGifu").Value,
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyHayosiko").Value,
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyFerndale").Value,
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyHome").Value,
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyRuscko").Value,
+				HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeySatsuma").Value
+			};
+			msg.playerKeys = keys;
+
+			// Write uncle states.
+
+			msg.uncleStage = UncleManager.Instance.UncleStage;
+			msg.uncleTime = UncleManager.Instance.UncleTime;
+			msg.uncleHome = UncleManager.Instance.UncleHome;
 		}
 
 
@@ -728,6 +753,21 @@ namespace MSCMP.Network {
 			
 			watch.Stop();
 			Logger.Debug("Full world synchronization message has been handled. Took " + watch.ElapsedMilliseconds + "ms");
+
+			// Player keys.
+
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyGifu").Value = msg.playerKeys[0];
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyHayosiko").Value = msg.playerKeys[1];
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyFerndale").Value = msg.playerKeys[2];
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyHome").Value = msg.playerKeys[3];
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeyRuscko").Value = msg.playerKeys[4];
+			HutongGames.PlayMaker.FsmVariables.GlobalVariables.GetFsmInt("PlayerKeySatsuma").Value = msg.playerKeys[5];
+
+			// Uncle states.
+
+			UncleManager.Instance.UncleStage = msg.uncleStage;
+			UncleManager.Instance.UncleTime = msg.uncleTime;
+			UncleManager.Instance.UncleHome = msg.uncleHome;
 		}
 
 		/// <summary>

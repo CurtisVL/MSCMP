@@ -48,6 +48,8 @@ namespace MSCMP.Game {
 		Shop shopManager = new Shop();
 		PhoneManager phoneManager = new PhoneManager();
 		MapManager mapManager = new MapManager();
+		KeyManager keyManager = new KeyManager();
+		UncleManager uncleManager = new UncleManager();
 
 		private GamePlayer player = null;
 
@@ -158,6 +160,8 @@ namespace MSCMP.Game {
 			gameObjectUsers.Add(gamePickupableDatabase);
 			gameObjectUsers.Add(lightSwitchManager);
 			gameObjectUsers.Add(gameVehicleDatabase);
+			gameObjectUsers.Add(keyManager);
+			gameObjectUsers.Add(uncleManager);
 		}
 
 		~GameWorld() {

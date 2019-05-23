@@ -82,6 +82,8 @@
     <Compile Include="Client.cs" />
     <Compile Include="Development\WorldDumper.cs" />
     <Compile Include="DevTools.cs" />
+    <Compile Include="Game\UncleManager.cs" />
+    <Compile Include="Game\KeyManager.cs" />
     <Compile Include="Game\MapManager.cs" />
     <Compile Include="Game\Components\ObjectSyncComponent.cs" />
     <Compile Include="Game\Components\ObjectSyncPlayerComponent.cs" />
