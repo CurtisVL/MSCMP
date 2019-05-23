@@ -8,7 +8,7 @@ namespace MSCMP.Game.Objects
 		GameObject gameObject;
 		Components.ObjectSyncComponent osc;
 
-		// Update rate for weather in frames.
+		// Update rate for sewage wells in frames.
 		float syncInterval = 150;
 		float currentFrame = 0;
 
